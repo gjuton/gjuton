@@ -8,14 +8,14 @@ empty `docs/adr` and `docs/prd` folders.
 
 ## Acceptance criteria
 
-- [ ] Parent POM exists with packaging `pom` and one declared module
-- [ ] `json-schema-gen-core` module builds with `mvn clean verify`
-- [ ] Root Java package `se.plilja.jsonschemagen` exists with `api` and
+- [x] Parent POM exists with packaging `pom` and one declared module
+- [x] `json-schema-gen-core` module builds with `mvn clean verify`
+- [x] Root Java package `se.plilja.jsonschemagen` exists with `api` and
       `internal` sub-packages
-- [ ] CLAUDE.md at repo root documents purpose, build commands,
+- [x] CLAUDE.md at repo root documents purpose, build commands,
       architecture overview, and package conventions
-- [ ] .gitignore covers Maven `target/` and common IDE files
-- [ ] `docs/adr/` and `docs/prd/` directories exist
+- [x] .gitignore covers Maven `target/` and common IDE files
+- [x] `docs/adr/` and `docs/prd/` directories exist
 
 ## Blocked by
 
