@@ -22,7 +22,8 @@ Three-phase pipeline:
    (type, constraints, $ref, combining keywords, etc.).
 3. **Generator** — walks the model and produces a JSON value string.
 
-Public API returns a plain `String`. No third-party types are exposed.
+Public API accepts a schema as a `String`, `File`, or `InputStream`.
+It returns a plain `String`. No third-party types are exposed.
 Convenience overloads write to `OutputStream`, `Writer`, or `File`.
 
 ## Package conventions
