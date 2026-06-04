@@ -22,6 +22,7 @@
         <jackson.version>2.22.0</jackson.version>
         <junit.version>5.14.4</junit.version>
         <archunit.version>1.4.2</archunit.version>
+        <spotbugs.version>4.9.8.3</spotbugs.version>
     </properties>
 
     <dependencyManagement>
@@ -61,5 +62,22 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>${spotbugs.version}</version>
+                <configuration>
+                    <excludeFilterFile>${project.basedir}/../spotbugs-exclude.xml</excludeFilterFile>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
     </build>
 </project>
