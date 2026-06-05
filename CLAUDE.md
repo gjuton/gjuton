@@ -49,6 +49,12 @@ model        — leaf; no dependencies on other internal packages
 Jackson (`com.fasterxml.jackson`) is allowed only in `parser` and `model`.
 Consumers must only import from `api`, never from `internal` directly.
 
+## Testing
+
+Integration tests are parameterized and driven by schema files in
+`src/test/resources/schemas/`. Adding a schema file is all that's needed to add
+a test case.
+
 ## Code style
 
 Google Java Style Guide, enforced by Checkstyle (`checkstyle:check` runs on `mvn verify`).

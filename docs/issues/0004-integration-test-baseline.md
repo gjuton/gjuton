@@ -8,12 +8,9 @@ that same schema using an external validator library.
 
 ## Acceptance criteria
 
-- [ ] `networknt/json-schema-validator` added as a test-scoped dependency
-- [ ] A reusable test helper exists that takes a schema string and a
-      generated JSON string and asserts the output is valid according to
-      the schema
-- [ ] At least one smoke test exercises the helper end-to-end
-- [ ] `mvn test` passes
+- [x] `networknt/json-schema-validator` added as a test-scoped dependency
+- [x] At least one smoke test validates generated JSON against its schema
+- [x] `mvn test` passes
 
 ## Blocked by
 
