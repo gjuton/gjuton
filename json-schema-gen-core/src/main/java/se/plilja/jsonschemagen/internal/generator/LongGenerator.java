@@ -1,6 +1,5 @@
 package se.plilja.jsonschemagen.internal.generator;
 
-import static se.plilja.jsonschemagen.internal.generator.FunctionalUtil.coalesce;
 import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result;
 import static se.plilja.jsonschemagen.internal.generator.GenerationResult.skip;
 
@@ -29,47 +28,117 @@ final class LongGenerator extends PhaseGenerator<LongGenerator.GenerationPhase, 
 
     @Override
     protected GenerationResult<Long> generatePhase(GenerationPhase phase) {
+        long effMin = effectiveMin();
+        long effMax = effectiveMax();
+        long lowestMultiple = snapUp(effMin);
+        long highestMultiple = snapDown(effMax);
         return switch (phase) {
-            case MIN -> schema.getMinimum() != null ? result(schema.getMinimum()) : skip();
-            case MAX -> schema.getMaximum() != null ? result(schema.getMaximum()) : skip();
-            // TODO consider generating boundary values even when min/max are not declared
+            case MIN -> hasLowerBound() || hasMultipleOf() ? result(lowestMultiple) : skip();
+            case MAX -> hasUpperBound() || hasMultipleOf() ? result(highestMultiple) : skip();
             case ZERO -> {
                 if (!isInRange(0)) {
                     yield skip();
                 }
-                // Skip when 0 equals min or max since those phases already emit it
-                if (Long.valueOf(0).equals(schema.getMinimum())
-                        || Long.valueOf(0).equals(schema.getMaximum())) {
+                if (lowestMultiple == 0 || highestMultiple == 0) {
                     yield skip();
                 }
                 yield result(0L);
             }
             case NEAR_MIN -> {
-                if (schema.getMinimum() == null) {
+                if (!hasLowerBound() && !hasMultipleOf()) {
                     yield skip();
                 }
-                long nearMin = schema.getMinimum() + 1;
+                long nearMin = lowestMultiple + step();
                 yield isInRange(nearMin) ? result(nearMin) : skip();
             }
             case NEAR_MAX -> {
-                if (schema.getMaximum() == null) {
+                if (!hasUpperBound() && !hasMultipleOf()) {
                     yield skip();
                 }
-                long nearMax = schema.getMaximum() - 1;
+                long nearMax = highestMultiple - step();
                 yield isInRange(nearMax) ? result(nearMax) : skip();
             }
             case RANDOM -> result(randomLong());
         };
     }
 
+    private long effectiveMin() {
+        Long min = schema.getMinimum();
+        Long exMin = schema.getExclusiveMinimum();
+        if (min != null && exMin != null) {
+            return Math.max(min, exMin + 1);
+        } else if (exMin != null) {
+            return exMin + 1;
+        } else if (min != null) {
+            return min;
+        }
+        return Long.MIN_VALUE;
+    }
+
+    private long effectiveMax() {
+        Long max = schema.getMaximum();
+        Long exMax = schema.getExclusiveMaximum();
+        if (max != null && exMax != null) {
+            return Math.min(max, exMax - 1);
+        } else if (exMax != null) {
+            return exMax - 1;
+        } else if (max != null) {
+            return max;
+        }
+        return Long.MAX_VALUE - 1;
+    }
+
+    private boolean hasLowerBound() {
+        return schema.getMinimum() != null || schema.getExclusiveMinimum() != null;
+    }
+
+    private boolean hasUpperBound() {
+        return schema.getMaximum() != null || schema.getExclusiveMaximum() != null;
+    }
+
+    private boolean hasMultipleOf() {
+        return schema.getMultipleOf() != null;
+    }
+
+    private long step() {
+        return hasMultipleOf() ? schema.getMultipleOf() : 1;
+    }
+
+    private long snapUp(long value) {
+        if (!hasMultipleOf()) {
+            return value;
+        }
+        long m = schema.getMultipleOf();
+        return Math.ceilDiv(value, m) * m;
+    }
+
+    private long snapDown(long value) {
+        if (!hasMultipleOf()) {
+            return value;
+        }
+        long m = schema.getMultipleOf();
+        return Math.floorDiv(value, m) * m;
+    }
+
     private boolean isInRange(long value) {
-        return value >= coalesce(schema.getMinimum(), Long.MIN_VALUE)
-                && value <= coalesce(schema.getMaximum(), Long.MAX_VALUE - 1);
+        if (value < effectiveMin() || value > effectiveMax()) {
+            return false;
+        }
+        if (hasMultipleOf() && value % schema.getMultipleOf() != 0) {
+            return false;
+        }
+        return true;
     }
 
     private long randomLong() {
-        long min = coalesce(schema.getMinimum(), Long.MIN_VALUE);
-        long max = coalesce(schema.getMaximum(), Long.MAX_VALUE - 1);
-        return random.nextLong(min, max + 1);
+        long lowestMultiple = snapUp(effectiveMin());
+        long highestMultiple = snapDown(effectiveMax());
+        if (!hasMultipleOf()) {
+            return random.nextLong(lowestMultiple, highestMultiple + 1);
+        }
+        long m = schema.getMultipleOf();
+        long lowestIndex = lowestMultiple / m;
+        long highestIndex = highestMultiple / m;
+        return random.nextLong(lowestIndex, highestIndex + 1) * m;
     }
 }

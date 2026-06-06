@@ -1,0 +1,1 @@
+{"type": "integer", "minimum": -50, "maximum": 50, "multipleOf": 7}

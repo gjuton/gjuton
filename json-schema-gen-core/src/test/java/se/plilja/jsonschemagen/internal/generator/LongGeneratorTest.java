@@ -39,7 +39,7 @@ class LongGeneratorTest {
 
     @Test
     void boundedCoversBoundaryValues() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-10L, 10L));
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-10L, 10L, null, null, null));
 
         // when
         List<Long> values = LongStream.range(0, 20)
@@ -53,7 +53,7 @@ class LongGeneratorTest {
 
     @Test
     void boundedAllValuesWithinRange() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-10L, 10L));
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-10L, 10L, null, null, null));
 
         // when
         List<Long> values = LongStream.range(0, 100)
@@ -67,7 +67,7 @@ class LongGeneratorTest {
 
     @Test
     void minOnlyCoversBoundaryValues() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-5L, null));
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-5L, null, null, null, null));
 
         // when
         List<Long> values = LongStream.range(0, 20)
@@ -81,8 +81,111 @@ class LongGeneratorTest {
     }
 
     @Test
+    void exclusiveMinimumExcludesBound() {
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, 10L, 5L, null, null));
+
+        // when
+        List<Long> values = LongStream.range(0, 100)
+                .map(i -> generator.generate())
+                .boxed()
+                .toList();
+
+        // then
+        assertThat(values).allMatch(v -> v > 5 && v <= 10);
+        assertThat(values).contains(6L, 10L);
+    }
+
+    @Test
+    void exclusiveMaximumExcludesBound() {
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-10L, null, null, 5L, null));
+
+        // when
+        List<Long> values = LongStream.range(0, 100)
+                .map(i -> generator.generate())
+                .boxed()
+                .toList();
+
+        // then
+        assertThat(values).allMatch(v -> v >= -10 && v < 5);
+        assertThat(values).contains(-10L, 4L);
+    }
+
+    @Test
+    void exclusiveBoundsOnlyCoversBoundaryValues() {
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, null, -10L, 10L, null));
+
+        // when
+        List<Long> values = LongStream.range(0, 20)
+                .map(i -> generator.generate())
+                .boxed()
+                .toList();
+
+        // then
+        assertThat(values).allMatch(v -> v > -10 && v < 10);
+        assertThat(values).contains(-9L, 9L, 0L, -8L, 8L);
+    }
+
+    @Test
+    void multipleOfAllValuesAreMultiples() {
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, null, null, null, 7L));
+
+        // when
+        List<Long> values = LongStream.range(0, 100)
+                .map(i -> generator.generate())
+                .boxed()
+                .toList();
+
+        // then
+        assertThat(values).allMatch(v -> v % 7 == 0);
+    }
+
+    @Test
+    void multipleOfWithBoundsCoversBoundaryMultiples() {
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-20L, 20L, null, null, 7L));
+
+        // when
+        List<Long> values = LongStream.range(0, 20)
+                .map(i -> generator.generate())
+                .boxed()
+                .toList();
+
+        // then
+        assertThat(values).allMatch(v -> v >= -20 && v <= 20 && v % 7 == 0);
+        assertThat(values).contains(-14L, 14L, 0L);
+    }
+
+    @Test
+    void multipleOfWithBoundsAllValuesValid() {
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-20L, 20L, null, null, 7L));
+
+        // when
+        List<Long> values = LongStream.range(0, 100)
+                .map(i -> generator.generate())
+                .boxed()
+                .toList();
+
+        // then
+        assertThat(values).allMatch(v -> v >= -20 && v <= 20 && v % 7 == 0);
+    }
+
+    @Test
+    void multipleOfWithExclusiveBounds() {
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, null, -15L, 15L, 7L));
+
+        // when
+        List<Long> values = LongStream.range(0, 100)
+                .map(i -> generator.generate())
+                .boxed()
+                .toList();
+
+        // then
+        assertThat(values).allMatch(v -> v > -15 && v < 15 && v % 7 == 0);
+        assertThat(values).contains(-14L, 14L, 0L);
+    }
+
+    @Test
     void maxOnlyCoversBoundaryValues() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, 5L));
+        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, 5L, null, null, null));
 
         // when
         List<Long> values = LongStream.range(0, 20)

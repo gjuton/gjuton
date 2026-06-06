@@ -7,12 +7,12 @@ Extend integer generation to support `exclusiveMinimum`,
 
 ## Acceptance criteria
 
-- [ ] `exclusiveMinimum` and `exclusiveMaximum` are respected
-- [ ] `multipleOf` produces values that are multiples of the given number
-- [ ] Boundary values are covered across repeated calls where applicable
-- [ ] Integration tests validate output against constrained schemas
-- [ ] Unit tests cover each constraint in isolation
-- [ ] `mvn test` passes
+- [x] `exclusiveMinimum` and `exclusiveMaximum` are respected
+- [x] `multipleOf` produces values that are multiples of the given number
+- [x] Boundary values are covered across repeated calls where applicable
+- [x] Integration tests validate output against constrained schemas
+- [x] Unit tests cover each constraint in isolation
+- [x] `mvn test` passes
 
 ## Blocked by
 

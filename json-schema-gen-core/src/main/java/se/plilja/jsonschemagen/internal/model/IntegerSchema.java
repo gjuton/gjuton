@@ -13,4 +13,7 @@ public final class IntegerSchema extends Schema {
 
     private Long minimum;
     private Long maximum;
+    private Long exclusiveMinimum;
+    private Long exclusiveMaximum;
+    private Long multipleOf;
 }
