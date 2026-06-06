@@ -27,6 +27,7 @@
         <networknt.version>1.5.6</networknt.version>
         <assertj.version>3.27.3</assertj.version>
         <lombok.version>1.18.46</lombok.version>
+        <rgxgen.version>2.0</rgxgen.version>
     </properties>
 
     <dependencyManagement>
@@ -59,6 +60,11 @@
                 <artifactId>assertj-core</artifactId>
                 <version>${assertj.version}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.github.curious-odd-man</groupId>
+                <artifactId>rgxgen</artifactId>
+                <version>${rgxgen.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

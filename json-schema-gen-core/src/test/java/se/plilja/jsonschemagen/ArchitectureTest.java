@@ -37,4 +37,10 @@ class ArchitectureTest {
                         )
                         .should().dependOnClassesThat().resideInAPackage("com.fasterxml.jackson..");
 
+        @ArchTest
+        static final ArchRule rgxgenOnlyInGenerator = noClasses()
+                        .that().resideInAPackage("se.plilja.jsonschemagen..")
+                        .and().resideOutsideOfPackage("se.plilja.jsonschemagen.internal.generator..")
+                        .should().dependOnClassesThat().resideInAPackage("com.github.curiousoddman.rgxgen..");
+
 }
