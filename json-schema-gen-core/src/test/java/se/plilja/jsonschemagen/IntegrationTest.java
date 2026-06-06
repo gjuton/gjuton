@@ -24,46 +24,46 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class IntegrationTest {
 
-  private static final JsonSchemaFactory FACTORY =
-      JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
+    private static final JsonSchemaFactory FACTORY =
+            JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
 
-  static List<Arguments> parameters() throws IOException, URISyntaxException {
-    Path schemasDir = Paths.get(
-        IntegrationTest.class.getClassLoader().getResource("schemas").toURI());
-    try (Stream<Path> files = Files.list(schemasDir)) {
-      return files
-          .filter(p -> p.toString().endsWith(".json"))
-          .flatMap(p -> {
-            String name = p.getFileName().toString();
-            String content;
-            try {
-              content = Files.readString(p);
-            } catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-            return IntStream.range(1, 21)
-                .mapToObj(i -> Arguments.of(name, content, i));
-          })
-          .toList();
-    }
-  }
-
-  @ParameterizedTest(name = "{0} invocation={2}")
-  @MethodSource("parameters")
-  void generatesValidJson(String schemaName, String schemaContent, int invocation) {
-    var gen = JsonSchemaGenerator.of(schemaContent);
-
-    // when
-    String json = null;
-    for (int i = 0; i < invocation; i++) {
-      json = gen.generate();
+    static List<Arguments> parameters() throws IOException, URISyntaxException {
+        Path schemasDir = Paths.get(
+                IntegrationTest.class.getClassLoader().getResource("schemas").toURI());
+        try (Stream<Path> files = Files.list(schemasDir)) {
+            return files
+                    .filter(p -> p.toString().endsWith(".json"))
+                    .flatMap(p -> {
+                        String name = p.getFileName().toString();
+                        String content;
+                        try {
+                            content = Files.readString(p);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                        return IntStream.range(1, 21)
+                                .mapToObj(i -> Arguments.of(name, content, i));
+                    })
+                    .toList();
+        }
     }
 
-    // then
-    Set<ValidationMessage> errors = FACTORY.getSchema(schemaContent)
-        .validate(json, InputFormat.JSON);
-    assertThat(errors)
-        .as("%s invocation=%d", schemaName, invocation)
-        .isEmpty();
-  }
+    @ParameterizedTest(name = "{0} invocation={2}")
+    @MethodSource("parameters")
+    void generatesValidJson(String schemaName, String schemaContent, int invocation) {
+        var gen = JsonSchemaGenerator.of(schemaContent);
+
+        // when
+        String json = null;
+        for (int i = 0; i < invocation; i++) {
+            json = gen.generate();
+        }
+
+        // then
+        Set<ValidationMessage> errors = FACTORY.getSchema(schemaContent)
+                .validate(json, InputFormat.JSON);
+        assertThat(errors)
+                .as("%s invocation=%d", schemaName, invocation)
+                .isEmpty();
+    }
 }

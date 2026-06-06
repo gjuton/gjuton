@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class IntegerSchema extends Schema {
 
-  private Long minimum;
-  private Long maximum;
+    private Long minimum;
+    private Long maximum;
 }

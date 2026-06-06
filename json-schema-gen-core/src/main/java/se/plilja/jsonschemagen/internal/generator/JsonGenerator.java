@@ -7,17 +7,17 @@ import se.plilja.jsonschemagen.internal.model.StringSchema;
 
 public final class JsonGenerator {
 
-  private final PhaseGenerator<?, ?> delegate;
+    private final PhaseGenerator<?, ?> delegate;
 
-  public JsonGenerator(Long seed, Schema schema) {
-    Random random = seed != null ? new Random(seed) : new Random();
-    this.delegate = switch (schema) {
-      case StringSchema s -> new StringGenerator(random, s);
-      case IntegerSchema s -> new LongGenerator(random, s);
-    };
-  }
+    public JsonGenerator(Long seed, Schema schema) {
+        Random random = seed != null ? new Random(seed) : new Random();
+        this.delegate = switch (schema) {
+            case StringSchema s -> new StringGenerator(random, s);
+            case IntegerSchema s -> new LongGenerator(random, s);
+        };
+    }
 
-  public Object generate() {
-    return delegate.generate();
-  }
+    public Object generate() {
+        return delegate.generate();
+    }
 }

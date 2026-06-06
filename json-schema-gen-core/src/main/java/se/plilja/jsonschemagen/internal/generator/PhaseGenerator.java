@@ -4,26 +4,26 @@ import java.util.Optional;
 
 abstract class PhaseGenerator<E extends Enum<E>, R> {
 
-  private E phase;
+    private E phase;
 
-  PhaseGenerator(Class<E> phaseClass) {
-    this.phase = GenerationPhaseUtil.first(phaseClass);
-  }
-
-  R generate() {
-    while (true) {
-      Optional<R> result = generatePhase(phase);
-      E prev = phase;
-      phase = GenerationPhaseUtil.advanceToNext(phase);
-      if (result.isPresent()) {
-        return result.get();
-      }
-      if (prev == phase) {
-        // We reached the end of the phases but were unable to generate any value
-        throw new IllegalStateException("No applicable phase found");
-      }
+    PhaseGenerator(Class<E> phaseClass) {
+        this.phase = GenerationPhaseUtil.first(phaseClass);
     }
-  }
 
-  protected abstract Optional<R> generatePhase(E phase);
+    R generate() {
+        while (true) {
+            Optional<R> result = generatePhase(phase);
+            E prev = phase;
+            phase = GenerationPhaseUtil.advanceToNext(phase);
+            if (result.isPresent()) {
+                return result.get();
+            }
+            if (prev == phase) {
+                // We reached the end of the phases but were unable to generate any value
+                throw new IllegalStateException("No applicable phase found");
+            }
+        }
+    }
+
+    protected abstract Optional<R> generatePhase(E phase);
 }

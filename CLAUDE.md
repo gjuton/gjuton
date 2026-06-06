@@ -73,8 +73,8 @@ no longer match the implementation.
 
 ## Code style
 
-Google Java Style Guide, enforced by Checkstyle (`checkstyle:check` runs on `mvn verify`).
-Use 2-space indentation. Violations fail the build.
+Google Java Style Guide (modified), enforced by Checkstyle (`checkstyle:check` runs on `mvn verify`).
+Use 4-space indentation, 160-char line length. Violations fail the build.
 
 ## Test conventions
 
