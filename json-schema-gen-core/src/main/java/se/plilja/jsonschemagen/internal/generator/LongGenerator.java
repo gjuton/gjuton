@@ -1,8 +1,9 @@
 package se.plilja.jsonschemagen.internal.generator;
 
 import static se.plilja.jsonschemagen.internal.generator.FunctionalUtil.coalesce;
+import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result;
+import static se.plilja.jsonschemagen.internal.generator.GenerationResult.skip;
 
-import java.util.Optional;
 import java.util.Random;
 import se.plilja.jsonschemagen.internal.model.IntegerSchema;
 
@@ -27,37 +28,37 @@ final class LongGenerator extends PhaseGenerator<LongGenerator.GenerationPhase, 
     }
 
     @Override
-    protected Optional<Long> generatePhase(GenerationPhase phase) {
+    protected GenerationResult<Long> generatePhase(GenerationPhase phase) {
         return switch (phase) {
-            case MIN -> Optional.ofNullable(schema.getMinimum());
-            case MAX -> Optional.ofNullable(schema.getMaximum());
+            case MIN -> schema.getMinimum() != null ? result(schema.getMinimum()) : skip();
+            case MAX -> schema.getMaximum() != null ? result(schema.getMaximum()) : skip();
             // TODO consider generating boundary values even when min/max are not declared
             case ZERO -> {
                 if (!isInRange(0)) {
-                    yield Optional.empty();
+                    yield skip();
                 }
                 // Skip when 0 equals min or max since those phases already emit it
                 if (Long.valueOf(0).equals(schema.getMinimum())
                         || Long.valueOf(0).equals(schema.getMaximum())) {
-                    yield Optional.empty();
+                    yield skip();
                 }
-                yield Optional.of(0L);
+                yield result(0L);
             }
             case NEAR_MIN -> {
                 if (schema.getMinimum() == null) {
-                    yield Optional.empty();
+                    yield skip();
                 }
                 long nearMin = schema.getMinimum() + 1;
-                yield isInRange(nearMin) ? Optional.of(nearMin) : Optional.empty();
+                yield isInRange(nearMin) ? result(nearMin) : skip();
             }
             case NEAR_MAX -> {
                 if (schema.getMaximum() == null) {
-                    yield Optional.empty();
+                    yield skip();
                 }
                 long nearMax = schema.getMaximum() - 1;
-                yield isInRange(nearMax) ? Optional.of(nearMax) : Optional.empty();
+                yield isInRange(nearMax) ? result(nearMax) : skip();
             }
-            case RANDOM -> Optional.of(randomLong());
+            case RANDOM -> result(randomLong());
         };
     }
 

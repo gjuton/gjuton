@@ -6,9 +6,9 @@ Implement generation for `{"type": "null"}` schemas.
 
 ## Acceptance criteria
 
-- [ ] `{"type": "null"}` generates a JSON `null` value
-- [ ] Integration test validates output against the schema
-- [ ] `mvn test` passes
+- [x] `{"type": "null"}` generates a JSON `null` value
+- [x] Integration test validates output against the schema
+- [x] `mvn test` passes
 
 ## Blocked by
 

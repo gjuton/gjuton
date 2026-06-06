@@ -1,6 +1,7 @@
 package se.plilja.jsonschemagen.internal.generator;
 
-import java.util.Optional;
+import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result;
+
 import java.util.Random;
 
 final class BooleanGenerator extends PhaseGenerator<BooleanGenerator.GenerationPhase, Boolean> {
@@ -17,8 +18,8 @@ final class BooleanGenerator extends PhaseGenerator<BooleanGenerator.GenerationP
     }
 
     @Override
-    protected Optional<Boolean> generatePhase(GenerationPhase phase) {
-        return Optional.of(switch (phase) {
+    protected GenerationResult<Boolean> generatePhase(GenerationPhase phase) {
+        return result(switch (phase) {
             case FALSE -> false;
             case TRUE -> true;
             case RANDOM -> random.nextBoolean();

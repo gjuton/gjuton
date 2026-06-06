@@ -1,6 +1,7 @@
 package se.plilja.jsonschemagen.internal.generator;
 
-import java.util.Optional;
+import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result;
+
 import java.util.Random;
 import se.plilja.jsonschemagen.internal.model.StringSchema;
 
@@ -21,8 +22,8 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
     }
 
     @Override
-    protected Optional<String> generatePhase(GenerationPhase phase) {
-        return Optional.of(switch (phase) {
+    protected GenerationResult<String> generatePhase(GenerationPhase phase) {
+        return result(switch (phase) {
             case EMPTY -> "";
             case RANDOM -> randomString();
         });

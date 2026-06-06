@@ -1,7 +1,5 @@
 package se.plilja.jsonschemagen.internal.generator;
 
-import java.util.Optional;
-
 abstract class PhaseGenerator<E extends Enum<E>, R> {
 
     private E phase;
@@ -12,11 +10,11 @@ abstract class PhaseGenerator<E extends Enum<E>, R> {
 
     R generate() {
         while (true) {
-            Optional<R> result = generatePhase(phase);
+            GenerationResult<R> result = generatePhase(phase);
             E prev = phase;
             phase = GenerationPhaseUtil.advanceToNext(phase);
-            if (result.isPresent()) {
-                return result.get();
+            if (result instanceof GenerationResult.Present<R> present) {
+                return present.value();
             }
             if (prev == phase) {
                 // We reached the end of the phases but were unable to generate any value
@@ -25,5 +23,5 @@ abstract class PhaseGenerator<E extends Enum<E>, R> {
         }
     }
 
-    protected abstract Optional<R> generatePhase(E phase);
+    protected abstract GenerationResult<R> generatePhase(E phase);
 }
