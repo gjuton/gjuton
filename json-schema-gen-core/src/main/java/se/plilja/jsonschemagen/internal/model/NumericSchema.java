@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor(staticName = "of")
 @JsonIgnoreProperties(ignoreUnknown = true)
-public final class IntegerSchema extends Schema {
+public final class NumericSchema extends Schema {
 
     private Long minimum;
     private Long maximum;

@@ -7,13 +7,13 @@ import java.util.Random;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
-import se.plilja.jsonschemagen.internal.model.IntegerSchema;
+import se.plilja.jsonschemagen.internal.model.NumericSchema;
 
-class LongGeneratorTest {
+class NumericGeneratorTest {
 
     @Test
     void unconstrainedFirstCallProducesZero() {
-        var generator = new LongGenerator(new Random(42), new IntegerSchema());
+        var generator = new NumericGenerator(new Random(42), new NumericSchema());
 
         // when
         long result = generator.generate();
@@ -24,7 +24,7 @@ class LongGeneratorTest {
 
     @Test
     void unconstrainedSubsequentCallsProduceVariedValues() {
-        var generator = new LongGenerator(new Random(42), new IntegerSchema());
+        var generator = new NumericGenerator(new Random(42), new NumericSchema());
         generator.generate();
 
         // when
@@ -39,7 +39,7 @@ class LongGeneratorTest {
 
     @Test
     void boundedCoversBoundaryValues() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-10L, 10L, null, null, null));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(-10L, 10L, null, null, null));
 
         // when
         List<Long> values = LongStream.range(0, 20)
@@ -53,7 +53,7 @@ class LongGeneratorTest {
 
     @Test
     void boundedAllValuesWithinRange() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-10L, 10L, null, null, null));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(-10L, 10L, null, null, null));
 
         // when
         List<Long> values = LongStream.range(0, 100)
@@ -67,7 +67,7 @@ class LongGeneratorTest {
 
     @Test
     void minOnlyCoversBoundaryValues() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-5L, null, null, null, null));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(-5L, null, null, null, null));
 
         // when
         List<Long> values = LongStream.range(0, 20)
@@ -82,7 +82,7 @@ class LongGeneratorTest {
 
     @Test
     void exclusiveMinimumExcludesBound() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, 10L, 5L, null, null));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(null, 10L, 5L, null, null));
 
         // when
         List<Long> values = LongStream.range(0, 100)
@@ -97,7 +97,7 @@ class LongGeneratorTest {
 
     @Test
     void exclusiveMaximumExcludesBound() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-10L, null, null, 5L, null));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(-10L, null, null, 5L, null));
 
         // when
         List<Long> values = LongStream.range(0, 100)
@@ -112,7 +112,7 @@ class LongGeneratorTest {
 
     @Test
     void exclusiveBoundsOnlyCoversBoundaryValues() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, null, -10L, 10L, null));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(null, null, -10L, 10L, null));
 
         // when
         List<Long> values = LongStream.range(0, 20)
@@ -127,7 +127,7 @@ class LongGeneratorTest {
 
     @Test
     void multipleOfAllValuesAreMultiples() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, null, null, null, 7L));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(null, null, null, null, 7L));
 
         // when
         List<Long> values = LongStream.range(0, 100)
@@ -141,7 +141,7 @@ class LongGeneratorTest {
 
     @Test
     void multipleOfWithBoundsCoversBoundaryMultiples() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-20L, 20L, null, null, 7L));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(-20L, 20L, null, null, 7L));
 
         // when
         List<Long> values = LongStream.range(0, 20)
@@ -156,7 +156,7 @@ class LongGeneratorTest {
 
     @Test
     void multipleOfWithBoundsAllValuesValid() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(-20L, 20L, null, null, 7L));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(-20L, 20L, null, null, 7L));
 
         // when
         List<Long> values = LongStream.range(0, 100)
@@ -170,7 +170,7 @@ class LongGeneratorTest {
 
     @Test
     void multipleOfWithExclusiveBounds() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, null, -15L, 15L, 7L));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(null, null, -15L, 15L, 7L));
 
         // when
         List<Long> values = LongStream.range(0, 100)
@@ -185,7 +185,7 @@ class LongGeneratorTest {
 
     @Test
     void maxOnlyCoversBoundaryValues() {
-        var generator = new LongGenerator(new Random(42), IntegerSchema.of(null, 5L, null, null, null));
+        var generator = new NumericGenerator(new Random(42), NumericSchema.of(null, 5L, null, null, null));
 
         // when
         List<Long> values = LongStream.range(0, 20)

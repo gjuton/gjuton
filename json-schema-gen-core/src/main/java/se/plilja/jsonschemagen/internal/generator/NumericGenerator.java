@@ -4,12 +4,12 @@ import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result
 import static se.plilja.jsonschemagen.internal.generator.GenerationResult.skip;
 
 import java.util.Random;
-import se.plilja.jsonschemagen.internal.model.IntegerSchema;
+import se.plilja.jsonschemagen.internal.model.NumericSchema;
 
-final class LongGenerator extends PhaseGenerator<LongGenerator.GenerationPhase, Long> {
+final class NumericGenerator extends PhaseGenerator<NumericGenerator.GenerationPhase, Long> {
 
     private final Random random;
-    private final IntegerSchema schema;
+    private final NumericSchema schema;
 
     enum GenerationPhase {
         MIN,
@@ -20,7 +20,7 @@ final class LongGenerator extends PhaseGenerator<LongGenerator.GenerationPhase, 
         RANDOM
     }
 
-    LongGenerator(Random random, IntegerSchema schema) {
+    NumericGenerator(Random random, NumericSchema schema) {
         super(GenerationPhase.class);
         this.random = random;
         this.schema = schema;

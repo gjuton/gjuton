@@ -12,11 +12,11 @@ import lombok.Getter;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = UntypedSchema.class)
 @JsonSubTypes({
         @JsonSubTypes.Type(value = StringSchema.class, name = "string"),
-        @JsonSubTypes.Type(value = IntegerSchema.class, name = "integer"),
+        @JsonSubTypes.Type(value = NumericSchema.class, name = "integer"),
         @JsonSubTypes.Type(value = BooleanSchema.class, name = "boolean"),
         @JsonSubTypes.Type(value = NullSchema.class, name = "null"),
 })
-public abstract sealed class Schema permits StringSchema, IntegerSchema, BooleanSchema, NullSchema, UntypedSchema {
+public abstract sealed class Schema permits StringSchema, NumericSchema, BooleanSchema, NullSchema, UntypedSchema {
 
     @JsonProperty("enum")
     private List<Object> enumValues;
