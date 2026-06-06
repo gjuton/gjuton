@@ -12,7 +12,7 @@ abstract class PhaseGenerator<E extends Enum<E>, R> {
         while (true) {
             GenerationResult<R> result = generatePhase(phase);
             E prev = phase;
-            phase = GenerationPhaseUtil.advanceToNext(phase);
+            phase = advanceToNext(phase);
             if (result instanceof GenerationResult.Present<R> present) {
                 return present.value();
             }
@@ -21,6 +21,10 @@ abstract class PhaseGenerator<E extends Enum<E>, R> {
                 throw new IllegalStateException("No applicable phase found");
             }
         }
+    }
+
+    protected E advanceToNext(E current) {
+        return GenerationPhaseUtil.advanceToNext(current);
     }
 
     protected abstract GenerationResult<R> generatePhase(E phase);

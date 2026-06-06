@@ -7,13 +7,13 @@ calls every value in the enum must be produced.
 
 ## Acceptance criteria
 
-- [ ] A schema with `enum` generates one of the listed values
-- [ ] Across N repeated calls all enum values are produced
-- [ ] Works for enums containing mixed types (string, integer, boolean,
+- [x] A schema with `enum` generates one of the listed values
+- [x] Across N repeated calls all enum values are produced
+- [x] Works for enums containing mixed types (string, integer, boolean,
       null)
-- [ ] Integration test validates output against the schema
-- [ ] Unit tests cover exhaustiveness in isolation
-- [ ] `mvn test` passes
+- [x] Integration test validates output against the schema
+- [x] Unit tests cover exhaustiveness in isolation
+- [x] `mvn test` passes
 
 ## Blocked by
 

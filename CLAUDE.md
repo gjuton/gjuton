@@ -28,6 +28,14 @@ Public API accepts a schema as a `String`, `File`, or `InputStream`.
 It returns a plain `String`. No third-party types are exposed.
 Convenience overloads write to `OutputStream`, `Writer`, or `File`.
 
+## Schema model design
+
+Cross-cutting JSON Schema keywords (`enum`, `const`, `if`/`then`/`else`,
+combining keywords) are fields on the `Schema` base class, not separate
+schema types. Type-specific properties (e.g. `minimum` for integers) live
+on concrete subclasses. The generator checks cross-cutting keywords before
+type-based dispatch.
+
 ## Generation strategy
 
 The generator prioritises values that are likely to expose bugs in the
