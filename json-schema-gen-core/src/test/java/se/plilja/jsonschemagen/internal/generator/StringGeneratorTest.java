@@ -10,10 +10,10 @@ class StringGeneratorTest {
 
   @Test
   void firstCallProducesEmptyString() {
-    var generator = new StringGenerator(new Random(42));
+    var generator = new StringGenerator(new Random(42), new StringSchema());
 
     // when
-    String result = generator.generate(new StringSchema());
+    String result = generator.generate();
 
     // then
     assertThat(result).isEmpty();
@@ -21,13 +21,12 @@ class StringGeneratorTest {
 
   @Test
   void subsequentCallsProduceNonEmptyStrings() {
-    var generator = new StringGenerator(new Random(42));
-    var schema = new StringSchema();
-    generator.generate(schema);
+    var generator = new StringGenerator(new Random(42), new StringSchema());
+    generator.generate();
 
     // when
-    String second = generator.generate(schema);
-    String third = generator.generate(schema);
+    String second = generator.generate();
+    String third = generator.generate();
 
     // then
     assertThat(second).isNotEmpty();

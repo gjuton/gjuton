@@ -8,6 +8,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes({
     @JsonSubTypes.Type(value = StringSchema.class, name = "string"),
+    @JsonSubTypes.Type(value = IntegerSchema.class, name = "integer"),
 })
-public abstract sealed class Schema permits StringSchema {
+public abstract sealed class Schema permits StringSchema, IntegerSchema {
 }

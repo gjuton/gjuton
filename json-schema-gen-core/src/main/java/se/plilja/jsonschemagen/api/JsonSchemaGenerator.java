@@ -44,7 +44,7 @@ public final class JsonSchemaGenerator {
     this.parsedSchema = parsedSchema;
     this.seed = seed;
     this.pins = pins;
-    this.generator = new JsonGenerator(seed);
+    this.generator = new JsonGenerator(seed, parsedSchema);
   }
 
   /**
@@ -123,7 +123,7 @@ public final class JsonSchemaGenerator {
    * Generates a valid JSON value for the configured schema.
    */
   public String generate() {
-    Object generated = generator.generate(parsedSchema);
+    Object generated = generator.generate();
     return JsonSerializer.serialize(generated);
   }
 

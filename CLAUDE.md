@@ -28,6 +28,14 @@ Public API accepts a schema as a `String`, `File`, or `InputStream`.
 It returns a plain `String`. No third-party types are exposed.
 Convenience overloads write to `OutputStream`, `Writer`, or `File`.
 
+## Generation strategy
+
+The generator prioritises values that are likely to expose bugs in the
+system under test. For each type, deterministic "trouble-prone" values
+are emitted first (e.g. empty string for strings; min, max, zero for
+integers), followed by random valid values. This is what "boundary-value
+exhaustiveness" means in issue acceptance criteria.
+
 ## Package conventions
 
 ```
@@ -67,3 +75,12 @@ no longer match the implementation.
 
 Google Java Style Guide, enforced by Checkstyle (`checkstyle:check` runs on `mvn verify`).
 Use 2-space indentation. Violations fail the build.
+
+## Test conventions
+
+Use `// when` and `// then` comments to separate test phases.
+
+## Workflow
+
+- Never commit unless explicitly told to commit.
+- Never start implementing unless explicitly told to start.
