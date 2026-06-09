@@ -7,6 +7,8 @@ import com.networknt.schema.ValidationMessage;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import se.plilja.jsonschemagen.api.JsonSchemaGenerator;
 
@@ -26,10 +28,16 @@ class IntegrationTest {
 
     private static final int ITERATIONS = 1000;
 
+    private static final long DEFAULT_SEED = 42L;
+
+    private static final Logger LOG = LoggerFactory.getLogger(IntegrationTest.class);
+
     private static final JsonSchemaFactory FACTORY =
             JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V7);
 
     static List<Arguments> parameters() throws IOException, URISyntaxException {
+        long seed = resolveSeed();
+        LOG.info("IntegrationTest seed: {} (override with -Dtest.seed=<long>)", seed);
         Path schemasDir = Paths.get(
                 IntegrationTest.class.getClassLoader().getResource("schemas").toURI());
         List<Path> schemaFiles;
@@ -45,7 +53,7 @@ class IntegrationTest {
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }
-                    var gen = JsonSchemaGenerator.of(content);
+                    var gen = JsonSchemaGenerator.of(content).withSeed(seed);
                     var args = new ArrayList<Arguments>(ITERATIONS);
                     for (int i = 1; i <= ITERATIONS; i++) {
                         args.add(Arguments.of(name, content, i, gen.generate()));
@@ -53,6 +61,14 @@ class IntegrationTest {
                     return args.stream();
                 })
                 .toList();
+    }
+
+    private static long resolveSeed() {
+        String value = System.getProperty("test.seed");
+        if (value == null || value.equals("random")) {
+            return DEFAULT_SEED;
+        }
+        return Long.parseLong(value);
     }
 
     @ParameterizedTest(name = "{0} invocation={2}")

@@ -95,6 +95,28 @@ class SchemaParserTest {
     }
 
     @Test
+    void refInsideArrayElementIsCollected() {
+        // $ref lives as an element of a JSON array (oneOf), not as a property
+        // value. Exercises the array-recursion branch of collectRefs.
+        var document = SchemaParser.parse("""
+                {
+                    "oneOf": [
+                        {"$ref": "#/definitions/Tag"}
+                    ],
+                    "definitions": {
+                        "Tag": {"type": "string"}
+                    }
+                }
+                """);
+
+        // when
+        var resolved = document.resolveRef("#/definitions/Tag");
+
+        // then
+        assertThat(resolved).isNotNull();
+    }
+
+    @Test
     void refNestedDeepInsideObjectPropertyIsCollected() {
         var document = SchemaParser.parse("""
                 {

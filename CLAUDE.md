@@ -113,4 +113,12 @@ Use `// when` and `// then` comments to separate test phases.
 ## Workflow
 
 - Never commit unless explicitly told to commit.
-- Never start implementing unless explicitly told to start.
+- Never start implementing unless explicitly told to start. The user
+  answering scope, design, or clarifying questions is NOT a green light —
+  it refines the plan, nothing more. Wait for an explicit imperative
+  ("go", "start", "implement it", "do it", "proceed") before any
+  state-changing tool use: `TaskCreate`, `Edit`, `Write`, or `Bash` that
+  mutates the working tree. `Read`, `Grep`, and other read-only
+  exploration are fine while planning. If you're unsure whether you have
+  the green light, you don't — present the plan, ask "ready to start?",
+  and wait.

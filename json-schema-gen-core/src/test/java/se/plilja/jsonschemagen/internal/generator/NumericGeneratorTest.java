@@ -214,4 +214,76 @@ class NumericGeneratorTest {
         assertThat(values).contains(5L, 0L, 4L);
         assertThat(values).allMatch(v -> v <= 5);
     }
+
+    @Test
+    void minimumAndExclusiveMinimumTakeTighterBound() {
+        // Both inclusive and exclusive lower bounds set — effective floor is max(0, 10+1) = 11.
+        var generator = new NumericGenerator(withSeed(42),
+                NumericSchema.builder().minimum(0L).exclusiveMinimum(10L).maximum(20L).build());
+
+        // when
+        List<Long> values = LongStream.range(0, 100)
+                .map(i -> generator.generate())
+                .boxed()
+                .toList();
+
+        // then
+        assertThat(values).allMatch(v -> v > 10 && v <= 20);
+        assertThat(values).contains(11L, 20L);
+    }
+
+    @Test
+    void maximumAndExclusiveMaximumTakeTighterBound() {
+        // Both inclusive and exclusive upper bounds set — effective ceiling is min(20, 10-1) = 9.
+        var generator = new NumericGenerator(withSeed(42),
+                NumericSchema.builder().minimum(0L).maximum(20L).exclusiveMaximum(10L).build());
+
+        // when
+        List<Long> values = LongStream.range(0, 100)
+                .map(i -> generator.generate())
+                .boxed()
+                .toList();
+
+        // then
+        assertThat(values).allMatch(v -> v >= 0 && v < 10);
+        assertThat(values).contains(0L, 9L);
+    }
+
+    @Test
+    void randomPhaseCoversEntireBoundedRange() {
+        // The deterministic phases (MIN, MAX, NEAR_*) emit each boundary exactly once.
+        // High counts (>50 in 1000 iterations) for both 0 and 3 prove the RANDOM phase
+        // itself reaches the upper bound, not just the MAX phase.
+        var generator = new NumericGenerator(withSeed(42),
+                NumericSchema.builder().minimum(0L).maximum(3L).build());
+
+        // when
+        var counts = LongStream.range(0, 1000)
+                .map(i -> generator.generate())
+                .boxed()
+                .collect(Collectors.groupingBy(v -> v, Collectors.counting()));
+
+        // then
+        assertThat(counts.get(0L)).isGreaterThan(50L);
+        assertThat(counts.get(3L)).isGreaterThan(50L);
+    }
+
+    @Test
+    void randomPhaseCoversEntireMultipleOfRange() {
+        // The deterministic phases (MIN, MAX, NEAR_*) emit each boundary multiple exactly
+        // once. High counts (>50 in 1000 iterations) for both 0 and 20 prove the RANDOM
+        // phase itself reaches the highest valid multiple, not just the MAX phase.
+        var generator = new NumericGenerator(withSeed(42),
+                NumericSchema.builder().minimum(0L).maximum(20L).multipleOf(5L).build());
+
+        // when
+        var counts = LongStream.range(0, 1000)
+                .map(i -> generator.generate())
+                .boxed()
+                .collect(Collectors.groupingBy(v -> v, Collectors.counting()));
+
+        // then
+        assertThat(counts.get(0L)).isGreaterThan(50L);
+        assertThat(counts.get(20L)).isGreaterThan(50L);
+    }
 }
