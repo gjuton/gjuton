@@ -88,9 +88,13 @@ a test case.
 
 ## Issues
 
-Issues live in `docs/issues/`. After completing work on an issue, update the
-issue file: check off acceptance criteria and revise any descriptions that
-no longer match the implementation.
+Issues live in `docs/issues/open/` and `docs/issues/closed/`. After
+completing work on an issue, check off acceptance criteria, revise any
+descriptions that no longer match the implementation, and `git mv` the
+file from `open/` into `closed/`.
+
+Issue numbers are globally unique across both folders — the next new
+issue gets the next free number regardless of which folder it lands in.
 
 ## Code style
 
