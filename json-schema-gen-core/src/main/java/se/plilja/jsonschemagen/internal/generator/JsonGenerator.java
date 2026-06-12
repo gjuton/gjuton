@@ -1,7 +1,10 @@
 package se.plilja.jsonschemagen.internal.generator;
 
 import java.util.Random;
+import se.plilja.jsonschemagen.internal.generator.format.DateGenerator;
+import se.plilja.jsonschemagen.internal.generator.format.DateTimeGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.EmailGenerator;
+import se.plilja.jsonschemagen.internal.generator.format.TimeGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.UuidGenerator;
 import se.plilja.jsonschemagen.internal.model.ArraySchema;
 import se.plilja.jsonschemagen.internal.model.BooleanSchema;
@@ -66,6 +69,9 @@ public final class JsonGenerator {
         return switch (format) {
             case EMAIL -> new EmailGenerator(context, schema);
             case UUID -> new UuidGenerator(context, schema);
+            case DATE -> new DateGenerator(context, schema);
+            case TIME -> new TimeGenerator(context, schema);
+            case DATE_TIME -> new DateTimeGenerator(context, schema);
             default -> new StringGenerator(context, schema);
         };
     }

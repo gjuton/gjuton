@@ -28,14 +28,14 @@ conforming values.
 
 ## Status
 
-`email` and `uuid` are implemented; remaining formats track here.
+`email`, `uuid`, `date`, `date-time`, and `time` are implemented; remaining formats track here.
 
 ## Acceptance criteria
 
 - [ ] Each format in the list above generates values that validate
       against a strict Draft 7 validator
       - [x] `email`
-      - [ ] `date`, `date-time`, `time`
+      - [x] `date`, `date-time`, `time`
       - [ ] `idn-email`
       - [ ] `uri`, `uri-reference`, `iri`, `iri-reference`
       - [ ] `hostname`, `idn-hostname`

@@ -134,4 +134,5 @@ class EmailGeneratorTest {
             assertThat(s.length()).isBetween(15, 25);
         });
     }
+
 }
