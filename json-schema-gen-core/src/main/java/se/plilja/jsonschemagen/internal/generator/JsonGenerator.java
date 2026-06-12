@@ -4,6 +4,9 @@ import java.util.Random;
 import se.plilja.jsonschemagen.internal.generator.format.DateGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.DateTimeGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.EmailGenerator;
+import se.plilja.jsonschemagen.internal.generator.format.HostnameGenerator;
+import se.plilja.jsonschemagen.internal.generator.format.Ipv4Generator;
+import se.plilja.jsonschemagen.internal.generator.format.Ipv6Generator;
 import se.plilja.jsonschemagen.internal.generator.format.TimeGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.UuidGenerator;
 import se.plilja.jsonschemagen.internal.model.ArraySchema;
@@ -72,6 +75,9 @@ public final class JsonGenerator {
             case DATE -> new DateGenerator(context, schema);
             case TIME -> new TimeGenerator(context, schema);
             case DATE_TIME -> new DateTimeGenerator(context, schema);
+            case HOSTNAME -> new HostnameGenerator(context, schema);
+            case IPV4 -> new Ipv4Generator(context, schema);
+            case IPV6 -> new Ipv6Generator(context, schema);
             default -> new StringGenerator(context, schema);
         };
     }
