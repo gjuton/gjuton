@@ -25,11 +25,11 @@ class UriGeneratorTest {
 
         // then
         assertThat(results).containsExactly(
-                "http://a.co",
-                "http://a.co/ahwmarnqdpaaiguewilzorarzvmgtymkshhvglpkffvdpcdvbxjsqcoqzpxbtjgjygup",
-                "https://vnnnh.us/dvoyxebbp?c=79",
-                "https://pbpzoqg.com/uvr?po=75",
-                "http://n.lwojybwq.vguihf.dev/usyuox?vrx=27");
+                "http://h.fr",
+                "https://r.qdpa.igu.fr/w/lzora/zvmg/ymkshhv/lp/ff/dpcdvbx/sqco/zpxbtj/jy/gupjfgvn",
+                "https://voyxebbpqcnhehpbpz.qg.qu.uk/vr/povsqenp/lwojyb",
+                "https://i.hf.net/wusyu/x/vrxntl/t/rtlgzh/xjgleta/gi/yutd/aifeozy/hk/rczkvi/zsfe",
+                "https://xbgtquydtqdgoyrscidn.np.vz.fr");
     }
 
     @Test

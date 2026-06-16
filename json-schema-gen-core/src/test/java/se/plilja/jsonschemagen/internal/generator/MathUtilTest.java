@@ -41,4 +41,42 @@ class MathUtilTest {
         assertThatThrownBy(() -> MathUtil.lcm(Long.MAX_VALUE / 2, 7))
                 .isInstanceOf(ArithmeticException.class);
     }
+
+    @ParameterizedTest
+    @CsvSource({
+            "5, 10, 0, 100, 5, 10",
+            "0, 100, 5, 20, 5, 20",
+            "5, 10, 0, 100, 5, 10",
+            "-5, 50, 0, 100, 0, 50",
+            "5, 200, 0, 100, 5, 100",
+            "-5, 200, 0, 100, 0, 100",
+            "50, 20, 0, 100, 50, 50",
+            "10, 10, 0, 100, 10, 10",
+    })
+    void clampRange(int min, int max, int floor, int ceiling, int expectedMin, int expectedMax) {
+        // when
+        var range = MathUtil.clampRange(min, max, floor, ceiling);
+
+        // then
+        assertThat(range.min()).isEqualTo(expectedMin);
+        assertThat(range.max()).isEqualTo(expectedMax);
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+            "-50, -10, 0, 100",
+            "200, 300, 0, 100",
+    })
+    void clampRangeRejectsNonOverlappingInput(int min, int max, int floor, int ceiling) {
+        // when / then
+        assertThatThrownBy(() -> MathUtil.clampRange(min, max, floor, ceiling))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void intRangeRejectsInvertedBounds() {
+        // when / then
+        assertThatThrownBy(() -> new MathUtil.IntRange(10, 5))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

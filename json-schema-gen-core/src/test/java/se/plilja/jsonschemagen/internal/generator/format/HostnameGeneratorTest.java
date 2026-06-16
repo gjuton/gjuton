@@ -1,8 +1,10 @@
 package se.plilja.jsonschemagen.internal.generator.format;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static se.plilja.jsonschemagen.internal.generator.TestContexts.withSeed;
 
+import java.util.Random;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import se.plilja.jsonschemagen.internal.model.StringFormat;
@@ -25,6 +27,49 @@ class HostnameGeneratorTest {
     }
 
     @Test
+    void boundedRandomHostnameProducesValidHostname() {
+        var random = new Random(42);
+
+        // when
+        var hostnames = IntStream.range(0, 50)
+                .mapToObj(i -> HostnameGenerator.randomHostname(Alphabets.EN, random, 4 + (i % 25)))
+                .toList();
+
+        // then
+        for (int i = 0; i < hostnames.size(); i++) {
+            assertThat(hostnames.get(i))
+                    .hasSize(4 + (i % 25))
+                    .matches("[a-z]+(\\.[a-z]+)+");
+        }
+    }
+
+    @Test
+    void boundedRandomHostnameRejectsLengthBelowMinReachable() {
+        var random = new Random(42);
+
+        // when / then
+        assertThatThrownBy(() -> HostnameGenerator.randomHostname(Alphabets.EN, random, 3))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void boundedRandomHostnameAtMinReachableProducesValidHostname() {
+        var random = new Random(42);
+
+        // when
+        var hostname = HostnameGenerator.randomHostname(Alphabets.EN, random, 4);
+
+        // then
+        assertThat(hostname).hasSize(4).matches("[a-z]+\\.[a-z]+");
+    }
+
+    @Test
+    void minReachableMatchesShortestTld() {
+        // then
+        assertThat(HostnameGenerator.minReachable(Alphabets.EN)).isEqualTo(4);
+    }
+
+    @Test
     void producesExpectedHostnamesForFixedSeed() {
         var schema = StringSchema.builder().format(StringFormat.HOSTNAME).build();
         var generator = new HostnameGenerator(withSeed(42), schema);
@@ -36,9 +81,9 @@ class HostnameGeneratorTest {
 
         // then
         assertThat(results).containsExactly(
-                "a.co",
-                "hwmarnqdpaaiguewilzorarzv.info",
-                "ymkshhv.lp.info",
+                "h.fr",
+                "arnqdpaaiguewilzor.rzvmgt.y.co",
+                "hhvglp.info",
                 "dpcdvbx.sqco.uk",
                 "btj.jy.fr");
     }

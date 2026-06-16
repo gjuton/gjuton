@@ -84,17 +84,53 @@ public final class HostnameGenerator extends StringFormatGenerator<HostnameGener
         return sb.toString();
     }
 
+    static String randomHostname(Alphabet alphabet, Random random, int length) {
+        if (length < minReachable(alphabet)) {
+            throw new IllegalArgumentException(
+                    "Cannot build a hostname of length " + length + " (min reachable for alphabet: "
+                            + minReachable(alphabet) + ")");
+        }
+        int spaceBeforeTld = length - 1;
+        var fittingTlds = alphabet.tlds().stream()
+                .filter(t -> spaceBeforeTld - t.length() >= MIN_RANDOM_LABEL_LEN)
+                .toList();
+        var tld = RandomUtil.randomOne(fittingTlds, random);
+        var sb = new StringBuilder(length);
+        int remaining = spaceBeforeTld - tld.length();
+        while (remaining > 0) {
+            int sep = sb.length() > 0 ? 1 : 0;
+            int budget = remaining - sep;
+            int maxLen = Math.min(MAX_LABEL_LEN, budget);
+            int labelLen;
+            if (maxLen <= 2) {
+                labelLen = maxLen;
+            } else {
+                int forbidden = budget - 1;
+                do {
+                    labelLen = random.nextInt(1, maxLen + 1);
+                } while (labelLen == forbidden);
+            }
+            if (sep > 0) {
+                sb.append('.');
+            }
+            sb.append(RandomUtil.randomStringOfLength(alphabet.chars(), labelLen, random));
+            remaining -= labelLen + sep;
+        }
+        sb.append('.').append(tld);
+        return sb.toString();
+    }
+
+    static int minReachable(Alphabet alphabet) {
+        return MIN_RANDOM_LABEL_LEN + 1 + StringUtil.shortest(alphabet.tlds()).length();
+    }
+
     private String shortHostname() {
-        var suffix = "." + StringUtil.shortest(canonical.tlds());
-        int target = Math.max(1 + suffix.length(), coalesce(schema.getMinLength(), 0));
-        int leadingLen = Math.min(MAX_LABEL_LEN, target - suffix.length());
-        return RandomUtil.randomStringOfLength(canonical.chars(), leadingLen, context.random()) + suffix;
+        int target = Math.max(minReachable(canonical), coalesce(schema.getMinLength(), 0));
+        return randomHostname(canonical, context.random(), target);
     }
 
     private String longHostname() {
-        var suffix = "." + StringUtil.longest(canonical.tlds());
-        int target = coalesce(schema.getMaxLength(), 30);
-        int leadingLen = Math.max(1, Math.min(MAX_LABEL_LEN, target - suffix.length()));
-        return RandomUtil.randomStringOfLength(canonical.chars(), leadingLen, context.random()) + suffix;
+        int target = Math.max(minReachable(canonical), coalesce(schema.getMaxLength(), 30));
+        return randomHostname(canonical, context.random(), target);
     }
 }

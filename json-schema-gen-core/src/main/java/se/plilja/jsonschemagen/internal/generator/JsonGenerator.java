@@ -11,6 +11,7 @@ import se.plilja.jsonschemagen.internal.generator.format.Ipv4Generator;
 import se.plilja.jsonschemagen.internal.generator.format.Ipv6Generator;
 import se.plilja.jsonschemagen.internal.generator.format.TimeGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.UriGenerator;
+import se.plilja.jsonschemagen.internal.generator.format.UriReferenceGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.UuidGenerator;
 import se.plilja.jsonschemagen.internal.model.ArraySchema;
 import se.plilja.jsonschemagen.internal.model.BooleanSchema;
@@ -84,6 +85,7 @@ public final class JsonGenerator {
             case IPV4 -> new Ipv4Generator(context, schema);
             case IPV6 -> new Ipv6Generator(context, schema);
             case URI -> new UriGenerator(context, schema);
+            case URI_REFERENCE -> new UriReferenceGenerator(context, schema);
             default -> new StringGenerator(context, schema);
         };
     }

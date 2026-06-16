@@ -1,26 +1,21 @@
 package se.plilja.jsonschemagen.internal.generator.format;
 
-import static se.plilja.jsonschemagen.internal.generator.FunctionalUtil.coalesce;
 import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result;
 
 import java.util.Random;
 import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 import se.plilja.jsonschemagen.internal.generator.GenerationResult;
 import se.plilja.jsonschemagen.internal.generator.GeneratorContext;
-import se.plilja.jsonschemagen.internal.generator.RandomUtil;
 import se.plilja.jsonschemagen.internal.model.StringSchema;
 
+/**
+ * Emits values for the {@code uri} format (RFC 3986). A URI is the absolute form of a URI
+ * reference; this generator delegates URI construction to
+ * {@link UriReferenceGenerator#randomAbsoluteUriOfLength(String, int, Random)} and restricts output to the
+ * absolute branch (plus a small mix of {@code mailto:} and {@code telnet://} schemes from
+ * {@link #generateCandidate()}).
+ */
 public final class UriGenerator extends StringFormatGenerator<UriGenerator.UriPhase> {
-
-    private static final int MIN_PATH_LEN = 2;
-    private static final int MAX_PATH_LEN = 10;
-    private static final int MIN_QUERY_KEY_LEN = 1;
-    private static final int MAX_QUERY_KEY_LEN = 6;
-    private static final String BARE_AUTHORITY = "http://a.co";
-    private static final int MIN_REACHABLE = BARE_AUTHORITY.length();
-    // Practical cap matching common URL field limits; keeps the unsatisfiable check finite.
-    private static final int MAX_REACHABLE = 4096;
-    private static final int DEFAULT_LONG_TARGET = 80;
 
     public enum UriPhase {
         SHORT, LONG, RANDOM
@@ -28,11 +23,15 @@ public final class UriGenerator extends StringFormatGenerator<UriGenerator.UriPh
 
     public UriGenerator(GeneratorContext context, StringSchema schema) {
         super(UriPhase.class, context, schema);
-        if (schema.getMinLength() != null && schema.getMinLength() > MAX_REACHABLE
-                || schema.getMaxLength() != null && schema.getMaxLength() < MIN_REACHABLE) {
+        if (schema.getMinLength() != null && schema.getMinLength() > UriReferenceGenerator.MAX_LENGTH) {
             throw new UnsatisfiableSchemaException(
-                    "URIs produced by this generator are between " + MIN_REACHABLE
-                            + " and " + MAX_REACHABLE + " characters; schema length bounds exclude that");
+                    "URIs produced by this generator cap at " + UriReferenceGenerator.MAX_LENGTH
+                            + " characters; schema length bounds exclude that");
+        }
+        if (schema.getMaxLength() != null && schema.getMaxLength() < UriReferenceGenerator.MIN_ABSOLUTE_URI) {
+            throw new UnsatisfiableSchemaException(
+                    "URIs produced by this generator are at least " + UriReferenceGenerator.MIN_ABSOLUTE_URI
+                            + " characters; schema maxLength excludes that");
         }
     }
 
@@ -44,29 +43,10 @@ public final class UriGenerator extends StringFormatGenerator<UriGenerator.UriPh
     @Override
     protected GenerationResult<String> generatePhase(UriPhase phase) {
         return switch (phase) {
-            case SHORT -> tryCandidate(shortUri());
-            case LONG -> tryCandidate(longUri());
+            case SHORT -> tryCandidate(UriReferenceGenerator.randomShortUri(schema, context.random()));
+            case LONG -> tryCandidate(UriReferenceGenerator.randomLongUri(schema, context.random()));
             case RANDOM -> result(randomWithRetry());
         };
-    }
-
-    private String shortUri() {
-        int target = coalesce(schema.getMinLength(), 0);
-        if (target <= BARE_AUTHORITY.length()) {
-            return BARE_AUTHORITY;
-        }
-        int pathLen = Math.max(1, target - BARE_AUTHORITY.length() - 1);
-        return BARE_AUTHORITY + "/" + RandomUtil.randomStringOfLength(Alphabets.EN.chars(), pathLen, context.random());
-    }
-
-    private String longUri() {
-        int target = Math.max(coalesce(schema.getMaxLength(), DEFAULT_LONG_TARGET),
-                coalesce(schema.getMinLength(), 0));
-        if (target <= BARE_AUTHORITY.length()) {
-            return BARE_AUTHORITY;
-        }
-        int pathLen = Math.max(1, target - BARE_AUTHORITY.length() - 1);
-        return BARE_AUTHORITY + "/" + RandomUtil.randomStringOfLength(Alphabets.EN.chars(), pathLen, context.random());
     }
 
     @Override
@@ -75,17 +55,7 @@ public final class UriGenerator extends StringFormatGenerator<UriGenerator.UriPh
         return switch (random.nextInt(10)) {
             case 0 -> "telnet://" + Ipv4Generator.randomIpv4(random) + "/";
             case 1 -> "mailto:" + EmailGenerator.randomEmail(Alphabets.EN, random);
-            case 2 -> webUri("http", random);
-            default -> webUri("https", random);
+            default -> UriReferenceGenerator.randomAbsoluteUri(schema, random);
         };
-    }
-
-    private static String webUri(String scheme, Random random) {
-        var host = HostnameGenerator.randomHostname(Alphabets.EN, random);
-        var path = RandomUtil.randomStringOfLength(Alphabets.EN.chars(),
-                random.nextInt(MIN_PATH_LEN, MAX_PATH_LEN + 1), random);
-        var key = RandomUtil.randomStringOfLength(Alphabets.EN.chars(),
-                random.nextInt(MIN_QUERY_KEY_LEN, MAX_QUERY_KEY_LEN + 1), random);
-        return scheme + "://" + host + "/" + path + "?" + key + "=" + random.nextInt(100);
     }
 }
