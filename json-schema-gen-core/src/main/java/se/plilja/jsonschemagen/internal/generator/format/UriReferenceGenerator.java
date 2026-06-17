@@ -5,6 +5,7 @@ import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result
 import static se.plilja.jsonschemagen.internal.generator.GenerationResult.skip;
 import static se.plilja.jsonschemagen.internal.generator.MathUtil.clampRange;
 
+import java.util.List;
 import java.util.Random;
 import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 import se.plilja.jsonschemagen.internal.generator.GenerationResult;
@@ -22,8 +23,6 @@ import se.plilja.jsonschemagen.internal.model.StringSchema;
 public final class UriReferenceGenerator extends StringFormatGenerator<UriReferenceGenerator.UriReferencePhase> {
 
     static final int MAX_LENGTH = 4096;
-    static final int MIN_ABSOLUTE_URI = "http://".length() + HostnameGenerator.minReachable(Alphabets.EN);
-    static final int MIN_ABSOLUTE_HTTPS_URI = "https://".length() + HostnameGenerator.minReachable(Alphabets.EN);
 
     private static final int MAX_SEGMENT_LEN = 8;
     private static final int DEFAULT_LONG_TARGET = 80;
@@ -33,8 +32,17 @@ public final class UriReferenceGenerator extends StringFormatGenerator<UriRefere
         EMPTY, RELATIVE, ABSOLUTE, RANDOM
     }
 
+    private final List<Alphabet> alphabets;
+    private final int minAbsolute;
+
     public UriReferenceGenerator(GeneratorContext context, StringSchema schema) {
+        this(context, schema, List.of(Alphabets.EN));
+    }
+
+    UriReferenceGenerator(GeneratorContext context, StringSchema schema, List<Alphabet> alphabets) {
         super(UriReferencePhase.class, context, schema);
+        this.alphabets = alphabets;
+        this.minAbsolute = "http://".length() + alphabets.stream().mapToInt(HostnameGenerator::minReachable).min().orElseThrow();
         if (schema.getMinLength() != null && schema.getMinLength() > MAX_LENGTH) {
             throw new UnsatisfiableSchemaException(
                     "URI references produced by this generator cap at " + MAX_LENGTH
@@ -49,9 +57,10 @@ public final class UriReferenceGenerator extends StringFormatGenerator<UriRefere
 
     @Override
     protected GenerationResult<String> generatePhase(UriReferencePhase phase) {
+        var alphabet = RandomUtil.randomOne(alphabets, context.random());
         return switch (phase) {
             case EMPTY -> tryCandidate("");
-            case RELATIVE -> tryCandidate(randomRelativePath(schema, context.random()));
+            case RELATIVE -> tryCandidate(randomRelativePath(schema, alphabet, context.random()));
             case ABSOLUTE -> randomAbsoluteUriOfLength();
             case RANDOM -> result(randomWithRetry());
         };
@@ -60,11 +69,13 @@ public final class UriReferenceGenerator extends StringFormatGenerator<UriRefere
     @Override
     protected String generateCandidate() {
         var random = context.random();
-        boolean canAbsolute = coalesce(schema.getMaxLength(), DEFAULT_LONG_TARGET) >= MIN_ABSOLUTE_URI;
+        var alphabet = RandomUtil.randomOne(alphabets, random);
+        int minForAlphabet = "http://".length() + HostnameGenerator.minReachable(alphabet);
+        boolean canAbsolute = coalesce(schema.getMaxLength(), DEFAULT_LONG_TARGET) >= minForAlphabet;
         if (canAbsolute && random.nextBoolean()) {
-            return randomAbsoluteUri(schema, random);
+            return randomAbsoluteUri(schema, alphabet, random);
         }
-        return randomRelativePath(schema, random);
+        return randomRelativePath(schema, alphabet, random);
     }
 
     /**
@@ -72,10 +83,11 @@ public final class UriReferenceGenerator extends StringFormatGenerator<UriRefere
      * when set. Skips when maxLength is smaller than the shortest absolute URI we can produce.
      */
     private GenerationResult<String> randomAbsoluteUriOfLength() {
-        if (coalesce(schema.getMaxLength(), DEFAULT_LONG_TARGET) < MIN_ABSOLUTE_URI) {
+        if (coalesce(schema.getMaxLength(), DEFAULT_LONG_TARGET) < minAbsolute) {
             return skip();
         }
-        return tryCandidate(randomAbsoluteUriOfLength("http", uriLengthBounds(schema).max(), context.random()));
+        var alphabet = RandomUtil.randomOne(alphabets, context.random());
+        return tryCandidate(randomAbsoluteUriOfLength("http", uriLengthBounds(schema, minAbsolute).max(), alphabet, context.random()));
     }
 
     /**
@@ -84,52 +96,57 @@ public final class UriReferenceGenerator extends StringFormatGenerator<UriRefere
      * @throws IllegalArgumentException if {@code target} is shorter than the shortest reachable hostname
      */
     static String randomAbsoluteUriOfLength(String scheme, int target, Random random) {
+        return randomAbsoluteUriOfLength(scheme, target, Alphabets.EN, random);
+    }
+
+    static String randomAbsoluteUriOfLength(String scheme, int target, Alphabet alphabet, Random random) {
         var prefix = scheme + "://";
         int budget = target - prefix.length();
-        int minHostname = HostnameGenerator.minReachable(Alphabets.EN);
+        int minHostname = HostnameGenerator.minReachable(alphabet);
         if (budget < minHostname) {
             throw new IllegalArgumentException(
                     "target " + target + " too small for scheme '" + scheme
                             + "' (minimum " + (prefix.length() + minHostname) + ")");
         }
         int hostLen = pickHostLength(budget, minHostname, random);
-        var host = HostnameGenerator.randomHostname(Alphabets.EN, random, hostLen);
+        var host = HostnameGenerator.randomHostname(alphabet, random, hostLen);
         if (hostLen == budget) {
             return prefix + host;
         }
         int pathLen = budget - hostLen - 1;
-        return prefix + host + "/" + randomRelativePath(pathLen, random);
+        return prefix + host + "/" + randomRelativePath(pathLen, alphabet, random);
     }
 
-    static String randomShortUri(StringSchema schema, Random random) {
-        return UriReferenceGenerator.randomAbsoluteUriOfLength("http", uriLengthBounds(schema).min(), random);
+    static String randomShortUri(StringSchema schema, Alphabet alphabet, Random random) {
+        int minAbsolute = "http://".length() + HostnameGenerator.minReachable(alphabet);
+        return randomAbsoluteUriOfLength("http", uriLengthBounds(schema, minAbsolute).min(), alphabet, random);
     }
 
-    static String randomLongUri(StringSchema schema, Random random) {
-        int length = uriLengthBounds(schema).max();
-        var scheme = length >= MIN_ABSOLUTE_HTTPS_URI ? "https" : "http";
-        return UriReferenceGenerator.randomAbsoluteUriOfLength(scheme, length, random);
+    static String randomLongUri(StringSchema schema, Alphabet alphabet, Random random) {
+        int minAbsolute = "http://".length() + HostnameGenerator.minReachable(alphabet);
+        int minAbsoluteHttps = "https://".length() + HostnameGenerator.minReachable(alphabet);
+        int length = uriLengthBounds(schema, minAbsolute).max();
+        var scheme = length >= minAbsoluteHttps ? "https" : "http";
+        return randomAbsoluteUriOfLength(scheme, length, alphabet, random);
     }
 
-    /**
-     * Builds an absolute URI of a length randomly chosen between {@code schema.minLength} and
-     * {@code schema.maxLength} (defaults: {@link #MIN_ABSOLUTE_URI} and {@link #DEFAULT_LONG_TARGET}).
-     */
-    static String randomAbsoluteUri(StringSchema schema, Random random) {
-        int length = uriLengthBounds(schema).pickRandom(random);
-        var scheme = length >= MIN_ABSOLUTE_HTTPS_URI && random.nextBoolean() ? "https" : "http";
-        return randomAbsoluteUriOfLength(scheme, length, random);
+    static String randomAbsoluteUri(StringSchema schema, Alphabet alphabet, Random random) {
+        int minAbsolute = "http://".length() + HostnameGenerator.minReachable(alphabet);
+        int minAbsoluteHttps = "https://".length() + HostnameGenerator.minReachable(alphabet);
+        int length = uriLengthBounds(schema, minAbsolute).pickRandom(random);
+        var scheme = length >= minAbsoluteHttps && random.nextBoolean() ? "https" : "http";
+        return randomAbsoluteUriOfLength(scheme, length, alphabet, random);
     }
 
     /**
      * Computes the effective length range for an absolute URI generated from {@code schema},
-     * clamped to {@code [MIN_ABSOLUTE_URI, MAX_LENGTH]}.
+     * clamped to {@code [minAbsolute, MAX_LENGTH]}.
      */
-    private static MathUtil.IntRange uriLengthBounds(StringSchema schema) {
+    private static MathUtil.IntRange uriLengthBounds(StringSchema schema, int minAbsolute) {
         return clampRange(
-                coalesce(schema.getMinLength(), MIN_ABSOLUTE_URI),
+                coalesce(schema.getMinLength(), minAbsolute),
                 coalesce(schema.getMaxLength(), DEFAULT_LONG_TARGET),
-                MIN_ABSOLUTE_URI,
+                minAbsolute,
                 MAX_LENGTH);
     }
 
@@ -145,13 +162,13 @@ public final class UriReferenceGenerator extends StringFormatGenerator<UriRefere
         return random.nextInt(minHostname, maxHost + 1);
     }
 
-    static String randomRelativePath(StringSchema schema, Random random) {
+    static String randomRelativePath(StringSchema schema, Alphabet alphabet, Random random) {
         var range = clampRange(
                 coalesce(schema.getMinLength(), 0),
                 coalesce(schema.getMaxLength(), MAX_LENGTH),
                 0,
                 MAX_LENGTH);
-        return randomRelativePath(range.pickRandom(random), random);
+        return randomRelativePath(range.pickRandom(random), alphabet, random);
     }
 
     /**
@@ -159,20 +176,20 @@ public final class UriReferenceGenerator extends StringFormatGenerator<UriRefere
      *
      * <p>For example {@code foo/bar/baz}.
      */
-    static String randomRelativePath(int length, Random random) {
+    static String randomRelativePath(int length, Alphabet alphabet, Random random) {
         if (length == 0) {
             return "";
         }
         var sb = new StringBuilder(length);
         while (sb.length() < length) {
-            if (sb.length() > 0) {
+            if (!sb.isEmpty()) {
                 sb.append('/');
             }
             int remaining = length - sb.length();
             int segLen = remaining <= MAX_SEGMENT_LEN
                     ? remaining
                     : random.nextInt(1, Math.min(MAX_SEGMENT_LEN, remaining - 2) + 1);
-            sb.append(RandomUtil.randomStringOfLength(RandomUtil.ENGLISH_ALPHABET, segLen, random));
+            sb.append(RandomUtil.randomStringOfLength(alphabet.chars(), segLen, random));
         }
         return sb.toString();
     }

@@ -19,7 +19,7 @@ class UriReferenceGeneratorTest {
 
         // when / then
         for (int length = 0; length <= 50; length++) {
-            var path = UriReferenceGenerator.randomRelativePath(length, random);
+            var path = UriReferenceGenerator.randomRelativePath(length, Alphabets.EN, random);
             assertThat(path.length()).as("length=%d path=%s", length, path).isEqualTo(length);
         }
     }
@@ -30,7 +30,7 @@ class UriReferenceGeneratorTest {
         var random = new Random(42);
 
         // when
-        var result = UriReferenceGenerator.randomLongUri(schema, random);
+        var result = UriReferenceGenerator.randomLongUri(schema, Alphabets.EN, random);
 
         // then
         assertThat(result.length()).isGreaterThanOrEqualTo(200);
@@ -53,7 +53,7 @@ class UriReferenceGeneratorTest {
 
         // when / then
         for (int length = 1; length <= 30; length++) {
-            var path = UriReferenceGenerator.randomRelativePath(length, random);
+            var path = UriReferenceGenerator.randomRelativePath(length, Alphabets.EN, random);
             assertThat(path).matches("[a-z]+(/[a-z]+)*");
         }
     }
