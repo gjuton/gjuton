@@ -106,6 +106,37 @@ their boxed counterparts (`int`/`Integer`, `long`/`Long`,
 silent boxing — e.g. `var x = coalesce(getInt(), 0)` infers `Integer`,
 turning `x == y` into reference comparison.
 
+## Documentation conventions
+
+Follows John Ousterhout's "A Philosophy of Software Design" approach.
+
+- **Javadoc defines the abstraction.** A reader should be able to use a
+  class or method from its javadoc alone, without reading the
+  implementation. Include preconditions, postconditions, side effects,
+  and what the thing *means* at a higher level than the signature conveys.
+- **Never leak implementation details into javadoc.** Describe what a
+  method does and means, not how it does it internally.
+- **Write javadoc before the implementation.** This is a design tool —
+  it forces the comment to describe the abstraction, not the
+  implementation, and clarifies thinking before code is written.
+- **Prefer good names over docs.** A well-named method or parameter
+  eliminates the need for javadoc. Rename `n` to `length` instead of
+  adding `@param n the length`.
+- **Don't document the obvious.** If the code already says it clearly,
+  a comment is noise.
+- **`@param`/`@return` tags** only when they add information beyond
+  what good naming already conveys.
+- **Implementation comments** only for non-obvious things — subtle
+  reasoning, why a particular approach was chosen, tricky invariants.
+- **Section comments** to give structure to long methods.
+- **Cross-module hacks** — when forced into a dependency that can't be
+  eliminated, document it at both ends so future readers know why.
+
+Scope:
+
+- `api` package: full javadoc on every public class and method.
+- Internal code: javadoc on classes and non-trivial methods.
+
 ## Test conventions
 
 Use `// when` and `// then` comments to separate test phases.
