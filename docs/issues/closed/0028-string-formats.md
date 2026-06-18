@@ -28,11 +28,11 @@ conforming values.
 
 ## Status
 
-`email`, `idn-email`, `uuid`, `date`, `date-time`, `time`, `hostname`, `idn-hostname`, `ipv4`, `ipv6`, `uri`, `uri-reference`, `iri`, `iri-reference`, `json-pointer`, and `relative-json-pointer` are implemented; remaining formats track here.
+All formats implemented.
 
 ## Acceptance criteria
 
-- [ ] Each format in the list above generates values that validate
+- [x] Each format in the list above generates values that validate
       against a strict Draft 7 validator
       - [x] `email`
       - [x] `date`, `date-time`, `time`
@@ -44,7 +44,7 @@ conforming values.
       - [x] `idn-hostname`
       - [x] `ipv4`, `ipv6`
       - [x] `uuid`
-      - [ ] `regex`
+      - [x] `regex`
       - [x] `json-pointer`, `relative-json-pointer`
 - [x] An unknown / unrecognised `format` is treated as a no-op (string
       is generated according to the other constraints) — `format` is

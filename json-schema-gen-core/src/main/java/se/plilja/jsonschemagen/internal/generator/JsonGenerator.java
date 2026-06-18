@@ -12,6 +12,7 @@ import se.plilja.jsonschemagen.internal.generator.format.Ipv6Generator;
 import se.plilja.jsonschemagen.internal.generator.format.IriGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.IriReferenceGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.JsonPointerGenerator;
+import se.plilja.jsonschemagen.internal.generator.format.RegexGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.RelativeJsonPointerGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.TimeGenerator;
 import se.plilja.jsonschemagen.internal.generator.format.UriGenerator;
@@ -94,6 +95,7 @@ public final class JsonGenerator {
             case IRI_REFERENCE -> new IriReferenceGenerator(context, schema);
             case JSON_POINTER -> new JsonPointerGenerator(context, schema);
             case RELATIVE_JSON_POINTER -> new RelativeJsonPointerGenerator(context, schema);
+            case REGEX -> new RegexGenerator(context, schema);
             default -> new StringGenerator(context, schema);
         };
     }
