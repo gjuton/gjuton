@@ -1,10 +1,8 @@
 package se.plilja.jsonschemagen.internal.generator;
 
-import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result;
-
 import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 
-final class RefGenerator extends PhaseGenerator<RefGenerator.GenerationPhase, Object> {
+final class RefGenerator implements Generator<Object> {
 
     // TODO make these configurable via the public API once a use case appears.
     // SOFT_DEPTH flips the context into minimal mode so recursive generators
@@ -17,25 +15,17 @@ final class RefGenerator extends PhaseGenerator<RefGenerator.GenerationPhase, Ob
     private static final int SOFT_DEPTH = 5;
     private static final int HARD_DEPTH = 10;
 
-    enum GenerationPhase {
-        REF
-    }
-
+    private final GeneratorContext context;
     private final String ref;
     private int depth;
 
     RefGenerator(GeneratorContext context, String ref) {
-        super(GenerationPhase.class, context);
+        this.context = context;
         this.ref = ref;
     }
 
     @Override
-    protected GenerationPhase minimalPhase() {
-        return GenerationPhase.REF;
-    }
-
-    @Override
-    protected GenerationResult<Object> generatePhase(GenerationPhase phase) {
+    public Object generate() {
         if (depth >= HARD_DEPTH) {
             throw new UnsatisfiableSchemaException(
                     "Recursive $ref '" + ref + "' could not bottom out within " + HARD_DEPTH
@@ -48,7 +38,7 @@ final class RefGenerator extends PhaseGenerator<RefGenerator.GenerationPhase, Ob
         }
         depth++;
         try {
-            return result(target.generate());
+            return target.generate();
         } finally {
             depth--;
             if (enterMinimal) {

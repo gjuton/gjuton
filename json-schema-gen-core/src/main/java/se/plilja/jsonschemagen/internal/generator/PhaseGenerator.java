@@ -1,7 +1,7 @@
 package se.plilja.jsonschemagen.internal.generator;
 
 // TODO deserves javadoc, add later
-public abstract class PhaseGenerator<E extends Enum<E>, R> {
+public abstract class PhaseGenerator<E extends Enum<E>, R> implements Generator<R> {
 
     protected final GeneratorContext context;
     private E phase;

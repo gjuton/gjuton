@@ -31,7 +31,7 @@ import se.plilja.jsonschemagen.internal.model.UntypedSchema;
 // TODO consider naming and javadoc. The name is confusingly close to JsonSchemaGenerator
 public final class JsonGenerator {
 
-    private final PhaseGenerator<?, ?> delegate;
+    private final Generator<?> delegate;
 
     public JsonGenerator(Long seed, SchemaDocument document) {
         this(document.getRoot(),
@@ -46,7 +46,7 @@ public final class JsonGenerator {
         return delegate.generate();
     }
 
-    private static PhaseGenerator<?, ?> buildDelegate(Schema schema, GeneratorContext context) {
+    private static Generator<?> buildDelegate(Schema schema, GeneratorContext context) {
         if (schema.getRef() != null) {
             return new RefGenerator(context, schema.getRef());
         }
@@ -66,14 +66,14 @@ public final class JsonGenerator {
             case StringSchema s -> buildStringDelegate(s, context);
             case NumericSchema s -> new NumericGenerator(context, s);
             case BooleanSchema ignored -> new BooleanGenerator(context);
-            case NullSchema ignored -> new NullGenerator(context);
+            case NullSchema ignored -> new NullGenerator();
             case ObjectSchema s -> new ObjectGenerator(context, s);
             case ArraySchema s -> new ArrayGenerator(context, s);
             case UntypedSchema ignored -> throw new IllegalArgumentException("Schema has no type and no enum");
         };
     }
 
-    private static PhaseGenerator<?, ?> buildStringDelegate(StringSchema schema, GeneratorContext context) {
+    private static Generator<?> buildStringDelegate(StringSchema schema, GeneratorContext context) {
         var format = schema.getFormat();
         if (format == null) {
             return new StringGenerator(context, schema);

@@ -21,13 +21,6 @@ phase progression at all: every call forwards to a delegate
 cycles through boundary values. Putting an enum on the outer class
 implies it owns a phase cycle, but it doesn't.
 
-**`OneOf`/`AnyOf` minimal-mode bug** — these *do* have meaningful phases
-(exhaustive sub-schema cycling, then random), so they should stay on
-`PhaseGenerator`. But `generatePhase(EXHAUSTIVE)` reads
-`subSchemas.get(index)`, and in minimal mode `index` is whatever
-non-minimal traffic left it at. "Minimal" should pin to the first
-sub-schema, not the current one.
-
 The intended cleanup:
 
 - Introduce a small `Generator<R>` interface exposing `generate()`.
@@ -35,23 +28,20 @@ The intended cleanup:
   as-is.
 - `NullGenerator`, `AllOfGenerator`, `RefGenerator` implement
   `Generator` directly and drop their dummy enum.
+- Pure-delegating format generators (`IdnEmailGenerator`,
+  `IdnHostnameGenerator`, `IriGenerator`, `IriReferenceGenerator`)
+  implement `Generator` directly and drop the pass-through
+  `PhaseGenerator` machinery.
 - `JsonGenerator.delegate` becomes `Generator<?>` rather than
   `PhaseGenerator<?, ?>`.
-- `OneOfGenerator` / `AnyOfGenerator` reset their exhaustive index (or
-  bypass it) when called in minimal mode so the smallest branch is
-  picked.
 
-No change to public API or to generation output for the non-minimal
-path. Minimal-mode output for `oneOf` / `anyOf` may change (now pins to
-branch 0).
+No change to public API or to generation output.
 
 ## Acceptance criteria
 
-- [ ] A `Generator<R>` interface exists; `PhaseGenerator` implements it
-- [ ] `NullGenerator`, `AllOfGenerator`, `RefGenerator` no longer extend
+- [x] A `Generator<R>` interface exists; `PhaseGenerator` implements it
+- [x] `NullGenerator`, `AllOfGenerator`, `RefGenerator` no longer extend
       `PhaseGenerator` and have no `GenerationPhase` enum
-- [ ] `JsonGenerator` holds and dispatches through `Generator<?>`
-- [ ] `OneOfGenerator` / `AnyOfGenerator` in minimal mode pick the first
-      sub-schema regardless of prior index state
-- [ ] Existing tests pass unchanged for non-minimal generation
-- [ ] `mvn verify` passes
+- [x] `JsonGenerator` holds and dispatches through `Generator<?>`
+- [x] Existing tests pass unchanged
+- [x] `mvn verify` passes
