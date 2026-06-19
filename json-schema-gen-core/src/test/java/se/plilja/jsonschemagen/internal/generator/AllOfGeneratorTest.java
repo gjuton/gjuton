@@ -124,6 +124,26 @@ class AllOfGeneratorTest {
         }
 
         @Test
+        void mergesConstWithCompatibleEnum() {
+            var generator = allOfGenerator("""
+                    {
+                        "allOf": [
+                            {"const": "beta"},
+                            {"enum": ["alpha", "beta", "gamma"]}
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(10)
+                    .toList();
+
+            // then
+            assertThat(values).allMatch(v -> v.equals("beta"));
+        }
+
+        @Test
         void mergesEnumsByIntersection() {
             var generator = allOfGenerator("""
                     {
@@ -245,6 +265,23 @@ class AllOfGeneratorTest {
         }
 
         @Test
+        void conflictingConstValuesThrows() {
+            var json = """
+                    {
+                        "allOf": [
+                            {"const": "hello"},
+                            {"const": "world"}
+                        ]
+                    }
+                    """;
+
+            // when / then
+            assertThatThrownBy(() -> allOfGenerator(json))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("const");
+        }
+
+        @Test
         void disjointEnumsThrows() {
             var json = """
                     {
@@ -259,6 +296,22 @@ class AllOfGeneratorTest {
             assertThatThrownBy(() -> allOfGenerator(json))
                     .isInstanceOf(UnsatisfiableSchemaException.class)
                     .hasMessageContaining("enum");
+        }
+
+        @Test
+        void constNotInEnumThrows() {
+            var json = """
+                    {
+                        "allOf": [
+                            {"const": "delta"},
+                            {"enum": ["alpha", "beta", "gamma"]}
+                        ]
+                    }
+                    """;
+
+            // when / then
+            assertThatThrownBy(() -> allOfGenerator(json))
+                    .isInstanceOf(UnsatisfiableSchemaException.class);
         }
 
         @Test

@@ -1,0 +1,6 @@
+{
+    "anyOf": [
+        {"const": "alpha"},
+        {"const": 42}
+    ]
+}

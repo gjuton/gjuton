@@ -100,8 +100,15 @@ final class SchemaMerger {
                             + " and " + b.getClass().getSimpleName());
         }
 
+        var constValue = mergeConstValues(a.getConstValue(), b.getConstValue());
+        var enumValues = mergeEnumValues(a.getEnumValues(), b.getEnumValues());
+        if (constValue != null && enumValues != null && !enumValues.contains(constValue)) {
+            throw new UnsatisfiableSchemaException(
+                    "const value " + constValue + " is not in enum " + enumValues);
+        }
         return merged.toBuilder()
-                .enumValues(mergeEnumValues(a.getEnumValues(), b.getEnumValues()))
+                .constValue(constValue)
+                .enumValues(enumValues)
                 .build();
     }
 
@@ -120,6 +127,28 @@ final class SchemaMerger {
         }
     }
 
+    /**
+     * Merges two {@code const} values. If both are present they must be
+     * equal; otherwise the schemas are unsatisfiable. A single non-null
+     * value passes through unchanged.
+     */
+    private static Object mergeConstValues(Object a, Object b) {
+        if (a == null || b == null) {
+            return coalesce(a, b);
+        }
+        if (!a.equals(b)) {
+            throw new UnsatisfiableSchemaException(
+                    "const branches have conflicting values: " + a + " vs " + b);
+        }
+        return a;
+    }
+
+    /**
+     * Merges two {@code enum} value lists by intersection. If both are
+     * present the result contains only values common to both; an empty
+     * intersection means the schemas are unsatisfiable. A single non-null
+     * list passes through unchanged.
+     */
     private static List<Object> mergeEnumValues(List<Object> a, List<Object> b) {
         if (a == null || b == null) {
             return coalesce(a, b);

@@ -50,6 +50,9 @@ public final class JsonGenerator {
         if (schema.getRef() != null) {
             return new RefGenerator(context, schema.getRef());
         }
+        if (schema.getConstValue() != null) {
+            return new ConstGenerator(schema.getConstValue());
+        }
         if (schema.getEnumValues() != null) {
             return new EnumGenerator(context, schema.getEnumValues());
         }

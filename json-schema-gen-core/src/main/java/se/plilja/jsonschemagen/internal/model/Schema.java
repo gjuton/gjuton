@@ -25,6 +25,9 @@ import lombok.experimental.SuperBuilder;
 })
 public abstract sealed class Schema permits StringSchema, NumericSchema, BooleanSchema, NullSchema, ObjectSchema, ArraySchema, UntypedSchema {
 
+    @JsonProperty("const")
+    private Object constValue;
+
     @JsonProperty("enum")
     private List<Object> enumValues;
 
