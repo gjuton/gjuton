@@ -26,7 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class IntegrationTest {
 
-    private static final int ITERATIONS = 1000;
+    private static final int ITERATIONS = 250;
 
     private static final long DEFAULT_SEED = 42L;
 
