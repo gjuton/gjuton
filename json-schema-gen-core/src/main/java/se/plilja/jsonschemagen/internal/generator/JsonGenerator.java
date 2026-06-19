@@ -69,7 +69,7 @@ public final class JsonGenerator {
             case NullSchema ignored -> new NullGenerator();
             case ObjectSchema s -> new ObjectGenerator(context, s);
             case ArraySchema s -> new ArrayGenerator(context, s);
-            case UntypedSchema ignored -> throw new IllegalArgumentException("Schema has no type and no enum");
+            case UntypedSchema ignored -> new UntypedGenerator(context);
         };
     }
 
