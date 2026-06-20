@@ -90,13 +90,9 @@ a test case.
 
 ## Issues
 
-Issues live in `docs/issues/open/` and `docs/issues/closed/`. After
-completing work on an issue, check off acceptance criteria, revise any
-descriptions that no longer match the implementation, and `git mv` the
-file from `open/` into `closed/`.
-
-Issue numbers are globally unique across both folders — the next new
-issue gets the next free number regardless of which folder it lands in.
+Issues are tracked on GitHub. After completing work on an issue, close
+it on GitHub, checking off acceptance criteria and revising any
+descriptions that no longer match the implementation.
 
 ## Code style
 
