@@ -17,7 +17,20 @@ final class AllOfGenerator implements Generator<Object> {
         if (parent.getAllOf().isEmpty()) {
             throw new IllegalArgumentException("allOf must contain at least one sub-schema");
         }
-        var branches = new ArrayList<>(parent.getAllOf());
+        var branches = new ArrayList<Schema>();
+        for (var branch : parent.getAllOf()) {
+            if (branch.getRef() != null) {
+                var resolved = context.resolveRef(branch.getRef());
+                // Identity check: the parser reuses the same Schema instance for "#"
+                if (resolved == parent) {
+                    throw new IllegalArgumentException(
+                            "Self-referential $ref '" + branch.getRef() + "' inside allOf is not supported");
+                }
+                branches.add(resolved);
+            } else {
+                branches.add(branch);
+            }
+        }
         branches.add(parent.toBuilder().allOf(null).build());
         this.merged = SchemaMerger.merge(branches);
     }

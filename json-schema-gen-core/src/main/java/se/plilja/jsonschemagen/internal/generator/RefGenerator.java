@@ -1,6 +1,7 @@
 package se.plilja.jsonschemagen.internal.generator;
 
 import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
+import se.plilja.jsonschemagen.internal.model.Schema;
 
 /**
  * Generator for schemas with a {@code $ref} keyword. A {@code $ref}
@@ -36,7 +37,8 @@ final class RefGenerator implements Generator<Object> {
                     "Recursive $ref '" + ref + "' could not bottom out within " + HARD_DEPTH
                             + " levels — schema appears to require infinite recursion");
         }
-        var target = context.generatorForRef(ref);
+        var schema = context.resolveRef(ref);
+        var target = context.generatorFor(schema);
         var enterMinimal = depth + 1 >= SOFT_DEPTH && !context.isMinimal();
         if (enterMinimal) {
             context.enterMinimal();

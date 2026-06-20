@@ -60,11 +60,17 @@ public final class GeneratorContext {
         return generatorCache.computeIfAbsent(schema, s -> new JsonGenerator(s, this));
     }
 
-    JsonGenerator generatorForRef(String ref) {
+    /**
+     * Resolves a {@code $ref} string to the {@link Schema} it points at.
+     *
+     * @throws IllegalArgumentException if the ref cannot be resolved
+     */
+    Schema resolveRef(String ref) {
         var target = document.resolveRef(ref);
         if (target == null) {
             throw new IllegalArgumentException("Unresolved $ref: " + ref);
         }
-        return generatorFor(target);
+        return target;
     }
+
 }
