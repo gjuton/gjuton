@@ -48,10 +48,12 @@ keywords.
 1. **`const`** — add to `Schema` as a cross-cutting keyword (like
    `enum`), check in `JsonGenerator.buildDelegate` before `enum`,
    merge in `SchemaMerger` (two const values must match or throw)
-2. **`additionalProperties: false`** — add `Boolean` field to
-   `ObjectSchema` (only the `false` case; schema-valued
-   `additionalProperties` is out of scope), merge in `SchemaMerger`
-   (`false` wins), respect in `ObjectGenerator` (skip optional fields)
+2. **`additionalProperties`** — add `Object` field to
+   `ObjectSchema` (either `Boolean` or `Schema`; deserialized by
+   `AdditionalPropertiesDeserializer`), merge in `SchemaMerger`
+   (`false` wins over everything, `Schema` wins over `true`, two
+   schemas are merged), no generator change needed (the generator
+   never invents undeclared properties)
 3. **`minProperties`** — add `Integer` field to `ObjectSchema`, merge
    in `SchemaMerger` (take max), respect in `ObjectGenerator` (ensure
    enough fields)
@@ -66,7 +68,7 @@ keywords.
       branches
 - [x] A `const` value declared on a schema (standalone or under a
       combining keyword) is emitted verbatim
-- [ ] A sub-schema with `additionalProperties: false` is honoured even
+- [x] A sub-schema with `additionalProperties: false` is honoured even
       when reached through a combining keyword (no extras emitted)
 - [ ] An object schema whose sub-schema sets `minProperties: 1` produces
       non-empty objects when that sub-schema is selected

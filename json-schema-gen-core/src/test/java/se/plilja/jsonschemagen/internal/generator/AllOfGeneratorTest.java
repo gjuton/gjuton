@@ -229,6 +229,40 @@ class AllOfGeneratorTest {
             assertThat(values).allMatch(v -> v.size() >= 2 && v.size() <= 4);
             assertThat(values).allMatch(v -> v.stream().allMatch(String.class::isInstance));
         }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void additionalPropertiesFalseMergedThroughAllOf() {
+            var generator = allOfGenerator("""
+                    {
+                        "allOf": [
+                            {
+                                "type": "object",
+                                "properties": {"a": {"type": "string"}},
+                                "required": ["a"],
+                                "additionalProperties": false
+                            },
+                            {
+                                "type": "object",
+                                "properties": {"b": {"type": "integer"}}
+                            }
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(20)
+                    .map(v -> (java.util.Map<String, Object>) v)
+                    .toList();
+
+            // then
+            assertThat(values).allSatisfy(obj -> {
+                assertThat(obj).containsKey("a");
+                assertThat(obj.get("a")).isInstanceOf(String.class);
+            });
+            assertThat(values).anyMatch(obj -> obj.containsKey("b"));
+        }
     }
 
     @Nested

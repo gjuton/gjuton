@@ -134,6 +134,29 @@ class ObjectGeneratorTest {
         assertThat(address.get("street")).isInstanceOf(String.class);
     }
 
+    @Test
+    void additionalPropertiesFalseStillEmitsDeclaredOptionalFields() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        "nickname": {"type": "string"}
+                    },
+                    "required": ["name"],
+                    "additionalProperties": false
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 2)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).anyMatch(obj -> obj.containsKey("nickname"));
+    }
+
     private static ObjectGenerator objectGenerator(String json) {
         var document = SchemaParser.parse(json);
         return new ObjectGenerator(new GeneratorContext(document, new Random(42)), (ObjectSchema) document.getRoot());

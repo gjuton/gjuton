@@ -16,11 +16,24 @@ import se.plilja.jsonschemagen.internal.model.Schema;
 import se.plilja.jsonschemagen.internal.model.StringSchema;
 import se.plilja.jsonschemagen.internal.model.UntypedSchema;
 
+/**
+ * Combines multiple schemas into one by taking the intersection of their
+ * constraints. Used by {@code allOf} (all branches must hold) and by
+ * {@code anyOf}/{@code oneOf} when parent-level sibling constraints need
+ * to be folded into each branch.
+ */
 final class SchemaMerger {
 
     private SchemaMerger() {
     }
 
+    /**
+     * Merges a list of schemas pairwise from left to right, producing a
+     * single schema whose constraints are the intersection of all inputs.
+     *
+     * @throws IllegalArgumentException      if the list is empty
+     * @throws UnsatisfiableSchemaException   if any pair has incompatible types or constraints
+     */
     static Schema merge(List<Schema> schemas) {
         if (schemas.isEmpty()) {
             throw new IllegalArgumentException("merge requires at least one schema");
@@ -78,9 +91,11 @@ final class SchemaMerger {
             var required = Stream.concat(oa.getRequired().stream(), ob.getRequired().stream())
                     .distinct()
                     .toList();
+            var additionalProperties = mergeAdditionalProperties(oa.getAdditionalProperties(), ob.getAdditionalProperties());
             merged = ObjectSchema.builder()
                     .properties(properties)
                     .required(required)
+                    .additionalProperties(additionalProperties)
                     .build();
         } else if (a instanceof ArraySchema aa && b instanceof ArraySchema ab) {
             Schema items;
@@ -125,6 +140,28 @@ final class SchemaMerger {
             throw new IllegalArgumentException(
                     "nested allOf inside allOf is not yet supported");
         }
+    }
+
+    /**
+     * Merges two {@code additionalProperties} values. Each value is either
+     * {@link Boolean} or {@link Schema}. {@code false} wins over everything;
+     * a {@link Schema} wins over {@code true} (more restrictive); two schemas
+     * are merged with {@link #mergeTwoSchemas}.
+     */
+    private static Object mergeAdditionalProperties(Object a, Object b) {
+        if (Boolean.FALSE.equals(a) || Boolean.FALSE.equals(b)) {
+            return Boolean.FALSE;
+        }
+        if (a instanceof Schema sa && b instanceof Schema sb) {
+            return mergeTwoSchemas(sa, sb);
+        }
+        if (a instanceof Schema) {
+            return a;
+        }
+        if (b instanceof Schema) {
+            return b;
+        }
+        return coalesce(a, b);
     }
 
     /**

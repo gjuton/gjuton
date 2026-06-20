@@ -6,11 +6,13 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import java.util.List;
 import lombok.AccessLevel;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 @Getter
+@EqualsAndHashCode
 @SuperBuilder(toBuilder = true)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @JsonIgnoreProperties(ignoreUnknown = true)

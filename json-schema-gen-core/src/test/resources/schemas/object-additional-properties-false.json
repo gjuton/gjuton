@@ -1,0 +1,10 @@
+{
+    "type": "object",
+    "properties": {
+        "id": {"type": "integer"},
+        "name": {"type": "string"},
+        "nickname": {"type": "string"}
+    },
+    "required": ["id", "name"],
+    "additionalProperties": false
+}
