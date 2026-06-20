@@ -111,8 +111,15 @@ final class SchemaMerger {
             } else {
                 items = coalesce(aa.getItems(), ab.getItems());
             }
+            Schema contains;
+            if (aa.getContains() != null && ab.getContains() != null) {
+                contains = mergeTwoSchemas(aa.getContains(), ab.getContains());
+            } else {
+                contains = coalesce(aa.getContains(), ab.getContains());
+            }
             merged = ArraySchema.builder()
                     .items(items)
+                    .contains(contains)
                     .minItems(maxNullable(aa.getMinItems(), ab.getMinItems()))
                     .maxItems(minNullable(aa.getMaxItems(), ab.getMaxItems()))
                     .build();

@@ -1,0 +1,14 @@
+{
+    "allOf": [
+        {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": 2,
+            "maxItems": 5
+        },
+        {
+            "type": "array",
+            "contains": {"const": "must-be-present"}
+        }
+    ]
+}

@@ -13,7 +13,18 @@ import lombok.experimental.SuperBuilder;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class ArraySchema extends Schema {
 
+    /**
+     * Schema that each element of the array must satisfy.
+     * Corresponds to the JSON Schema {@code items} keyword.
+     */
     private Schema items;
+
+    /**
+     * Schema that at least one element of the array must satisfy.
+     * Corresponds to the JSON Schema {@code contains} keyword.
+     */
+    private Schema contains;
+
     private Integer minItems;
     private Integer maxItems;
 }

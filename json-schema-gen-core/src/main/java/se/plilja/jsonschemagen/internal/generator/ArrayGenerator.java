@@ -53,10 +53,24 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
     }
 
     private List<Object> buildList(int length) {
+        // cr I don't like this. The method says to build a list of a particaular length, then we should not build of another length, we should push the minimum length to the call site
+        int effectiveLength = schema.getContains() != null ? Math.max(length, 1) : length;
         var list = new ArrayList<>();
-        for (var i = 0; i < length; i++) {
+        for (var i = 0; i < effectiveLength; i++) {
             list.add(context.generatorFor(itemSchema).generate());
         }
+        satisfyContains(list); // CR i dont like overwriting here, for example lets say the generator of the for loop were generating a particular value of an enum cycle. Here we would overwrite that. This means that not all enum values would have been emitted. Better to decide which index before the for loop should have the contains. And then put an if-statemtn in thhe for loop
         return list;
+    }
+
+    private void satisfyContains(ArrayList<Object> list) {
+
+        // CR this method should be inlined
+        if (schema.getContains() == null) {
+            return;
+        }
+        var containsValue = context.generatorFor(schema.getContains()).generate();
+        int index = context.random().nextInt(list.size());
+        list.set(index, containsValue);
     }
 }
