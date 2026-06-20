@@ -40,22 +40,31 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
 
     @Override
     protected GenerationResult<List<Object>> generatePhase(GenerationPhase phase) {
+        int minLength = coalesce(schema.getMinItems(), 0);
+        if (schema.getContains() != null) {
+            // We need at least 1 item to satisfy the contains even if minItems was smaller
+            minLength = Math.max(minLength, 1);
+        }
         return switch (phase) {
-            case MIN_LENGTH -> result(buildList(coalesce(schema.getMinItems(), 0)));
+            case MIN_LENGTH -> result(buildList(minLength));
             case MAX_LENGTH -> schema.getMaxItems() != null ? result(buildList(schema.getMaxItems())) : skip();
             case RANDOM -> {
-                var min = coalesce(schema.getMinItems(), 0);
-                var max = coalesce(schema.getMaxItems(), min + DEFAULT_LENGTH_BUFFER);
-                var length = min + context.random().nextInt(max - min + 1);
+                var max = coalesce(schema.getMaxItems(), minLength + DEFAULT_LENGTH_BUFFER);
+                var length = minLength + context.random().nextInt(max - minLength + 1);
                 yield result(buildList(length));
             }
         };
     }
 
     private List<Object> buildList(int length) {
+        int containsIndex = schema.getContains() == null ? -1 : context.random().nextInt(length);
         var list = new ArrayList<>();
         for (var i = 0; i < length; i++) {
-            list.add(context.generatorFor(itemSchema).generate());
+            if (i == containsIndex) {
+                list.add(context.generatorFor(schema.getContains()).generate());
+            } else {
+                list.add(context.generatorFor(itemSchema).generate());
+            }
         }
         return list;
     }

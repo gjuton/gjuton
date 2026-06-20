@@ -1,0 +1,7 @@
+{
+    "type": "array",
+    "items": {"type": "string"},
+    "contains": {"const": "required-value"},
+    "minItems": 1,
+    "maxItems": 5
+}

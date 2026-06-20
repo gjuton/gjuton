@@ -393,6 +393,42 @@ class SchemaMergerTest {
                     {"type": "array", "items": {"type": "string", "minLength": 3, "maxLength": 10}}
                     """));
         }
+
+        @Test
+        void containsMergesRecursivelyWhenBothPresent() {
+            var a = readSchema("""
+                    {"type": "array", "contains": {"type": "string", "minLength": 3}}
+                    """);
+            var b = readSchema("""
+                    {"type": "array", "contains": {"type": "string", "maxLength": 10}}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged).isEqualTo(readSchema("""
+                    {"type": "array", "contains": {"type": "string", "minLength": 3, "maxLength": 10}}
+                    """));
+        }
+
+        @Test
+        void containsCoalescesWhenOnlyOneSideHasIt() {
+            var a = readSchema("""
+                    {"type": "array", "contains": {"const": "x"}}
+                    """);
+            var b = readSchema("""
+                    {"type": "array", "items": {"type": "string"}}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged).isEqualTo(readSchema("""
+                    {"type": "array", "items": {"type": "string"}, "contains": {"const": "x"}}
+                    """));
+        }
     }
 
     @Nested

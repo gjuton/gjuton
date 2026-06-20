@@ -111,6 +111,72 @@ class ArrayGeneratorTest {
         assertThat(results).allSatisfy(arr -> assertThat(arr).allMatch(e -> e instanceof String));
     }
 
+    @Test
+    void containsForcesNonEmptyArrayEvenWithoutMinItems() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "contains": {"const": "x"}
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> {
+            assertThat(arr).isNotEmpty();
+            assertThat(arr).contains("x");
+        });
+    }
+
+    @Test
+    void containsRespectsMaxItems() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "contains": {"const": "x"},
+                    "maxItems": 2
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> {
+            assertThat(arr).hasSizeLessThanOrEqualTo(2);
+            assertThat(arr).contains("x");
+        });
+    }
+
+    @Test
+    void containsEnsuresMatchingElementIsPresent() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "contains": {"const": "required-value"},
+                    "minItems": 3
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr ->
+                assertThat(arr).contains("required-value"));
+    }
+
     private static ArrayGenerator arrayGenerator(String json) {
         var document = SchemaParser.parse(json);
         return new ArrayGenerator(new GeneratorContext(document, new Random(42)), (ArraySchema) document.getRoot());
