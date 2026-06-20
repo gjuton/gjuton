@@ -8,3 +8,4 @@ target/
 .factorypath
 reference-project/
 .claude/
+worktrees/
