@@ -1,0 +1,22 @@
+{
+    "definitions": {
+        "Person": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"}
+            },
+            "required": ["name"]
+        }
+    },
+    "allOf": [
+        {"$ref": "#/definitions/Person"},
+        {
+            "type": "object",
+            "properties": {
+                "email": {"type": "string"}
+            },
+            "required": ["email"]
+        }
+    ]
+}

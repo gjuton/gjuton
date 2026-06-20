@@ -1,0 +1,18 @@
+{
+    "definitions": {
+        "HasId": {
+            "type": "object",
+            "properties": {"id": {"type": "integer"}},
+            "required": ["id"]
+        },
+        "HasName": {
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+            "required": ["name"]
+        }
+    },
+    "allOf": [
+        {"$ref": "#/definitions/HasId"},
+        {"$ref": "#/definitions/HasName"}
+    ]
+}

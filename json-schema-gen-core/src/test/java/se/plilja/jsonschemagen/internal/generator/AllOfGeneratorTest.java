@@ -232,6 +232,76 @@ class AllOfGeneratorTest {
 
         @Test
         @SuppressWarnings("unchecked")
+        void mergesRefBranchWithInlineBranch() {
+            var generator = allOfGenerator("""
+                    {
+                        "definitions": {
+                            "Person": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {"type": "string"},
+                                    "age": {"type": "integer"}
+                                },
+                                "required": ["name"]
+                            }
+                        },
+                        "allOf": [
+                            {"$ref": "#/definitions/Person"},
+                            {
+                                "type": "object",
+                                "properties": {"email": {"type": "string"}},
+                                "required": ["email"]
+                            }
+                        ]
+                    }
+                    """);
+
+            // when
+            var value = (java.util.Map<String, Object>) generator.generate();
+
+            // then
+            assertThat(value).containsKey("name");
+            assertThat(value.get("name")).isInstanceOf(String.class);
+            assertThat(value).containsKey("email");
+            assertThat(value.get("email")).isInstanceOf(String.class);
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void mergesAllRefBranches() {
+            var generator = allOfGenerator("""
+                    {
+                        "definitions": {
+                            "HasId": {
+                                "type": "object",
+                                "properties": {"id": {"type": "integer"}},
+                                "required": ["id"]
+                            },
+                            "HasName": {
+                                "type": "object",
+                                "properties": {"name": {"type": "string"}},
+                                "required": ["name"]
+                            }
+                        },
+                        "allOf": [
+                            {"$ref": "#/definitions/HasId"},
+                            {"$ref": "#/definitions/HasName"}
+                        ]
+                    }
+                    """);
+
+            // when
+            var value = (java.util.Map<String, Object>) generator.generate();
+
+            // then
+            assertThat(value).containsKey("id");
+            assertThat(value.get("id")).isInstanceOf(Long.class);
+            assertThat(value).containsKey("name");
+            assertThat(value.get("name")).isInstanceOf(String.class);
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
         void additionalPropertiesFalseMergedThroughAllOf() {
             var generator = allOfGenerator("""
                     {
@@ -366,13 +436,13 @@ class AllOfGeneratorTest {
         }
 
         @Test
-        void refInsideAllOfThrows() {
+        void selfReferentialRefInsideAllOfThrows() {
             var json = """
                     {
-                        "definitions": {"Foo": {"type": "string"}},
+                        "type": "object",
+                        "properties": {"value": {"type": "string"}},
                         "allOf": [
-                            {"type": "string"},
-                            {"$ref": "#/definitions/Foo"}
+                            {"$ref": "#"}
                         ]
                     }
                     """;
@@ -380,7 +450,7 @@ class AllOfGeneratorTest {
             // when / then
             assertThatThrownBy(() -> allOfGenerator(json))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("$ref");
+                    .hasMessageContaining("Self-referential");
         }
 
         @Test

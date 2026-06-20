@@ -135,10 +135,6 @@ final class SchemaMerger {
     }
 
     private static void rejectUnsupportedComposition(Schema a, Schema b) {
-        if (a.getRef() != null || b.getRef() != null) {
-            throw new IllegalArgumentException(
-                    "allOf composition with $ref sub-schemas is not yet supported");
-        }
         if (a.getOneOf() != null || b.getOneOf() != null) {
             throw new IllegalArgumentException(
                     "allOf composition with nested oneOf is not yet supported");
