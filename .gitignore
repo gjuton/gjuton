@@ -7,3 +7,4 @@ target/
 .project
 .factorypath
 reference-project/
+.claude/
