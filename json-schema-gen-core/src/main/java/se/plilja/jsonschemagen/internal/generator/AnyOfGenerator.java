@@ -5,6 +5,7 @@ import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result
 import java.util.List;
 import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 import se.plilja.jsonschemagen.internal.model.Schema;
+import se.plilja.jsonschemagen.internal.util.RandomUtil;
 
 final class AnyOfGenerator extends PhaseGenerator<AnyOfGenerator.GenerationPhase, Object> {
 

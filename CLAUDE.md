@@ -64,7 +64,8 @@ se.plilja.jsonschemagen
 └── internal     implementation detail, not part of the public contract
     ├── parser   JSON → schema model
     ├── model    schema model classes
-    └── generator model → JSON value string
+    ├── generator model → JSON value string
+    └── util     general-purpose utilities (math, random, string, functional)
 ```
 
 Allowed dependencies (enforced by ArchUnit — violations fail `mvn test`):
@@ -72,8 +73,9 @@ Allowed dependencies (enforced by ArchUnit — violations fail `mvn test`):
 ```
 api          — entry point; may access all layers
 parser       — may only access model and errors
-generator    — may only access model and errors
+generator    — may only access model, errors, and util
 model        — leaf; no dependencies on other internal packages
+util         — leaf; no dependencies on other internal packages
 errors       — leaf; no dependencies on other packages
 ```
 

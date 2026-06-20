@@ -1,4 +1,4 @@
-package se.plilja.jsonschemagen.internal.generator;
+package se.plilja.jsonschemagen.internal.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

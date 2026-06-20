@@ -5,7 +5,7 @@ import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result
 import java.util.Random;
 import se.plilja.jsonschemagen.internal.generator.GenerationResult;
 import se.plilja.jsonschemagen.internal.generator.GeneratorContext;
-import se.plilja.jsonschemagen.internal.generator.RandomUtil;
+import se.plilja.jsonschemagen.internal.util.RandomUtil;
 import se.plilja.jsonschemagen.internal.model.StringSchema;
 
 /**

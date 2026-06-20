@@ -1,8 +1,9 @@
-package se.plilja.jsonschemagen.internal.generator;
+package se.plilja.jsonschemagen.internal.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Random;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -78,5 +79,43 @@ class MathUtilTest {
         // when / then
         assertThatThrownBy(() -> new MathUtil.IntRange(10, 5))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void pickRandomReturnsValueWithinRange() {
+        var range = new MathUtil.IntRange(5, 10);
+        var random = new Random(42);
+
+        // when
+        for (int i = 0; i < 100; i++) {
+            int value = range.pickRandom(random);
+
+            // then
+            assertThat(value).isBetween(5, 10);
+        }
+    }
+
+    @Test
+    void pickRandomOnSingleValueRangeReturnsThatValue() {
+        var range = new MathUtil.IntRange(7, 7);
+
+        // when
+        int value = range.pickRandom(new Random(42));
+
+        // then
+        assertThat(value).isEqualTo(7);
+    }
+
+    @ParameterizedTest
+    @CsvSource(nullValues = "null", value = {
+            "3, 5, 15",
+            "4, 12, 12",
+            "null, 7, 7",
+            "7, null, 7",
+            "null, null, null",
+    })
+    void lcmNullable(Long a, Long b, Long expected) {
+        // when / then
+        assertThat(MathUtil.lcmNullable(a, b)).isEqualTo(expected);
     }
 }

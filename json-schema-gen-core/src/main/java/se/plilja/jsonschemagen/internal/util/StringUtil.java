@@ -1,4 +1,4 @@
-package se.plilja.jsonschemagen.internal.generator;
+package se.plilja.jsonschemagen.internal.util;
 
 import java.util.Comparator;
 import java.util.List;

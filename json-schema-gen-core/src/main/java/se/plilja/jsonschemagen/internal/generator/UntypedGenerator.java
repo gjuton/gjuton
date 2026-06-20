@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import se.plilja.jsonschemagen.internal.util.RandomUtil;
 
 /**
  * Generates values for schemas with no {@code type} keyword. Since any JSON

@@ -1,6 +1,6 @@
 package se.plilja.jsonschemagen.internal.generator.format;
 
-import static se.plilja.jsonschemagen.internal.generator.FunctionalUtil.coalesce;
+import static se.plilja.jsonschemagen.internal.util.FunctionalUtil.coalesce;
 import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result;
 
 import java.util.List;
@@ -8,8 +8,8 @@ import java.util.Random;
 import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 import se.plilja.jsonschemagen.internal.generator.GenerationResult;
 import se.plilja.jsonschemagen.internal.generator.GeneratorContext;
-import se.plilja.jsonschemagen.internal.generator.RandomUtil;
-import se.plilja.jsonschemagen.internal.generator.StringUtil;
+import se.plilja.jsonschemagen.internal.util.RandomUtil;
+import se.plilja.jsonschemagen.internal.util.StringUtil;
 import se.plilja.jsonschemagen.internal.model.StringSchema;
 
 public final class EmailGenerator extends StringFormatGenerator<EmailGenerator.EmailPhase> {

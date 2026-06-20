@@ -1,8 +1,8 @@
 package se.plilja.jsonschemagen.internal.generator;
 
-import static se.plilja.jsonschemagen.internal.generator.FunctionalUtil.coalesce;
-import static se.plilja.jsonschemagen.internal.generator.FunctionalUtil.maxNullable;
-import static se.plilja.jsonschemagen.internal.generator.FunctionalUtil.minNullable;
+import static se.plilja.jsonschemagen.internal.util.FunctionalUtil.coalesce;
+import static se.plilja.jsonschemagen.internal.util.FunctionalUtil.maxNullable;
+import static se.plilja.jsonschemagen.internal.util.FunctionalUtil.minNullable;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,6 +15,7 @@ import se.plilja.jsonschemagen.internal.model.ObjectSchema;
 import se.plilja.jsonschemagen.internal.model.Schema;
 import se.plilja.jsonschemagen.internal.model.StringSchema;
 import se.plilja.jsonschemagen.internal.model.UntypedSchema;
+import se.plilja.jsonschemagen.internal.util.MathUtil;
 
 /**
  * Combines multiple schemas into one by taking the intersection of their

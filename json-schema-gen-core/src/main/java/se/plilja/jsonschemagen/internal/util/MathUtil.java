@@ -1,4 +1,4 @@
-package se.plilja.jsonschemagen.internal.generator;
+package se.plilja.jsonschemagen.internal.util;
 
 import java.util.Random;
 
@@ -55,7 +55,7 @@ public final class MathUtil {
         return Math.multiplyExact(Math.abs(a) / gcd(a, b), Math.abs(b));
     }
 
-    static Long lcmNullable(Long a, Long b) {
+    public static Long lcmNullable(Long a, Long b) {
         if (a == null || b == null) {
             return a == null ? b : a;
         }
