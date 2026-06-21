@@ -43,4 +43,4 @@ jobs:
           allowed_bots: 'claude,claude[bot]'
           additional_permissions: |
             actions: read
-          claude_args: '--allowedTools Bash Edit Read Write Glob Grep'
+          claude_args: '--model claude-opus-4-6 --allowedTools Bash Edit Read Write Glob Grep'
