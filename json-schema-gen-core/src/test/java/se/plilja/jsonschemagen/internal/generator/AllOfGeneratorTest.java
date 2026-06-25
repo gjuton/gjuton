@@ -333,6 +333,57 @@ class AllOfGeneratorTest {
             });
             assertThat(values).anyMatch(obj -> obj.containsKey("b"));
         }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void selfReferentialRefInsideAllOfIsSkipped() {
+            var json = """
+                    {
+                        "type": "object",
+                        "properties": {"value": {"type": "string"}},
+                        "required": ["value"],
+                        "allOf": [
+                            {"$ref": "#"}
+                        ]
+                    }
+                    """;
+
+            // when
+            var value = (java.util.Map<String, Object>) allOfGenerator(json).generate();
+
+            // then
+            assertThat(value).containsKey("value");
+            assertThat(value.get("value")).isInstanceOf(String.class);
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void selfReferentialRefInsideAllOfMergesOtherBranches() {
+            var json = """
+                    {
+                        "type": "object",
+                        "properties": {
+                            "value": {"type": "string"},
+                            "tag": {"type": "string"}
+                        },
+                        "required": ["value"],
+                        "allOf": [
+                            {"$ref": "#"},
+                            {
+                                "type": "object",
+                                "required": ["tag"]
+                            }
+                        ]
+                    }
+                    """;
+
+            // when
+            var value = (java.util.Map<String, Object>) allOfGenerator(json).generate();
+
+            // then
+            assertThat(value).containsKey("value");
+            assertThat(value).containsKey("tag");
+        }
     }
 
     @Nested
@@ -433,24 +484,6 @@ class AllOfGeneratorTest {
             assertThatThrownBy(() -> allOfGenerator(json))
                     .isInstanceOf(UnsatisfiableSchemaException.class)
                     .hasMessageContaining("pattern");
-        }
-
-        @Test
-        void selfReferentialRefInsideAllOfThrows() {
-            var json = """
-                    {
-                        "type": "object",
-                        "properties": {"value": {"type": "string"}},
-                        "allOf": [
-                            {"$ref": "#"}
-                        ]
-                    }
-                    """;
-
-            // when / then
-            assertThatThrownBy(() -> allOfGenerator(json))
-                    .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Self-referential");
         }
 
         @Test
