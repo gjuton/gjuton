@@ -21,10 +21,12 @@ final class AllOfGenerator implements Generator<Object> {
         for (var branch : parent.getAllOf()) {
             if (branch.getRef() != null) {
                 var resolved = context.resolveRef(branch.getRef());
-                // Identity check: the parser reuses the same Schema instance for "#"
+                // Identity check: the parser reuses the same Schema instance for "#",
+                // so == detects self-referential $ref. Self-ref is tautological in
+                // allOf — the value already satisfies this schema by construction.
+                // Common in schemas emitted by codegen tools (e.g. Swagger/OpenAPI).
                 if (resolved == parent) {
-                    throw new IllegalArgumentException(
-                            "Self-referential $ref '" + branch.getRef() + "' inside allOf is not supported");
+                    continue;
                 }
                 branches.add(resolved);
             } else {
