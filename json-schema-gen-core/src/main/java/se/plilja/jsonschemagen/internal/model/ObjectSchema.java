@@ -29,6 +29,8 @@ public final class ObjectSchema extends Schema {
 
     private Integer minProperties;
 
+    private Integer maxProperties;
+
     /**
      * Either {@link Boolean} ({@code true}/{@code false}) or a
      * {@link Schema} constraining additional property values.

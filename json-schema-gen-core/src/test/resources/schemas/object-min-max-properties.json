@@ -1,0 +1,13 @@
+{
+    "type": "object",
+    "properties": {
+        "a": {"type": "string"},
+        "b": {"type": "integer"},
+        "c": {"type": "boolean"},
+        "d": {"type": "string"},
+        "e": {"type": "integer"}
+    },
+    "required": ["a"],
+    "minProperties": 2,
+    "maxProperties": 4
+}
