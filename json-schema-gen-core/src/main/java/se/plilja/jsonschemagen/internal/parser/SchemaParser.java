@@ -43,8 +43,9 @@ public final class SchemaParser {
 
     /**
      * Normalises the Draft 7 {@code "type": ["string", "null"]} shorthand
-     * into an explicit {@code oneOf} before deserialisation, because the
-     * model layer only supports scalar type dispatch.
+     * into an explicit {@code oneOf} before deserialisation. Jackson uses
+     * the scalar {@code type} field for subclass dispatch, so the array
+     * form must be rewritten before {@code treeToValue} can succeed.
      *
      * <p>For example,
      * <pre>{@code

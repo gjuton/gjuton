@@ -3,6 +3,7 @@ package se.plilja.jsonschemagen.internal.generator;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.List;
 import java.util.Random;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Nested;
@@ -148,6 +149,350 @@ class AnyOfAllOfOneOfGeneratorTest {
                     """))
                     .isInstanceOf(IllegalArgumentException.class);
         }
+
+        @Test
+        void mergesNumericBounds() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {"type": "integer", "minimum": 10},
+                            {"type": "integer", "maximum": 20}
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(50)
+                    .map(Long.class::cast)
+                    .toList();
+
+            // then
+            assertThat(values).allMatch(v -> v >= 10 && v <= 20);
+        }
+
+        @Test
+        void mergesTypedWithUntypedCrossCutting() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {"type": "string"},
+                            {"enum": ["alpha", "beta", "gamma"]}
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(10)
+                    .toList();
+
+            // then
+            assertThat(values).allMatch(v -> v.equals("alpha") || v.equals("beta") || v.equals("gamma"));
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void mergesObjectSchemas() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {
+                                "type": "object",
+                                "properties": {"a": {"type": "string"}},
+                                "required": ["a"]
+                            },
+                            {
+                                "type": "object",
+                                "properties": {"b": {"type": "integer"}},
+                                "required": ["b"]
+                            }
+                        ]
+                    }
+                    """);
+
+            // when
+            var value = (java.util.Map<String, Object>) generator.generate();
+
+            // then
+            assertThat(value).containsOnlyKeys("a", "b");
+            assertThat(value.get("a")).isInstanceOf(String.class);
+            assertThat(value.get("b")).isInstanceOf(Long.class);
+        }
+
+        @Test
+        void mergesConstWithCompatibleEnum() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {"const": "beta"},
+                            {"enum": ["alpha", "beta", "gamma"]}
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(10)
+                    .toList();
+
+            // then
+            assertThat(values).allMatch(v -> v.equals("beta"));
+        }
+
+        @Test
+        void mergesEnumsByIntersection() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {"enum": ["a", "b", "c"]},
+                            {"enum": ["b", "c", "d"]}
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(10)
+                    .toList();
+
+            // then
+            assertThat(values).allMatch(v -> v.equals("b") || v.equals("c"));
+        }
+
+        @Test
+        void mergesMultipleOfAsLcm() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {"type": "integer", "multipleOf": 3},
+                            {"type": "integer", "multipleOf": 5}
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(20)
+                    .map(Long.class::cast)
+                    .toList();
+
+            // then
+            assertThat(values).allMatch(v -> v % 15 == 0);
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void mergesArraySchemas() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {"type": "array", "minItems": 2, "items": {"type": "string"}},
+                            {"type": "array", "maxItems": 4, "items": {"type": "string"}}
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(20)
+                    .map(v -> (java.util.List<Object>) v)
+                    .toList();
+
+            // then
+            assertThat(values).allMatch(v -> v.size() >= 2 && v.size() <= 4);
+            assertThat(values).allMatch(v -> v.stream().allMatch(String.class::isInstance));
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void mergesAllRefBranches() {
+            var generator = generatorFor("""
+                    {
+                        "definitions": {
+                            "HasId": {
+                                "type": "object",
+                                "properties": {"id": {"type": "integer"}},
+                                "required": ["id"]
+                            },
+                            "HasName": {
+                                "type": "object",
+                                "properties": {"name": {"type": "string"}},
+                                "required": ["name"]
+                            }
+                        },
+                        "allOf": [
+                            {"$ref": "#/definitions/HasId"},
+                            {"$ref": "#/definitions/HasName"}
+                        ]
+                    }
+                    """);
+
+            // when
+            var value = (java.util.Map<String, Object>) generator.generate();
+
+            // then
+            assertThat(value).containsKey("id");
+            assertThat(value.get("id")).isInstanceOf(Long.class);
+            assertThat(value).containsKey("name");
+            assertThat(value.get("name")).isInstanceOf(String.class);
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void additionalPropertiesFalseMergedThroughAllOf() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {
+                                "type": "object",
+                                "properties": {"a": {"type": "string"}},
+                                "required": ["a"],
+                                "additionalProperties": false
+                            },
+                            {
+                                "type": "object",
+                                "properties": {"b": {"type": "integer"}}
+                            }
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(20)
+                    .map(v -> (java.util.Map<String, Object>) v)
+                    .toList();
+
+            // then
+            assertThat(values).allSatisfy(obj -> {
+                assertThat(obj).containsKey("a");
+                assertThat(obj.get("a")).isInstanceOf(String.class);
+            });
+            assertThat(values).anyMatch(obj -> obj.containsKey("b"));
+        }
+
+        @Test
+        @SuppressWarnings("unchecked")
+        void selfReferentialRefMergesOtherBranches() {
+            var generator = generatorFor("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "value": {"type": "string"},
+                            "tag": {"type": "string"}
+                        },
+                        "required": ["value"],
+                        "allOf": [
+                            {"$ref": "#"},
+                            {
+                                "type": "object",
+                                "required": ["tag"]
+                            }
+                        ]
+                    }
+                    """);
+
+            // when
+            var value = (java.util.Map<String, Object>) generator.generate();
+
+            // then
+            assertThat(value).containsKey("value");
+            assertThat(value).containsKey("tag");
+        }
+
+        @Test
+        void conflictingConstValuesThrows() {
+            // when / then
+            assertThatThrownBy(() -> generatorFor("""
+                    {
+                        "allOf": [
+                            {"const": "hello"},
+                            {"const": "world"}
+                        ]
+                    }
+                    """))
+                    .isInstanceOf(UnsatisfiableSchemaException.class);
+        }
+
+        @Test
+        void disjointEnumsThrows() {
+            // when / then
+            assertThatThrownBy(() -> generatorFor("""
+                    {
+                        "allOf": [
+                            {"enum": ["a", "b"]},
+                            {"enum": ["c", "d"]}
+                        ]
+                    }
+                    """))
+                    .isInstanceOf(UnsatisfiableSchemaException.class);
+        }
+
+        @Test
+        void constNotInEnumThrows() {
+            // when / then
+            assertThatThrownBy(() -> generatorFor("""
+                    {
+                        "allOf": [
+                            {"const": "delta"},
+                            {"enum": ["alpha", "beta", "gamma"]}
+                        ]
+                    }
+                    """))
+                    .isInstanceOf(UnsatisfiableSchemaException.class);
+        }
+
+        @Test
+        void conflictingPatternsThrows() {
+            // when / then
+            assertThatThrownBy(() -> generatorFor("""
+                    {
+                        "allOf": [
+                            {"type": "string", "pattern": "[a-z]+"},
+                            {"type": "string", "pattern": "[A-Z]+"}
+                        ]
+                    }
+                    """))
+                    .isInstanceOf(UnsatisfiableSchemaException.class);
+        }
+
+        @Test
+        void nestedOneOfInsideAllOfIsSupported() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {"type": "string"},
+                            {"oneOf": [{"type": "string", "minLength": 1}, {"type": "string", "maxLength": 10}]}
+                        ]
+                    }
+                    """);
+
+            // when
+            var value = generator.generate();
+
+            // then
+            assertThat(value).isInstanceOf(String.class);
+        }
+
+        @Test
+        void nestedAllOfInsideAllOfIsSupported() {
+            var generator = generatorFor("""
+                    {
+                        "allOf": [
+                            {"type": "string"},
+                            {"allOf": [{"type": "string", "minLength": 3}]}
+                        ]
+                    }
+                    """);
+
+            // when
+            var value = generator.generate();
+
+            // then
+            assertThat(value).isInstanceOf(String.class);
+            assertThat(((String) value).length()).isGreaterThanOrEqualTo(3);
+        }
     }
 
     @Nested
@@ -193,8 +538,8 @@ class AnyOfAllOfOneOfGeneratorTest {
                     .toList();
 
             // then
-            assertThat(observed).containsExactly(
-                    Long.class, String.class, Long.class, Long.class, String.class);
+            assertThat(observed).isEqualTo(
+                    List.of(Long.class, String.class, Long.class, Long.class, String.class));
         }
 
         @Test
@@ -219,6 +564,32 @@ class AnyOfAllOfOneOfGeneratorTest {
 
             // then
             assertThat(values).allMatch(m -> m.containsKey("x"));
+        }
+
+        @Test
+        void skipsUnsatisfiableNestedBranch() {
+            var generator = generatorFor("""
+                    {
+                        "oneOf": [
+                            {"type": "string"},
+                            {
+                                "type": "null",
+                                "oneOf": [
+                                    {"type": "string"},
+                                    {"type": "integer"}
+                                ]
+                            }
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(20)
+                    .toList();
+
+            // then
+            assertThat(values).allMatch(v -> v instanceof String);
         }
 
         @Test
@@ -292,6 +663,32 @@ class AnyOfAllOfOneOfGeneratorTest {
         }
 
         @Test
+        void skipsUnsatisfiableNestedBranch() {
+            var generator = generatorFor("""
+                    {
+                        "oneOf": [
+                            {"type": "string"},
+                            {
+                                "type": "null",
+                                "anyOf": [
+                                    {"type": "string"},
+                                    {"type": "integer"}
+                                ]
+                            }
+                        ]
+                    }
+                    """);
+
+            // when
+            var values = Stream.generate(generator::generate)
+                    .limit(20)
+                    .toList();
+
+            // then
+            assertThat(values).allMatch(v -> v instanceof String);
+        }
+
+        @Test
         void respectsParentSiblingConstraints() {
             var generator = generatorFor("""
                     {
@@ -313,6 +710,27 @@ class AnyOfAllOfOneOfGeneratorTest {
 
             // then
             assertThat(values).allMatch(m -> m.containsKey("x"));
+        }
+
+        @Test
+        void fallsBackToSmallerSubsetWhenMergeIsUnsatisfiable() {
+            var generator = generatorFor("""
+                    {
+                        "anyOf": [
+                            {"type": "string"},
+                            {"type": "integer"}
+                        ]
+                    }
+                    """);
+            generator.generate();
+            generator.generate();
+
+            // when
+            var values = Stream.generate(generator::generate).limit(50).toList();
+
+            // then
+            assertThat(values).hasSize(50);
+            assertThat(values).allMatch(v -> v instanceof String || v instanceof Number);
         }
     }
 
