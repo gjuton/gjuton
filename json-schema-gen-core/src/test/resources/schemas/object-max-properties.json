@@ -1,0 +1,10 @@
+{
+    "type": "object",
+    "properties": {
+        "a": {"type": "string"},
+        "b": {"type": "integer"},
+        "c": {"type": "boolean"},
+        "d": {"type": "string"}
+    },
+    "maxProperties": 3
+}

@@ -208,6 +208,36 @@ class SchemaMergerTest {
         }
 
         @Test
+        void mergesMaxPropertiesTakingStricter() {
+            var a = readSchema("""
+                    {
+                        "type": "object",
+                        "properties": {"a": {"type": "string"}},
+                        "maxProperties": 5
+                    }
+                    """);
+            var b = readSchema("""
+                    {
+                        "type": "object",
+                        "properties": {"a": {"type": "string"}},
+                        "maxProperties": 3
+                    }
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged).isEqualTo(readSchema("""
+                    {
+                        "type": "object",
+                        "properties": {"a": {"type": "string"}},
+                        "maxProperties": 3
+                    }
+                    """));
+        }
+
+        @Test
         void additionalPropertiesFalseWinsOverAbsent() {
             var a = readSchema("""
                     {

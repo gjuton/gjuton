@@ -277,6 +277,237 @@ class ObjectGeneratorTest {
         assertThat(results).allSatisfy(obj -> assertThat(obj).doesNotContainKey("forbidden"));
     }
 
+    @Test
+    void boundaryValuesExercisedAcrossIterations() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "a": {"type": "string"},
+                        "b": {"type": "string"},
+                        "c": {"type": "string"},
+                        "d": {"type": "string"},
+                        "e": {"type": "string"}
+                    },
+                    "minProperties": 2,
+                    "maxProperties": 4
+                }
+                """);
+
+        // when
+        var sizes = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .map(Map::size)
+                .toList();
+
+        // then
+        assertThat(sizes).contains(2);
+        assertThat(sizes).contains(4);
+    }
+
+    @Test
+    void minAndMaxPropertiesEnforcedTogether() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "a": {"type": "string"},
+                        "b": {"type": "string"},
+                        "c": {"type": "string"},
+                        "d": {"type": "string"},
+                        "e": {"type": "string"}
+                    },
+                    "minProperties": 2,
+                    "maxProperties": 4
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(obj -> {
+            assertThat(obj).hasSizeGreaterThanOrEqualTo(2);
+            assertThat(obj).hasSizeLessThanOrEqualTo(4);
+        });
+    }
+
+    @Test
+    void maxPropertiesLessThanRequiredCountThrows() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "a": {"type": "string"},
+                        "b": {"type": "string"},
+                        "c": {"type": "string"}
+                    },
+                    "required": ["a", "b", "c"],
+                    "maxProperties": 2
+                }
+                """);
+
+        // when / then
+        assertThatThrownBy(generator::generate)
+                .isInstanceOf(UnsatisfiableSchemaException.class);
+    }
+
+    @Test
+    void maxPropertiesWithRequiredFieldsTrimsOptional() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "integer"},
+                        "name": {"type": "string"},
+                        "nickname": {"type": "string"},
+                        "email": {"type": "string"}
+                    },
+                    "required": ["id", "name"],
+                    "maxProperties": 3
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(obj -> {
+            assertThat(obj).containsKey("id");
+            assertThat(obj).containsKey("name");
+            assertThat(obj).hasSizeLessThanOrEqualTo(3);
+        });
+    }
+
+    @Test
+    void requiredDependentRequiredExceedingMaxPropertiesThrows() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "trigger": {"type": "string"},
+                        "dep1": {"type": "string"},
+                        "dep2": {"type": "string"}
+                    },
+                    "required": ["trigger"],
+                    "dependentRequired": {
+                        "trigger": ["dep1", "dep2"]
+                    },
+                    "maxProperties": 2
+                }
+                """);
+
+        // when / then
+        assertThatThrownBy(generator::generate)
+                .isInstanceOf(UnsatisfiableSchemaException.class);
+    }
+
+    @Test
+    void optionalDependentRequiredSkippedWhenExceedingMaxProperties() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "a": {"type": "string"},
+                        "trigger": {"type": "string"},
+                        "dep1": {"type": "string"},
+                        "dep2": {"type": "string"}
+                    },
+                    "dependentRequired": {
+                        "trigger": ["dep1", "dep2"]
+                    },
+                    "maxProperties": 2
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(obj -> assertThat(obj).hasSizeLessThanOrEqualTo(2));
+    }
+
+    @Test
+    void minPropertiesExceedsAvailablePropertiesThrows() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "a": {"type": "string"},
+                        "b": false
+                    },
+                    "minProperties": 3
+                }
+                """);
+
+        // when / then
+        assertThatThrownBy(generator::generate)
+                .isInstanceOf(UnsatisfiableSchemaException.class);
+    }
+
+    @Test
+    void maxPropertiesCapsKeyCount() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "a": {"type": "string"},
+                        "b": {"type": "string"},
+                        "c": {"type": "string"},
+                        "d": {"type": "string"}
+                    },
+                    "maxProperties": 2
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(obj -> assertThat(obj).hasSizeLessThanOrEqualTo(2));
+    }
+
+    @Test
+    void circularDependentRequiredBothPresentOrAbsent() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "a": {"type": "string"},
+                        "b": {"type": "string"},
+                        "c": {"type": "string"}
+                    },
+                    "dependentRequired": {
+                        "a": ["b"],
+                        "b": ["a"]
+                    }
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(obj -> {
+            if (obj.containsKey("a")) {
+                assertThat(obj).containsKey("b");
+            }
+            if (obj.containsKey("b")) {
+                assertThat(obj).containsKey("a");
+            }
+        });
+    }
+
     private static ObjectGenerator objectGenerator(String json) {
         var document = SchemaParser.parse(json);
         return new ObjectGenerator(new GeneratorContext(document, new Random(42)), (ObjectSchema) document.getRoot());
