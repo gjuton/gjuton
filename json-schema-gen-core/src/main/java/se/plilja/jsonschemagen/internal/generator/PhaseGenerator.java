@@ -1,16 +1,16 @@
 package se.plilja.jsonschemagen.internal.generator;
 
+import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 import se.plilja.jsonschemagen.internal.util.EnumUtil;
 
 /**
- * Generator that walks through a sequence of named phases.
- *
- * <p>Each call to {@link #generate()} tries the current phase via
- * {@link #generatePhase}. If the phase returns {@link GenerationResult.Skip},
- * the generator advances to the next phase and retries until a phase
- * produces a value.
+ * Generator that walks through a sequence of named phases, producing
+ * one value per {@link #generate()} call. Phases are tried in order;
+ * a phase that cannot produce a value is skipped in favour of the next.
  */
 public abstract class PhaseGenerator<E extends Enum<E>, R> implements Generator<R> {
+
+    private static final int RETRY_BUDGET = 10;
 
     protected final GeneratorContext context;
     private E phase;
@@ -28,18 +28,23 @@ public abstract class PhaseGenerator<E extends Enum<E>, R> implements Generator<
             }
             throw new IllegalStateException("Minimal phase must always produce a value");
         }
-        while (true) {
-            var result = generatePhase(phase);
+        UnsatisfiableSchemaException lastException = null;
+        for (int attempt = 0; attempt < RETRY_BUDGET; attempt++) {
+            GenerationResult<R> result;
+            try {
+                result = generatePhase(phase);
+            } catch (UnsatisfiableSchemaException e) {
+                lastException = e;
+                result = GenerationResult.skip();
+            }
             var prev = phase;
             phase = advanceToNext(phase);
             if (result instanceof GenerationResult.Present<R> present) {
                 return present.value();
             }
-            if (prev == phase) {
-                // We reached the end of the phases but were unable to generate any value
-                throw new IllegalStateException("No applicable phase found");
-            }
         }
+        throw lastException != null ? lastException
+                : new UnsatisfiableSchemaException("Unable to generate a value satisfying the schema");
     }
 
     protected E advanceToNext(E current) {
