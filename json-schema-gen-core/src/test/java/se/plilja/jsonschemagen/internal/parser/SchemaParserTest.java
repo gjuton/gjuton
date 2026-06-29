@@ -13,6 +13,7 @@ import java.nio.file.Paths;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import java.util.List;
+import se.plilja.jsonschemagen.api.JsonSchemaGenerator;
 import se.plilja.jsonschemagen.internal.model.NullSchema;
 import se.plilja.jsonschemagen.internal.model.NumericSchema;
 import se.plilja.jsonschemagen.internal.model.ObjectSchema;
@@ -559,6 +560,235 @@ class SchemaParserTest {
         var resolved = document.resolveRef("leaf.json");
         assertThat(resolved).isNotNull();
         assertThat(resolved).isInstanceOf(StringSchema.class);
+    }
+
+    @Test
+    void refsWithinExternalSchemaAreResolved(@TempDir Path tempDir) throws Exception {
+        Files.writeString(tempDir.resolve("defs.json"), """
+                {
+                    "definitions": {
+                        "Order": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "integer"},
+                                "address": {"$ref": "#/definitions/Address"}
+                            },
+                            "required": ["id", "address"]
+                        },
+                        "Address": {
+                            "type": "object",
+                            "properties": {
+                                "street": {"type": "string"},
+                                "city": {"type": "string"}
+                            },
+                            "required": ["street", "city"]
+                        }
+                    }
+                }
+                """);
+        var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
+                {
+                    "type": "object",
+                    "properties": {
+                        "order": {"$ref": "defs.json#/definitions/Order"}
+                    },
+                    "required": ["order"]
+                }
+                """);
+
+        // when
+        var document = SchemaParser.parse(schemaFile);
+
+        // then
+        var order = document.resolveRef("defs.json#/definitions/Order");
+        assertThat(order).isNotNull().isInstanceOf(ObjectSchema.class);
+        var addressRef = document.resolveRef("defs.json#/definitions/Address");
+        assertThat(addressRef).isNotNull().isInstanceOf(ObjectSchema.class);
+    }
+
+    @Test
+    void generationWorksWithRefsWithinExternalSchema(@TempDir Path tempDir) throws Exception {
+        Files.writeString(tempDir.resolve("defs.json"), """
+                {
+                    "definitions": {
+                        "Order": {
+                            "type": "object",
+                            "properties": {
+                                "id": {"type": "integer"},
+                                "address": {"$ref": "#/definitions/Address"}
+                            },
+                            "required": ["id", "address"]
+                        },
+                        "Address": {
+                            "type": "object",
+                            "properties": {
+                                "street": {"type": "string"},
+                                "city": {"type": "string"}
+                            },
+                            "required": ["street", "city"]
+                        }
+                    }
+                }
+                """);
+        var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
+                {
+                    "type": "object",
+                    "properties": {
+                        "order": {"$ref": "defs.json#/definitions/Order"}
+                    },
+                    "required": ["order"]
+                }
+                """);
+
+        // when
+        var gen = JsonSchemaGenerator.of(schemaFile.toFile()).withSeed(42);
+        var json = gen.generate();
+
+        // then
+        var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        assertThat(tree.has("order")).isTrue();
+        assertThat(tree.get("order").has("id")).isTrue();
+        assertThat(tree.get("order").has("address")).isTrue();
+        assertThat(tree.get("order").get("address").has("street")).isTrue();
+        assertThat(tree.get("order").get("address").has("city")).isTrue();
+    }
+
+    @Test
+    void transitiveRefsWithinExternalSchemaAreResolved(@TempDir Path tempDir) throws Exception {
+        Files.writeString(tempDir.resolve("defs.json"), """
+                {
+                    "definitions": {
+                        "Order": {
+                            "type": "object",
+                            "properties": {
+                                "address": {"$ref": "#/definitions/Address"}
+                            },
+                            "required": ["address"]
+                        },
+                        "Address": {
+                            "type": "object",
+                            "properties": {
+                                "zip": {"$ref": "#/definitions/ZipCode"}
+                            },
+                            "required": ["zip"]
+                        },
+                        "ZipCode": {
+                            "type": "string",
+                            "minLength": 5,
+                            "maxLength": 10
+                        }
+                    }
+                }
+                """);
+        var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
+                {
+                    "type": "object",
+                    "properties": {
+                        "order": {"$ref": "defs.json#/definitions/Order"}
+                    },
+                    "required": ["order"]
+                }
+                """);
+
+        // when
+        var gen = JsonSchemaGenerator.of(schemaFile.toFile()).withSeed(42);
+        var json = gen.generate();
+
+        // then
+        var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        var zip = tree.get("order").get("address").get("zip");
+        assertThat(zip.isTextual()).isTrue();
+        assertThat(zip.asText().length()).isBetween(5, 10);
+    }
+
+    @Test
+    void overlappingDefinitionNamesInMainAndExternalDocDoNotCollide(@TempDir Path tempDir) throws Exception {
+        Files.writeString(tempDir.resolve("defs.json"), """
+                {
+                    "definitions": {
+                        "Thing": {
+                            "type": "object",
+                            "properties": {
+                                "name": {"$ref": "#/definitions/Name"}
+                            },
+                            "required": ["name"]
+                        },
+                        "Name": {
+                            "type": "string",
+                            "minLength": 10,
+                            "maxLength": 20
+                        }
+                    }
+                }
+                """);
+        var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
+                {
+                    "type": "object",
+                    "properties": {
+                        "thing": {"$ref": "defs.json#/definitions/Thing"},
+                        "localName": {"$ref": "#/definitions/Name"}
+                    },
+                    "definitions": {
+                        "Name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 3
+                        }
+                    },
+                    "required": ["thing", "localName"]
+                }
+                """);
+
+        // when
+        var gen = JsonSchemaGenerator.of(schemaFile.toFile()).withSeed(42);
+        var json = gen.generate();
+
+        // then
+        var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        var externalName = tree.get("thing").get("name").asText();
+        var localName = tree.get("localName").asText();
+        assertThat(externalName.length()).isBetween(10, 20);
+        assertThat(localName.length()).isBetween(1, 3);
+    }
+
+    @Test
+    void externalSchemaReferencingAnotherExternalSchema(@TempDir Path tempDir) throws Exception {
+        Files.writeString(tempDir.resolve("address.json"), """
+                {
+                    "type": "object",
+                    "properties": {
+                        "street": {"type": "string"},
+                        "zip": {"$ref": "zipcode.json"}
+                    },
+                    "required": ["street", "zip"]
+                }
+                """);
+        Files.writeString(tempDir.resolve("zipcode.json"), """
+                {
+                    "type": "string",
+                    "minLength": 5,
+                    "maxLength": 10
+                }
+                """);
+        var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
+                {
+                    "type": "object",
+                    "properties": {
+                        "address": {"$ref": "address.json"}
+                    },
+                    "required": ["address"]
+                }
+                """);
+
+        // when
+        var gen = JsonSchemaGenerator.of(schemaFile.toFile()).withSeed(42);
+        var json = gen.generate();
+
+        // then
+        var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
+        assertThat(tree.get("address").get("street").isTextual()).isTrue();
+        var zip = tree.get("address").get("zip").asText();
+        assertThat(zip.length()).isBetween(5, 10);
     }
 
     @Test

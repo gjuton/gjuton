@@ -121,40 +121,41 @@ public final class SchemaParser {
     private static void collectRefs(
             JsonNode node, JsonNode root, Map<String, Schema> refs,
             Path baseDir) throws JsonProcessingException {
+        collectRefs(node, root, refs, baseDir, null);
+    }
+
+    private static void collectRefs(
+            JsonNode node, JsonNode root, Map<String, Schema> refs,
+            Path baseDir, String currentDocUri) throws JsonProcessingException {
         if (node.isObject()) {
             var refNode = node.get("$ref");
             if (refNode != null && refNode.isTextual()) {
                 var ref = refNode.asText();
                 if (!refs.containsKey(ref)) {
-                    var resolved = resolveRef(ref, root, baseDir);
-                    refs.put(ref, resolved);
+                    if (ref.startsWith("#")) {
+                        refs.put(ref, resolveFragment(ref.substring(1), root));
+                    } else if (currentDocUri != null && ref.startsWith(currentDocUri + "#")) {
+                        var fragment = ref.substring(ref.indexOf('#') + 1);
+                        refs.put(ref, resolveFragment(fragment, root));
+                    } else {
+                        int fragIdx = ref.indexOf('#');
+                        var baseUri = fragIdx >= 0 ? ref.substring(0, fragIdx) : ref;
+                        var fragment = fragIdx >= 0 ? ref.substring(fragIdx + 1) : "";
+                        var externalDoc = loadExternalDocument(baseUri, baseDir);
+                        qualifyRefsWithinExternalDocument(externalDoc, baseUri);
+                        refs.put(ref, resolveFragment(fragment, externalDoc));
+                        collectRefs(externalDoc, externalDoc, refs, baseDir, baseUri);
+                    }
                 }
             }
             for (var property : node.properties()) {
-                collectRefs(property.getValue(), root, refs, baseDir);
+                collectRefs(property.getValue(), root, refs, baseDir, currentDocUri);
             }
         } else if (node.isArray()) {
             for (var item : node) {
-                collectRefs(item, root, refs, baseDir);
+                collectRefs(item, root, refs, baseDir, currentDocUri);
             }
         }
-    }
-
-    /**
-     * Resolves a {@code $ref} string to a {@link Schema}. Internal
-     * references are resolved within {@code root}; external references
-     * are loaded from file or HTTP and resolved by fragment.
-     */
-    private static Schema resolveRef(String ref, JsonNode root, Path baseDir) throws JsonProcessingException {
-        if (ref.startsWith("#")) {
-            return resolveFragment(ref.substring(1), root);
-        }
-        int fragmentIndex = ref.indexOf('#');
-        var baseUri = fragmentIndex >= 0 ? ref.substring(0, fragmentIndex) : ref;
-        var fragment = fragmentIndex >= 0 ? ref.substring(fragmentIndex + 1) : "";
-
-        var externalRoot = loadExternalDocument(baseUri, baseDir);
-        return resolveFragment(fragment, externalRoot);
     }
 
     private static Schema resolveFragment(String pointer, JsonNode root) throws JsonProcessingException {
@@ -188,6 +189,33 @@ public final class SchemaParser {
             return node;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
+        }
+    }
+
+    /**
+     * Rewrites {@code $ref} values in an external document from the
+     * document-local form ({@code "#/definitions/Foo"}) to fully-qualified
+     * form ({@code "baseUri#/definitions/Foo"}). This must run before any
+     * deserialization so that the resulting {@link Schema} objects carry
+     * qualified ref strings that match the keys in the shared refs map.
+     */
+    private static void qualifyRefsWithinExternalDocument(JsonNode node, String baseUri) {
+        if (node.isObject()) {
+            var objectNode = (ObjectNode) node;
+            var refNode = objectNode.get("$ref");
+            if (refNode != null && refNode.isTextual()) {
+                var ref = refNode.asText();
+                if (ref.startsWith("#")) {
+                    objectNode.put("$ref", baseUri + ref);
+                }
+            }
+            for (var entry : objectNode.properties()) {
+                qualifyRefsWithinExternalDocument(entry.getValue(), baseUri);
+            }
+        } else if (node.isArray()) {
+            for (var element : node) {
+                qualifyRefsWithinExternalDocument(element, baseUri);
+            }
         }
     }
 }
