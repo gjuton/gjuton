@@ -137,9 +137,9 @@ class RefGeneratorTest {
                 .orElseThrow();
 
         // then
-        // HARD_DEPTH is 10 ref expansions; observable JSON nesting can be a small
-        // multiple of that (object → array → object → ...). Anything well below
-        // a stack-overflow ceiling is fine.
+        // GLOBAL_HARD_DEPTH is 4 ref expansions; observable JSON nesting can be
+        // a small multiple of that (object → array → object → ...). Anything
+        // well below a stack-overflow ceiling is fine.
         assertThat(maxDepth).isLessThan(50);
     }
 
@@ -157,6 +157,40 @@ class RefGeneratorTest {
             }
         }
         return 1 + max;
+    }
+
+    @Test
+    void manySelfReferencingPropertiesCompleteInBoundedTime() {
+        // Schema mimics Renovate-style: many properties all pointing $ref: "#".
+        // Without a global depth limit this causes exponential blowup.
+        var props = new StringBuilder();
+        for (int i = 0; i < 50; i++) {
+            if (i > 0) {
+                props.append(",");
+            }
+            props.append("\"prop").append(i).append("\": {\"$ref\": \"#\"}");
+        }
+        var schema = """
+                {
+                    "type": "object",
+                    "properties": {
+                        "name": {"type": "string"},
+                        %s
+                    },
+                    "required": ["name"],
+                    "additionalProperties": false
+                }
+                """.formatted(props);
+        var document = SchemaParser.parse(schema);
+        var gen = new JsonGenerator(42L, document);
+
+        // when
+        // second call hits MAX_PROPERTIES phase, expanding all 50 refs
+        gen.generate();
+        var result = gen.generate();
+
+        // then
+        assertThat(result).isInstanceOf(Map.class);
     }
 
     private static RefGenerator refGenerator(String json, String ref) {

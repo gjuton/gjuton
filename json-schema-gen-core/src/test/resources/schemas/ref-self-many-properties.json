@@ -1,0 +1,30 @@
+{
+    "type": "object",
+    "properties": {
+        "name": {"type": "string"},
+        "enabled": {"type": "boolean"},
+        "count": {"type": "integer"},
+        "override1": {"$ref": "#"},
+        "override2": {"$ref": "#"},
+        "override3": {"$ref": "#"},
+        "override4": {"$ref": "#"},
+        "override5": {"$ref": "#"},
+        "override6": {"$ref": "#"},
+        "override7": {"$ref": "#"},
+        "override8": {"$ref": "#"},
+        "override9": {"$ref": "#"},
+        "override10": {"$ref": "#"},
+        "override11": {"$ref": "#"},
+        "override12": {"$ref": "#"},
+        "override13": {"$ref": "#"},
+        "override14": {"$ref": "#"},
+        "override15": {"$ref": "#"},
+        "override16": {"$ref": "#"},
+        "override17": {"$ref": "#"},
+        "override18": {"$ref": "#"},
+        "override19": {"$ref": "#"},
+        "override20": {"$ref": "#"}
+    },
+    "required": ["name"],
+    "additionalProperties": false
+}
