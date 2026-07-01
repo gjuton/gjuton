@@ -29,11 +29,24 @@ public final class GeneratorContext {
     private final Map<Schema, JsonGenerator> generatorCache = new IdentityHashMap<>();
 
     /**
-     * Minimal-generation mode flag. {@link RefGenerator} flips this on when
-     * expanding past the soft recursion limit so containers downstream collapse
-     * to their smallest valid form and the recursion terminates.
+     * Flips the context into minimal mode so recursive generators collapse
+     * to required-only / empty containers.
      */
-    private boolean minimal;
+    static final int GLOBAL_REF_SOFT_DEPTH = 2;
+
+    /**
+     * Ceiling for required-field recursion that can never bottom out —
+     * beyond this depth the schema is unsatisfiable.
+     */
+    static final int GLOBAL_REF_HARD_DEPTH = 4;
+
+    /**
+     * Number of {@code $ref} expansions currently on the call stack across all
+     * {@link RefGenerator} instances. Drives minimal-mode: when this reaches
+     * the soft depth limit, downstream generators collapse to their smallest
+     * valid form so recursion terminates.
+     */
+    private int globalRefDepth;
 
     GeneratorContext(SchemaDocument document, Random random) {
         this.document = document;
@@ -45,15 +58,19 @@ public final class GeneratorContext {
     }
 
     boolean isMinimal() {
-        return minimal;
+        return globalRefDepth >= GLOBAL_REF_SOFT_DEPTH;
     }
 
-    void enterMinimal() {
-        minimal = true;
+    int getGlobalRefDepth() {
+        return globalRefDepth;
     }
 
-    void exitMinimal() {
-        minimal = false;
+    void incrementGlobalRefDepth() {
+        globalRefDepth++;
+    }
+
+    void decrementGlobalRefDepth() {
+        globalRefDepth--;
     }
 
     JsonGenerator generatorFor(Schema schema) {
