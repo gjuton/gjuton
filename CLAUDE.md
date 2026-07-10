@@ -139,6 +139,13 @@ Scope:
 
 Use `// when` and `// then` comments to separate test phases.
 
+## Worktrees
+
+When creating git worktrees, always use relative paths in both
+`.git` (the worktree's gitdir pointer) and `.git/worktrees/<name>/gitdir`.
+The repo may be inside a container whose absolute paths differ from the
+host.
+
 ## Workflow
 
 - Never commit unless explicitly told to commit.
