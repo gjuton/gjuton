@@ -1,6 +1,7 @@
 package se.plilja.jsonschemagen.internal.generator;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -215,6 +216,9 @@ final class SchemaValidator {
         }
         if (schema.getContains() != null
                 && list.stream().noneMatch(item -> satisfies(item, schema.getContains()))) {
+            return false;
+        }
+        if (schema.isUniqueItems() && new HashSet<>(list).size() != list.size()) {
             return false;
         }
         return true;

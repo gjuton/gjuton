@@ -4,7 +4,10 @@ import static se.plilja.jsonschemagen.internal.generator.GenerationResult.result
 import static se.plilja.jsonschemagen.internal.util.FunctionalUtil.coalesce;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 import se.plilja.jsonschemagen.internal.model.ArraySchema;
 import se.plilja.jsonschemagen.internal.model.NullSchema;
 import se.plilja.jsonschemagen.internal.model.Schema;
@@ -21,6 +24,12 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
      * arrays of varying lengths across phases.
      */
     private static final int DEFAULT_LENGTH_BUFFER = 5;
+
+    /**
+     * Retry budget for finding a distinct element when {@code uniqueItems}
+     * is set, before giving up as unsatisfiable.
+     */
+    private static final int UNIQUE_ITEMS_RETRY_BUDGET = 20;
 
     private final ArraySchema schema;
     private final List<Schema> prefixSchemas;
@@ -71,16 +80,47 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
     private List<Object> buildList(int length) {
         int containsIndex = pickContainsIndex(length);
         var list = new ArrayList<>();
-        for (var i = 0; i < length; i++) {
-            if (i == containsIndex) {
-                list.add(context.generatorFor(schema.getContains()).generate());
-            } else if (i < prefixSchemas.size()) {
-                list.add(context.generatorFor(prefixSchemas.get(i)).generate());
-            } else {
-                list.add(context.generatorFor(itemSchema).generate());
+        if (schema.isUniqueItems()) {
+            var seen = new HashSet<>();
+            for (var i = 0; i < length; i++) {
+                var element = generateDistinctElementAt(i, containsIndex, seen);
+                list.add(element);
+                seen.add(element);
+            }
+        } else {
+            for (var i = 0; i < length; i++) {
+                list.add(generateElementAt(i, containsIndex));
             }
         }
         return list;
+    }
+
+    private Object generateElementAt(int index, int containsIndex) {
+        if (index == containsIndex) {
+            return context.generatorFor(schema.getContains()).generate();
+        } else if (index < prefixSchemas.size()) {
+            return context.generatorFor(prefixSchemas.get(index)).generate();
+        } else {
+            return context.generatorFor(itemSchema).generate();
+        }
+    }
+
+    /**
+     * Generates the element at {@code index}, retrying on collision with an
+     * already-placed element ({@code seen}) until a distinct value is found.
+     *
+     * @throws UnsatisfiableSchemaException if no distinct element can be
+     *         produced within the retry budget
+     */
+    private Object generateDistinctElementAt(int index, int containsIndex, Set<Object> seen) {
+        for (var attempt = 0; attempt < UNIQUE_ITEMS_RETRY_BUDGET; attempt++) {
+            var element = generateElementAt(index, containsIndex);
+            if (!seen.contains(element)) {
+                return element;
+            }
+        }
+        throw new UnsatisfiableSchemaException(
+                "Could not generate a distinct element satisfying uniqueItems within the retry budget");
     }
 
     /**

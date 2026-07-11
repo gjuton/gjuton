@@ -1,11 +1,13 @@
 package se.plilja.jsonschemagen.internal.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Random;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
+import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 import se.plilja.jsonschemagen.internal.model.ArraySchema;
 import se.plilja.jsonschemagen.internal.parser.SchemaParser;
 
@@ -369,6 +371,112 @@ class ArrayGeneratorTest {
                 assertThat(arr.get(i)).isInstanceOf(Boolean.class);
             }
         });
+    }
+
+    @Test
+    void uniqueItemsProducesNoDuplicateElements() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer", "minimum": 0, "maximum": 1000},
+                    "uniqueItems": true,
+                    "minItems": 5,
+                    "maxItems": 5
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> assertThat(arr).doesNotHaveDuplicates());
+    }
+
+    @Test
+    void uniqueItemsWithSmallEnumStillProducesAllDistinctElements() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["a", "b", "c"]},
+                    "uniqueItems": true,
+                    "minItems": 3,
+                    "maxItems": 3
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> {
+            assertThat(arr).doesNotHaveDuplicates();
+            assertThat(arr).hasSize(3);
+        });
+    }
+
+    @Test
+    void uniqueItemsThrowsWhenMinItemsExceedsValueSpace() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "string", "enum": ["a", "b", "c"]},
+                    "uniqueItems": true,
+                    "minItems": 4
+                }
+                """);
+
+        // when / then
+        assertThatThrownBy(generator::generate).isInstanceOf(UnsatisfiableSchemaException.class);
+    }
+
+    @Test
+    void uniqueItemsAppliesAcrossPrefixAndAdditionalPositions() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "prefixItems": [
+                        {"type": "string", "enum": ["a", "b", "c"]},
+                        {"type": "string", "enum": ["a", "b", "c"]}
+                    ],
+                    "items": {"type": "string", "enum": ["a", "b", "c"]},
+                    "uniqueItems": true,
+                    "minItems": 3,
+                    "maxItems": 3
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> {
+            assertThat(arr).doesNotHaveDuplicates();
+            assertThat(arr).hasSize(3);
+        });
+    }
+
+    @Test
+    void uniqueItemsThrowsWhenPrefixItemsForceADuplicateConst() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "prefixItems": [
+                        {"const": "x"},
+                        {"const": "x"}
+                    ],
+                    "uniqueItems": true,
+                    "minItems": 2
+                }
+                """);
+
+        // when / then
+        assertThatThrownBy(generator::generate).isInstanceOf(UnsatisfiableSchemaException.class);
     }
 
     private static ArrayGenerator arrayGenerator(String json) {

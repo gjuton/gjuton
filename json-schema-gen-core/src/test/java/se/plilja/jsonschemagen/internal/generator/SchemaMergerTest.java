@@ -592,6 +592,24 @@ class SchemaMergerTest {
         }
 
         @Test
+        void uniqueItemsTrueOnEitherSideWins() {
+            var a = readSchema("""
+                    {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+                    """);
+            var b = readSchema("""
+                    {"type": "array", "items": {"type": "string"}}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged).isEqualTo(readSchema("""
+                    {"type": "array", "items": {"type": "string"}, "uniqueItems": true}
+                    """));
+        }
+
+        @Test
         void mergesItemSchemas() {
             var a = readSchema("""
                     {"type": "array", "items": {"type": "string", "minLength": 3}}

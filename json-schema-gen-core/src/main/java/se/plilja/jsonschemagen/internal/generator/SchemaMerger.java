@@ -236,6 +236,7 @@ final class SchemaMerger {
                 .contains(contains)
                 .minItems(maxNullable(a.getMinItems(), b.getMinItems()))
                 .maxItems(minNullable(a.getMaxItems(), b.getMaxItems()))
+                .uniqueItems(a.isUniqueItems() || b.isUniqueItems())
                 .build();
     }
 
