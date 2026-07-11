@@ -67,6 +67,11 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
             // additionalItems: false — nothing is allowed past the tuple prefix
             effectiveMax = Math.min(effectiveMax, prefixSchemas.size());
         }
+        if (effectiveMax < minLength) {
+            throw new UnsatisfiableSchemaException(
+                    "No valid array length satisfies minItems/maxItems/contains together: effective minimum length "
+                            + minLength + " exceeds effective maximum length " + effectiveMax);
+        }
         return switch (phase) {
             case MIN_LENGTH -> result(buildList(minLength));
             case MAX_LENGTH -> result(buildList(effectiveMax));

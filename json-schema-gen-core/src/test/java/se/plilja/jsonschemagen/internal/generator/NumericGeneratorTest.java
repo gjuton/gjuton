@@ -1,6 +1,7 @@
 package se.plilja.jsonschemagen.internal.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static se.plilja.jsonschemagen.internal.generator.TestContexts.withSeed;
 
 import java.math.BigDecimal;
@@ -9,6 +10,7 @@ import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 import se.plilja.jsonschemagen.internal.model.NumericSchema;
 
 class NumericGeneratorTest {
@@ -398,6 +400,15 @@ class NumericGeneratorTest {
             assertThat(counts.get(0L)).isGreaterThan(50L);
             assertThat(counts.get(20L)).isGreaterThan(50L);
         }
+
+        @Test
+        void contradictoryBoundsThrowsUnsatisfiableSchemaException() {
+            var generator = new NumericGenerator(withSeed(42),
+                    NumericSchema.builder().type("integer").minimum(BigDecimal.valueOf(600)).maximum(BigDecimal.valueOf(500)).build());
+
+            // when / then
+            assertThatThrownBy(generator::generate).isInstanceOf(UnsatisfiableSchemaException.class);
+        }
     }
 
     @Nested
@@ -499,6 +510,27 @@ class NumericGeneratorTest {
             // then
             assertThat(values).hasSizeGreaterThan(1);
             assertThat(values).allMatch(v -> v instanceof Double);
+        }
+
+        @Test
+        void minimumEqualsMaximumProducesThatValue() {
+            var generator = new NumericGenerator(withSeed(42),
+                    NumericSchema.builder().type("number").minimum(BigDecimal.valueOf(1)).maximum(BigDecimal.valueOf(1)).build());
+
+            // when
+            var result = generator.generate();
+
+            // then
+            assertThat(result).isEqualTo(1.0);
+        }
+
+        @Test
+        void contradictoryBoundsThrowsUnsatisfiableSchemaException() {
+            var generator = new NumericGenerator(withSeed(42),
+                    NumericSchema.builder().type("number").minimum(BigDecimal.valueOf(5)).maximum(BigDecimal.valueOf(1)).build());
+
+            // when / then
+            assertThatThrownBy(generator::generate).isInstanceOf(UnsatisfiableSchemaException.class);
         }
     }
 

@@ -5,6 +5,7 @@ import static se.plilja.jsonschemagen.internal.generator.GenerationResult.skip;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import se.plilja.jsonschemagen.errors.UnsatisfiableSchemaException;
 import se.plilja.jsonschemagen.internal.model.NumericSchema;
 import se.plilja.jsonschemagen.internal.util.MathUtil;
 
@@ -210,6 +211,15 @@ final class NumericGenerator extends PhaseGenerator<NumericGenerator.GenerationP
     }
 
     private BigDecimal randomValue(BigDecimal lowestMultiple, BigDecimal highestMultiple) {
+        int comparison = lowestMultiple.compareTo(highestMultiple);
+        if (comparison > 0) {
+            throw new UnsatisfiableSchemaException(
+                    "No valid value satisfies minimum/maximum/multipleOf together: effective lower bound "
+                            + lowestMultiple + " exceeds effective upper bound " + highestMultiple);
+        }
+        if (comparison == 0) {
+            return lowestMultiple;
+        }
         if (!hasMultipleOf()) {
             if (schema.isInteger()) {
                 long lo = lowestMultiple.longValueExact();
