@@ -508,6 +508,22 @@ class ArrayGeneratorTest {
                 item -> assertThat((Map<String, Object>) item).containsKey("label")));
     }
 
+    @Test
+    void containsForcingMinLengthAboveMaxItemsThrows() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "minItems": 0,
+                    "maxItems": 0,
+                    "items": {"type": "integer"},
+                    "contains": {"const": 42}
+                }
+                """);
+
+        // when / then
+        assertThatThrownBy(generator::generate).isInstanceOf(UnsatisfiableSchemaException.class);
+    }
+
     private static ArrayGenerator arrayGenerator(String json) {
         var document = SchemaParser.parse(json);
         return new ArrayGenerator(new GeneratorContext(document, new Random(42)), (ArraySchema) document.getRoot());
