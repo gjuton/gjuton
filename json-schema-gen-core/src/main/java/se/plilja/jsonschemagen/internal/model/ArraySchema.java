@@ -60,6 +60,13 @@ public final class ArraySchema extends Schema {
     private Integer maxItems;
 
     /**
+     * Whether every element of the array must be distinct from every
+     * other element. Corresponds to the JSON Schema {@code uniqueItems}
+     * keyword; defaults to {@code false} when absent.
+     */
+    private boolean uniqueItems;
+
+    /**
      * Returns the positional (tuple) schemas, merging both Draft 7
      * ({@code items} as array) and Draft 2019-09+ ({@code prefixItems}).
      * Returns an empty list when neither is present.

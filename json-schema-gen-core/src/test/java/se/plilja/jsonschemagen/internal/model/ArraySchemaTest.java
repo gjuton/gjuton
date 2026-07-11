@@ -176,6 +176,37 @@ class ArraySchemaTest {
         }
     }
 
+    @Nested
+    class IsUniqueItems {
+
+        @Test
+        void trueWhenUniqueItemsTrue() {
+            var schema = parseArray("""
+                    {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "uniqueItems": true
+                    }
+                    """);
+
+            // then
+            assertThat(schema.isUniqueItems()).isTrue();
+        }
+
+        @Test
+        void falseWhenAbsent() {
+            var schema = parseArray("""
+                    {
+                        "type": "array",
+                        "items": {"type": "string"}
+                    }
+                    """);
+
+            // then
+            assertThat(schema.isUniqueItems()).isFalse();
+        }
+    }
+
     private static ArraySchema parseArray(String json) {
         return (ArraySchema) SchemaParser.parse(json).getRoot();
     }

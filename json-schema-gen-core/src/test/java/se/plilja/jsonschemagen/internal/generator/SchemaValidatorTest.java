@@ -435,6 +435,32 @@ class SchemaValidatorTest {
             // then
             assertThat(result).isTrue();
         }
+
+        @Test
+        void arrayWithDuplicateElementsFailsUniqueItemsSchema() {
+            var document = SchemaParser.parse("""
+                    {"type": "array", "uniqueItems": true}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(List.of("a", "a"), document.getRoot());
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void arrayWithDistinctElementsSatisfiesUniqueItemsSchema() {
+            var document = SchemaParser.parse("""
+                    {"type": "array", "uniqueItems": true}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(List.of("a", "b"), document.getRoot());
+
+            // then
+            assertThat(result).isTrue();
+        }
     }
 
     @Nested
