@@ -194,9 +194,27 @@ host.
   before coding. The user pointing out a problem or asking "what about
   X?" means "revise the plan", not "go fix it". Only start coding after
   an explicit go-ahead.
+- **Think before coding.** Make your assumptions explicit up front; when
+  in doubt, ask rather than guess. When multiple interpretations exist,
+  surface them — don't silently pick one. If a simpler approach exists,
+  say so and push back when warranted.
+- **Define success criteria before starting.** Turn the task into
+  something checkable — "add validation" becomes "cover the invalid
+  inputs with failing tests, then satisfy them"; "fix the bug" becomes
+  "capture it in a failing test first, then make that test green". For
+  multi-step work, state a brief plan with a verify step for each step.
+  Strong criteria let you loop to done without constant clarification.
 - Start with the simplest implementation that passes the tests. Add
   complexity (helper methods, guards, extra abstractions) only when a
-  failing test or concrete scenario forces it — not preemptively.
+  failing test or concrete scenario forces it — not preemptively. No
+  error handling for scenarios that can't occur; if a 200-line draft
+  would work as 50, throw it away and write the 50.
+- **Make surgical changes.** Each changed line should be justifiable
+  straight from the request. Don't improve adjacent code, refactor what
+  isn't broken, or restyle to taste — match the existing style even
+  where you'd differ. Remove imports/variables/functions your change
+  orphaned; leave pre-existing dead code alone (mention it, don't
+  delete it).
 - When a fix could go in two places, fix the root cause, not the
   symptom. A defensive check that filters out bad data is a sign the
   producer should be fixed instead.
