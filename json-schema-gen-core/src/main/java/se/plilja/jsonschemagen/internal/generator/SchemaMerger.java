@@ -77,6 +77,13 @@ final class SchemaMerger {
         Schema merged;
         if (a instanceof UnsatisfiableSchema || b instanceof UnsatisfiableSchema) {
             merged = new UnsatisfiableSchema();
+        } else if (a instanceof UntypedSchema && b instanceof UntypedSchema) {
+            // Two untyped schemas have no type constraint to merge, so keeping the
+            // left side alone would drop the right side's $ref. Prefer whichever
+            // side actually carries one.
+            merged = (a.getRef() == null && b.getRef() != null)
+                    ? b.toBuilder().build()
+                    : a.toBuilder().build();
         } else if (b instanceof UntypedSchema) {
             merged = a.toBuilder().build();
         } else if (a instanceof UntypedSchema) {
