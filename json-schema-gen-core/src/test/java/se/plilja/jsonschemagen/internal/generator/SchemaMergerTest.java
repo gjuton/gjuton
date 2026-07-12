@@ -831,6 +831,38 @@ class SchemaMergerTest {
                     {"type": "string", "minLength": 5, "enum": ["hello", "world"]}
                     """));
         }
+
+        @Test
+        void blankUntypedSeedKeepsOtherSidesRef() {
+            var blank = readSchema("""
+                    {}
+                    """);
+            var ref = readSchema("""
+                    {"$ref": "#/definitions/Foo", "definitions": {"Foo": {"type": "string"}}}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(blank, ref));
+
+            // then
+            assertThat(merged.getRef()).isEqualTo("#/definitions/Foo");
+        }
+
+        @Test
+        void refSurvivesWhenSeededFirst() {
+            var ref = readSchema("""
+                    {"$ref": "#/definitions/Foo", "definitions": {"Foo": {"type": "string"}}}
+                    """);
+            var blank = readSchema("""
+                    {}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(ref, blank));
+
+            // then
+            assertThat(merged.getRef()).isEqualTo("#/definitions/Foo");
+        }
     }
 
     @Nested
