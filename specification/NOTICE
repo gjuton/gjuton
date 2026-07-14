@@ -1,0 +1,10 @@
+The contents of this directory (specification/) are downloaded from
+https://json-schema.org and https://github.com/json-schema-org/json-schema-spec.
+
+Meta-schema JSON files are unmodified downloads. Human-readable spec
+documents (*.md) are converted from the original HTML/PDF/text sources
+into Markdown; content is preserved, formatting may differ from the
+original.
+
+Licensed under the terms in LICENSE (BSD-3-Clause and Academic Free
+License v3.0), copyright JSON Schema Specification Authors.

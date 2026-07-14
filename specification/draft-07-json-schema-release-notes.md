@@ -1,0 +1,174 @@
+JSON Schema - Draft-07 Release Notes
+
+The JSON Schema Office Hours Now Runs Weekly! [Join Us!](https://github.com/orgs/json-schema-org/discussions/34)✕
+
+[![Dynamic image](/img/logos/logo-blue.svg)](/)
+
+[Specification](/specification)[Docs](/docs)[Tools](/tools?query=&sortBy=name&sortOrder=ascending&groupBy=toolingTypes&licenses=&languages=&drafts=&toolingTypes=&environments=)[Blog](/blog)[Community](/community)
+
+Search
+
+![Dark Mode](/icons/theme-switch.svg)
+
+![System theme](/icons/theme-switch.svg)System
+
+![Light theme](/icons/sun.svg)Light
+
+![Dark theme](/icons/moon.svg)Dark
+
+[Star on GitHub](https://github.com/json-schema-org/json-schema-spec)
+
+### Specification
+
+Introduction
+
+Get Started
+
+Guides
+
+Reference
+
+Specification
+
+Introduction
+
+Get Started
+
+Guides
+
+Reference
+
+Specification
+
+# Draft-07 Release Notes
+
+For the Core and Validation specifications, draft-07 is a relatively minor update. In terms of validation keywords and outcomes, it is fully backwards-compatible with draft-06.
+
+Some differences exist with keywords moved over from Hyper-Schema, and with how instances and schemas are recommended to be linked together. Finally, the process of collecting annotation keyword values has been defined more clearly than before.
+
+*   [Keywords](#keywords)
+*   [Formats](#formats)
+*   [Classification of Keywords](#classification-of-keywords)
+*   [Collecting Annotation Values](#collecting-annotation-values)
+*   [JSON Schema in Hypermedia Environments](#json-schema-in-hypermedia-environments)
+    *   [Linking Instances and Schemas](#linking-instances-and-schemas)
+    *   [Instance Media Type](#instance-media-type)
+
+### Keywords
+
+*   No keywords changed behavior
+*   No keywords were removed
+*   Some keywords were moved from Hyper-Schema, and two of those were renamed
+
+| keyword | change | notes |
+| --- | --- | --- |
+| [`"$comment"`](../../draft-07/json-schema-core.html#rfc.section.9) | added to Core | Intended for notes to schema maintainers, as opposed to [`"description"`](../../draft-07/json-schema-validation.html#rfc.section.10.1) which is suitable for display to end users |
+| [`"if"`, `"then"`, `"else"`](../../draft-07/json-schema-validation.html#rfc.section.6.6) | added to Validation | explicit conditional schema evaluation |
+| [`"readOnly"`](../../draft-07/json-schema-validation.html#rfc.section.10.3) | moved from Hyper-Schema to Validation | not limited to hypermedia environments |
+| [`"writeOnly"`](../../draft-07/json-schema-validation.html#rfc.section.10.3) | added to Validation | general write-only fields, including but not limited to passwords |
+| [`"contentMediaType"`](../../draft-07/json-schema-validation.html#rfc.section.8) | moved from Hyper-Schema to Validation | formerly [`"media": {"type": "..."}`](../../draft-06/json-schema-hypermedia.html#rfc.section.5.3) |
+| [`"contentEncoding"`](../../draft-07/json-schema-validation.html#rfc.section.8) | moved from Hyper-Schema to Validation | formerly [`"media": {"binaryEncoding": "..."}`](../../draft-06/json-schema-hypermedia.html#rfc.section.5.3) |
+
+Note that the `"content*"` keywords do not _require_ validation.
+
+### Formats
+
+Numerous formats were added, clarified, or restored from older drafts.
+
+| format | change | notes |
+| --- | --- | --- |
+| [`"iri"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.5) | added | I18N equivalent of `"uri"` |
+| [`"iri-reference"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.5) | added | I18N equivalent of `"uri-reference"` |
+| [`"uri-template"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.6) | noted IRI support | There is no separate IRI Template standard |
+| [`"idn-email"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.2) | added | I18N equivalent of `"email"` |
+| [`"idn-hostname"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.3) | added | I18N equivalent of `"hostname"` |
+| [`"json-pointer"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.7) | clarified | Use for string form only, not URI fragment |
+| [`"relative-json-pointer"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.7) | added | Revived [Relative JSON Pointer](../../draft-07/relative-json-pointer.html) draft |
+| [`"regex"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.8) | restored from draft-03 | ECMA 262 regular expressions |
+| [`"date"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.1) | restored from draft-03 | RFC 3339 "full-date" |
+| [`"time"`](../../draft-07/json-schema-validation.html#rfc.section.7.3.1) | restored from draft-03 | RFC 3339 "full-time" |
+
+All other RFC 3339 date, time, and duration names are reserved for future consideration. If added as extension formats, they SHOULD be implemented in a way that is compatible with their use in the RFC to ensure future compatibility.
+
+### Classification of Keywords
+
+While it does not have a direct impact on the validation process, this set of drafts classifies keywords by their behavior. The names of these classifications are used throughout the documents, so they are useful to know:
+
+*   [Applicability](../../draft-07/json-schema-validation.html#rfc.section.3.1)
+*   [Assertions](../../draft-07/json-schema-validation.html#rfc.section.3.2)
+*   [Annotations](../../draft-07/json-schema-validation.html#rfc.section.3.3)
+
+Note that `definitions` does not fit any of these categories, nor do the dollar-prefixed Core keywords.
+
+### Collecting Annotation Values
+
+[Annotation keywords](../../draft-07/json-schema-validation.html#rfc.section.10) (formerly called [metadata keywords](../../draft-06/json-schema-validation.html#rfc.section.7) now provide guidance on [how to collect multiple values](../../draft-07/json-schema-validation.html#rfc.section.3.3) that apply to the same location in the instance. By default, all values that are not found within [negated schemas](../../draft-07/json-schema-validation.html#rfc.section.3.3.1) are collected as an unordered set. The following exceptions are documented under the approprite keywords:
+
+*   `readOnly` and `writeOnly` should be logically ORed
+*   `examples` should be flattened into a single collected array
+
+### JSON Schema in Hypermedia Environments
+
+These changes are not relevant to many Validation use cases, and are more of interest to Hyper-Schema users. However, even without Hyper-Schema, if you are accessing instance documents over HTTP or through other hypermedia environments, you may find this section useful.
+
+#### Linking Instances and Schemas
+
+After discussions with the author of the "profile" specification, we concluded that its use for JSON Schema was not correct. The new guidance for [what relations to use](../../draft-07/json-schema-core.html#rfc.section.11.1) to link instances to schemas is:
+
+| link relation | change | notes |
+| --- | --- | --- |
+| "describedBy" | no change | network-accessible URL |
+| "profile" | removed; use "schema" | opaque identifying URI |
+| "schema" | added | opaque identifying URI |
+
+"schema", like "profile" in past drafts, can also be used as a [media type parameter](../../draft-07/json-schema-core.html#rfc.section.11.2).
+
+#### Instance Media Type
+
+Changes in the section are more relevant to JSON Hyper-Schema than to Validation, but as they are part of the core specification, they are explained here.
+
+Media types determine their own parameters, as well as their own URI fragment syntax(es). `application/json` does not allow any parameters or URI fragments.
+
+[`application/schema-instance+json`](../../draft-07/json-schema-core.html#rfc.section.4.2.2) is an optional media type for use with instances that supports "schema" as a media type parameter, and allows for URI fragments using the JSON Pointer syntax.
+
+Supporting "schema" as a media type parameter allows for schema-based content negotiation in hypermedia environments.
+
+Supporting JSON Pointer URI fragments is primarily useful with JSON Hyper-Schema, as many URIs involved in hyper-schema usage originate from or point to locations within an instance document rather than the entire document.
+
+## Need Help?
+
+### Did you find these docs helpful?
+
+### Help us make our docs great!
+
+At JSON Schema, we value docs contributions as much as every other type of contribution!
+
+[Edit this page on Github](https://github.com/json-schema-org/website/blob/main/pages/draft-07/json-schema-release-notes.md)
+
+[Learn how to contribute](https://github.com/json-schema-org/website/blob/main/CONTRIBUTING.md)
+
+### Still Need Help?
+
+Learning JSON Schema is often confusing, but don't worry, we are here to help!.
+
+[Ask the community on GitHub](https://github.com/orgs/json-schema-org/discussions/new?category=q-a)
+
+[Ask the community on Slack](https://json-schema.org/slack)
+
+![logo-white](/img/logos/logo-white.svg)
+
+[Open Collective](https://opencollective.com/json-schema)
+
+[Code of Conduct](/overview/code-of-conduct)
+
+[![Slack logo](/img/logos/slack_logo_small-white.svg)Slack](https://json-schema.org/slack)
+
+ [![X logo](/img/logos/x-twitter.svg) X](https://x.com/jsonschema)
+
+[![LinkedIn logo](/img/logos/icons8-linkedin-2.svg)LinkedIn](https://linkedin.com/company/jsonschema/)
+
+[![YouTube logo](/img/logos/icons8-youtube.svg)Youtube](https://www.youtube.com/@JSONSchemaOrgOfficial)
+
+[![GitHub logo](/img/logos/github_logo-white.svg)GitHub](https://github.com/json-schema-org)
+
+Copyright © 2026 JSON Schema. All rights reserved.
