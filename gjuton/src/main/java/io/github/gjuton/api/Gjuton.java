@@ -1,5 +1,6 @@
 package io.github.gjuton.api;
 
+import io.github.gjuton.errors.JsonBindingException;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.generator.GeneratorConfig;
 import io.github.gjuton.internal.generator.JsonGenerator;
@@ -262,6 +263,25 @@ public final class Gjuton {
     public String generate() {
         var generated = generator.generateRoot();
         return JsonSerializer.serialize(generated);
+    }
+
+    /**
+     * Generates a valid JSON value and binds it to an instance of {@code type},
+     * as a typed alternative to {@link #generate()}. Equivalent to deserializing
+     * the JSON that {@link #generate()} would return into {@code type}.
+     *
+     * @throws UnsatisfiableSchemaException if the schema is over-constrained
+     *     or the generator's random search could not find a value satisfying the
+     *     schema within its retry budget
+     * @throws JsonBindingException if the generated value does not map onto
+     *     {@code type}
+     */
+    public <T> T generate(Class<T> type) {
+        if (type == null) {
+            throw new IllegalArgumentException("type must not be null");
+        }
+        var generated = generator.generateRoot();
+        return JsonSerializer.convert(generated, type);
     }
 
     /**
