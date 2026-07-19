@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
+import io.github.gjuton.errors.JsonBindingException;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -369,6 +370,65 @@ class GjutonTest {
         }
 
         private record Point(int x, int y) {
+        }
+    }
+
+    @Nested
+    class GenerateIntoType {
+
+        private record Bean(int a) {
+        }
+
+        @Test
+        void bindsGeneratedValueIntoPojo() {
+            // given a schema whose integer field fits the target's int component
+            var schema = """
+                    {
+                      "type": "object",
+                      "properties": { "a": { "type": "integer", "minimum": 5, "maximum": 100 } },
+                      "required": ["a"]
+                    }""";
+
+            // when
+            var bean = Gjuton.of(schema).withSeed(1L).generate(Bean.class);
+
+            // then
+            assertThat(bean.a()).isBetween(5, 100);
+        }
+
+        @Test
+        void bindingFailureThrowsJsonBindingException() {
+            // given a schema whose generated field type cannot map onto the target
+            var schema = """
+                    {
+                      "type": "object",
+                      "properties": { "a": { "type": "array", "items": { "type": "integer" } } },
+                      "required": ["a"]
+                    }""";
+
+            // then
+            assertThatThrownBy(() -> Gjuton.of(schema).withSeed(1L).generate(Bean.class))
+                    .isInstanceOf(JsonBindingException.class);
+        }
+
+        @Test
+        void matchesDeserializingGenerateOutput() {
+            // given two generators with the same schema and seed
+            var schema = """
+                    {
+                      "type": "object",
+                      "properties": { "a": { "type": "integer", "minimum": 5, "maximum": 100 } },
+                      "required": ["a"]
+                    }""";
+            var stringGen = Gjuton.of(schema).withSeed(1L);
+            var typedGen = Gjuton.of(schema).withSeed(1L);
+
+            // when
+            var fromString = parse(stringGen.generate());
+            var fromTyped = typedGen.generate(Bean.class);
+
+            // then
+            assertThat(fromTyped.a()).isEqualTo(fromString.get("a").asInt());
         }
     }
 
