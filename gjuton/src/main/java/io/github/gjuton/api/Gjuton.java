@@ -42,8 +42,8 @@ public final class Gjuton {
 
     private final String schema;
     private final Long seed;
-    private final Map<String, ValueProducer> producers;
-    private final Map<String, ValueProducer> nameProducers;
+    private final Map<String, ValueOverride> overrides;
+    private final Map<String, ValueOverride> nameOverrides;
     private final GenerationMode mode;
     private final boolean generateAdditionalProperties;
     private final int refSoftDepth;
@@ -56,8 +56,8 @@ public final class Gjuton {
             String schema,
             SchemaDocument document,
             Long seed,
-            Map<String, ValueProducer> producers,
-            Map<String, ValueProducer> nameProducers,
+            Map<String, ValueOverride> overrides,
+            Map<String, ValueOverride> nameOverrides,
             GenerationMode mode,
             boolean generateAdditionalProperties,
             int refSoftDepth,
@@ -66,8 +66,8 @@ public final class Gjuton {
         this.schema = schema;
         this.document = document;
         this.seed = seed;
-        this.producers = producers;
-        this.nameProducers = nameProducers;
+        this.overrides = overrides;
+        this.nameOverrides = nameOverrides;
         this.mode = mode;
         this.generateAdditionalProperties = generateAdditionalProperties;
         this.refSoftDepth = refSoftDepth;
@@ -78,19 +78,19 @@ public final class Gjuton {
                 generateAdditionalProperties,
                 refSoftDepth,
                 refHardDepth,
-                toValueSuppliers(producers),
-                toValueSuppliers(nameProducers),
+                toValueSuppliers(overrides),
+                toValueSuppliers(nameOverrides),
                 toValueConstraints(mode, constraints));
         this.generator = new JsonGenerator(seed, document, config);
     }
 
     /**
-     * Adapts the public {@link ValueProducer} map into a {@link Supplier} map.
+     * Adapts the public {@link ValueOverride} map into a {@link Supplier} map.
      * The internal generator layer cannot depend on the {@code api} package,
-     * so it consumes each producer as a plain {@link Supplier}.
+     * so it consumes each override as a plain {@link Supplier}.
      */
-    private static Map<String, Supplier<Object>> toValueSuppliers(Map<String, ValueProducer> producers) {
-        return producers.entrySet().stream()
+    private static Map<String, Supplier<Object>> toValueSuppliers(Map<String, ValueOverride> overrides) {
+        return overrides.entrySet().stream()
                 .collect(Collectors.toUnmodifiableMap(
                         Map.Entry::getKey,
                         e -> e.getValue()::produce));
@@ -192,8 +192,8 @@ public final class Gjuton {
                 schema,
                 document,
                 seed,
-                producers,
-                nameProducers,
+                overrides,
+                nameOverrides,
                 mode,
                 generateAdditionalProperties,
                 refSoftDepth,
@@ -203,10 +203,10 @@ public final class Gjuton {
 
     /**
      * Returns a new generator that overrides the value at {@code jsonPath}
-     * with whatever {@code producer} returns instead of generating it from the
-     * schema; a later producer at the same path replaces an earlier one.
+     * with whatever {@code override} returns instead of generating it from the
+     * schema; a later override at the same path replaces an earlier one.
      *
-     * <p>The producer fires once per {@link #generate()} call that visits the
+     * <p>The override fires once per {@link #generate()} call that visits the
      * path, and not at all on calls that don't reach it. The overridden subtree
      * is never generated — so a path whose schema is unsatisfiable or
      * unsupported can still be populated — and the value is inserted as-is,
@@ -218,32 +218,32 @@ public final class Gjuton {
      * <pre>{@code
      * Gjuton gen = Gjuton.of(schema)
      *         // a fixed value: pin a user id that exists in the test database
-     *         .withProducer("$.userId", () -> 42)
+     *         .withOverrideByPath("$.userId", () -> 42)
      *         // a fresh value each generate() call, composed with a data faker
-     *         .withProducer("$.email", faker.internet()::emailAddress);
+     *         .withOverrideByPath("$.email", faker.internet()::emailAddress);
      *
      * String json = gen.generate();
      * }</pre>
      *
      * @param jsonPath path identifying the position to override
-     * @param producer supplies the value placed at that position
-     * @see ValueProducer
+     * @param override supplies the value placed at that position
+     * @see ValueOverride
      */
-    public Gjuton withProducer(String jsonPath, ValueProducer producer) {
+    public Gjuton withOverrideByPath(String jsonPath, ValueOverride override) {
         if (jsonPath == null) {
             throw new IllegalArgumentException("jsonPath must not be null");
         }
-        if (producer == null) {
-            throw new IllegalArgumentException("producer must not be null");
+        if (override == null) {
+            throw new IllegalArgumentException("override must not be null");
         }
-        var merged = new LinkedHashMap<>(producers);
-        merged.put(jsonPath, producer);
+        var merged = new LinkedHashMap<>(overrides);
+        merged.put(jsonPath, override);
         return new Gjuton(
                 schema,
                 document,
                 seed,
                 Collections.unmodifiableMap(merged),
-                nameProducers,
+                nameOverrides,
                 mode,
                 generateAdditionalProperties,
                 refSoftDepth,
@@ -253,15 +253,15 @@ public final class Gjuton {
 
     /**
      * Returns a new generator that overrides the value of every property named
-     * {@code propertyName} with whatever {@code producer} returns, regardless
+     * {@code propertyName} with whatever {@code override} returns, regardless
      * of the property's position in the schema. A later call with the same name
      * replaces an earlier one.
      *
-     * <p>Name-based producers apply wherever a matching property name appears.
-     * When both a path-based producer ({@link #withProducer}) and a name-based
-     * producer match the same position, the path-based producer wins.
+     * <p>Name-based overrides apply wherever a matching property name appears.
+     * When both a path-based override ({@link #withOverrideByPath}) and a
+     * name-based override match the same position, the path-based override wins.
      *
-     * <p>The producer fires once per {@link #generate()} call, and every
+     * <p>The override fires once per {@link #generate()} call, and every
      * position with the same name in that call shares the returned value — the
      * property means the same thing wherever it appears. It is not invoked at
      * positions where the name does not appear as an object property (e.g.
@@ -270,30 +270,30 @@ public final class Gjuton {
      *
      * <pre>{@code
      * Gjuton gen = Gjuton.of(schema)
-     *         .withProducerByName("customerId", () -> "cust-42");
+     *         .withOverrideByName("customerId", () -> "cust-42");
      *
      * // every property named "customerId" in the schema will be "cust-42"
      * String json = gen.generate();
      * }</pre>
      *
      * @param propertyName the property name to match
-     * @param producer supplies the value placed at each matching position
-     * @see #withProducer(String, ValueProducer)
+     * @param override supplies the value placed at each matching position
+     * @see #withOverrideByPath(String, ValueOverride)
      */
-    public Gjuton withProducerByName(String propertyName, ValueProducer producer) {
+    public Gjuton withOverrideByName(String propertyName, ValueOverride override) {
         if (propertyName == null) {
             throw new IllegalArgumentException("propertyName must not be null");
         }
-        if (producer == null) {
-            throw new IllegalArgumentException("producer must not be null");
+        if (override == null) {
+            throw new IllegalArgumentException("override must not be null");
         }
-        var merged = new LinkedHashMap<>(nameProducers);
-        merged.put(propertyName, producer);
+        var merged = new LinkedHashMap<>(nameOverrides);
+        merged.put(propertyName, override);
         return new Gjuton(
                 schema,
                 document,
                 seed,
-                producers,
+                overrides,
                 Collections.unmodifiableMap(merged),
                 mode,
                 generateAdditionalProperties,
@@ -317,8 +317,8 @@ public final class Gjuton {
                 schema,
                 document,
                 seed,
-                producers,
-                nameProducers,
+                overrides,
+                nameOverrides,
                 mode,
                 generateAdditionalProperties,
                 refSoftDepth,
@@ -337,8 +337,8 @@ public final class Gjuton {
                 schema,
                 document,
                 seed,
-                producers,
-                nameProducers,
+                overrides,
+                nameOverrides,
                 mode,
                 true,
                 refSoftDepth,
@@ -391,8 +391,8 @@ public final class Gjuton {
                 schema,
                 document,
                 seed,
-                producers,
-                nameProducers,
+                overrides,
+                nameOverrides,
                 mode,
                 generateAdditionalProperties,
                 soft,
@@ -431,8 +431,8 @@ public final class Gjuton {
                 schema,
                 document,
                 seed,
-                producers,
-                nameProducers,
+                overrides,
+                nameOverrides,
                 mode,
                 generateAdditionalProperties,
                 refSoftDepth,
@@ -446,7 +446,7 @@ public final class Gjuton {
      * @throws UnsatisfiableSchemaException if the schema is over-constrained
      *     or the generator's random search could not find a value satisfying the
      *     schema within its retry budget
-     * @throws IllegalArgumentException if a registered producer returns a value
+     * @throws IllegalArgumentException if a registered override returns a value
      *     that cannot be represented as JSON
      */
     public String generate() {

@@ -95,11 +95,11 @@ Gjuton gen = Gjuton.of(schema).withSeed(42);
 Gjuton gen = Gjuton.of(schema).withGenerationMode(GenerationMode.EXHAUSTIVE);
 ```
 
-### Custom value producers
+### Value overrides
 
-`withProducer(String jsonPath, ValueProducer)` overrides the value at a specific
-path with whatever your producer returns, instead of generating it from the
-schema. Use it for application-level constraints the schema can't express — a
+`withOverrideByPath(String jsonPath, ValueOverride)` overrides the value at a
+specific path with whatever your override returns, instead of generating it from
+the schema. Use it for application-level constraints the schema can't express — a
 user id that must exist in your test database, say — or to plug in a data-faker
 library.
 
@@ -109,19 +109,20 @@ Paths match exactly (no wildcards): `$` is the root, `$.a.b` a nested field,
 ```java
 Gjuton gen = Gjuton.of(schema)
         // a fixed value: pin a user id that exists in the test database
-        .withProducer("$.userId", () -> 71)
+        .withOverrideByPath("$.userId", () -> 71)
         // a fresh value each call, composed with a data faker
-        .withProducer("$.email", faker.internet()::emailAddress);
+        .withOverrideByPath("$.email", faker.internet()::emailAddress);
 ```
 
-`withProducerByName(String propertyName, ValueProducer)` does the same thing but
+`withOverrideByName(String propertyName, ValueOverride)` does the same thing but
 matches by property name instead of path — it fires at every position where that
-name appears, without enumerating every path. When both a path-based and a
-name-based producer match the same position, the path-based producer wins.
+name appears, without enumerating every path. All positions with the same name
+share one value per `generate()` call. When both a path-based and a name-based
+override match the same position, the path-based override wins.
 
 ```java
 Gjuton gen = Gjuton.of(schema)
-        .withProducerByName("customerId", () -> "cust-42");
+        .withOverrideByName("customerId", () -> "cust-42");
 ```
 
 ### Value constraints
@@ -213,4 +214,4 @@ instance in the default `RANDOM` mode throws `IllegalStateException`.
 - **`pattern` strings are generated with RgxGen.** String values constrained by a
   `pattern` regular expression are produced using the RgxGen library. If RgxGen
   cannot produce a string matching a given pattern, override that path with a
-  custom producer that supplies a matching string yourself.
+  custom override that supplies a matching string yourself.
