@@ -214,7 +214,7 @@ class GjutonTest {
     }
 
     @Nested
-    class Producers {
+    class OverridesByPath {
 
         private static final String TWO_FIELD_SCHEMA = """
                 {
@@ -238,21 +238,21 @@ class GjutonTest {
                 { "type": "array", "items": { "type": "integer" }, "minItems": 3 }""";
 
         @Test
-        void producerReplacesFieldValue() {
+        void overrideReplacesFieldValue() {
             // when
             var gen = Gjuton.of(TWO_FIELD_SCHEMA).withSeed(1L)
-                    .withProducer("$.role", () -> "admin");
+                    .withOverrideByPath("$.role", () -> "admin");
 
             // then
             assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("admin");
         }
 
         @Test
-        void producerInvokedOnEachGenerate() {
+        void overrideInvokedOnEachGenerate() {
             // when
             var counter = new int[] {0};
             var gen = Gjuton.of(TWO_FIELD_SCHEMA).withSeed(1L)
-                    .withProducer("$.role", () -> "user-" + counter[0]++);
+                    .withOverrideByPath("$.role", () -> "user-" + counter[0]++);
 
             // then
             assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("user-0");
@@ -261,10 +261,10 @@ class GjutonTest {
         }
 
         @Test
-        void producerReturningBeanSerializesAsObject() {
+        void overrideReturningBeanSerializesAsObject() {
             // when
             var gen = Gjuton.of(NESTED_SCHEMA).withSeed(1L)
-                    .withProducer("$.a", () -> new Point(3, 4));
+                    .withOverrideByPath("$.a", () -> new Point(3, 4));
 
             // then
             var a = parse(gen.generate()).get("a");
@@ -273,30 +273,30 @@ class GjutonTest {
         }
 
         @Test
-        void producerOnNestedPathOverridesOnlyThatField() {
+        void overrideOnNestedPathOverridesOnlyThatField() {
             // when
             var gen = Gjuton.of(NESTED_SCHEMA).withSeed(1L)
-                    .withProducer("$.a.b", () -> "fixed");
+                    .withOverrideByPath("$.a.b", () -> "fixed");
 
             // then
             assertThat(parse(gen.generate()).get("a").get("b").asText()).isEqualTo("fixed");
         }
 
         @Test
-        void producerOnArrayElementOverridesThatIndex() {
+        void overrideOnArrayElementOverridesThatIndex() {
             // when
             var gen = Gjuton.of(ARRAY_SCHEMA).withSeed(1L)
-                    .withProducer("$[0]", () -> 999);
+                    .withOverrideByPath("$[0]", () -> 999);
 
             // then
             assertThat(parse(gen.generate()).get(0).asInt()).isEqualTo(999);
         }
 
         @Test
-        void producerAtRootReplacesWholeValue() {
+        void overrideAtRootReplacesWholeValue() {
             // when
             var gen = Gjuton.of(TWO_FIELD_SCHEMA).withSeed(1L)
-                    .withProducer("$", () -> List.of("replaced"));
+                    .withOverrideByPath("$", () -> List.of("replaced"));
 
             // then
             var root = parse(gen.generate());
@@ -305,36 +305,36 @@ class GjutonTest {
         }
 
         @Test
-        void producerBypassesGenerationOfUnsatisfiableField() {
+        void overrideBypassesGenerationOfUnsatisfiableField() {
             // given a schema whose required field can never be generated
             var schema = """
                     { "type": "object", "properties": { "x": false }, "required": ["x"] }""";
 
-            // then generation fails without a producer
+            // then generation fails without an override
             assertThatThrownBy(() -> Gjuton.of(schema).withSeed(1L).generate())
                     .isInstanceOf(UnsatisfiableSchemaException.class);
 
-            // when a producer supplies the value, the subtree is never generated
+            // when an override supplies the value, the subtree is never generated
             var gen = Gjuton.of(schema).withSeed(1L)
-                    .withProducer("$.x", () -> "supplied");
+                    .withOverrideByPath("$.x", () -> "supplied");
 
             // then
             assertThat(parse(gen.generate()).get("x").asText()).isEqualTo("supplied");
         }
 
         @Test
-        void producerBypassesRequiredFieldWithNoSchema() {
+        void overrideBypassesRequiredFieldWithNoSchema() {
             // given a required field the schema neither declares nor allows
             var schema = """
                     { "type": "object", "required": ["x"], "additionalProperties": false }""";
 
-            // then generation fails without a producer
+            // then generation fails without an override
             assertThatThrownBy(() -> Gjuton.of(schema).withSeed(1L).generate())
                     .isInstanceOf(UnsatisfiableSchemaException.class);
 
-            // when a producer supplies the value, the field is never resolved
+            // when an override supplies the value, the field is never resolved
             var gen = Gjuton.of(schema).withSeed(1L)
-                    .withProducer("$.x", () -> "supplied");
+                    .withOverrideByPath("$.x", () -> "supplied");
 
             // then
             assertThat(parse(gen.generate()).get("x").asText()).isEqualTo("supplied");
@@ -351,18 +351,18 @@ class GjutonTest {
                       ]
                     }""";
             var gen = Gjuton.of(schema).withSeed(1L)
-                    .withProducer("$.n", () -> "not-a-number");
+                    .withOverrideByPath("$.n", () -> "not-a-number");
 
             // then the override survives validation and appears verbatim
             assertThat(parse(gen.generate()).get("n").asText()).isEqualTo("not-a-number");
         }
 
         @Test
-        void producerOnUnvisitedPathNeverFires() {
-            // when a producer targets a field the schema does not declare
+        void overrideOnUnvisitedPathNeverFires() {
+            // when an override targets a field the schema does not declare
             var fired = new boolean[] {false};
             var gen = Gjuton.of(TWO_FIELD_SCHEMA).withSeed(1L)
-                    .withProducer("$.absent", () -> {
+                    .withOverrideByPath("$.absent", () -> {
                         fired[0] = true;
                         return "x";
                     });
@@ -373,22 +373,22 @@ class GjutonTest {
         }
 
         @Test
-        void withProducerLastCallWinsForSamePath() {
+        void withOverrideByPathLastCallWinsForSamePath() {
             // when
             var gen = Gjuton.of(TWO_FIELD_SCHEMA).withSeed(1L)
-                    .withProducer("$.role", () -> "first")
-                    .withProducer("$.role", () -> "second");
+                    .withOverrideByPath("$.role", () -> "first")
+                    .withOverrideByPath("$.role", () -> "second");
 
             // then
             assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("second");
         }
 
         @Test
-        void withProducerRejectsNullArguments() {
+        void withOverrideByPathRejectsNullArguments() {
             // then
-            assertThatThrownBy(() -> Gjuton.of(TWO_FIELD_SCHEMA).withProducer(null, () -> "x"))
+            assertThatThrownBy(() -> Gjuton.of(TWO_FIELD_SCHEMA).withOverrideByPath(null, () -> "x"))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Gjuton.of(TWO_FIELD_SCHEMA).withProducer("$.role", null))
+            assertThatThrownBy(() -> Gjuton.of(TWO_FIELD_SCHEMA).withOverrideByPath("$.role", null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
 
@@ -397,7 +397,7 @@ class GjutonTest {
     }
 
     @Nested
-    class ProducersByName {
+    class OverridesByName {
 
         private static final String TWO_FIELD_SCHEMA = """
                 {
@@ -407,7 +407,7 @@ class GjutonTest {
                 }""";
 
         @Test
-        void nameProducerMatchesAtMultiplePositions() {
+        void overrideByNameMatchesAtMultiplePositions() {
             // given a schema with the same property name at two different paths
             var schema = """
                     {
@@ -425,7 +425,7 @@ class GjutonTest {
 
             // when
             var gen = Gjuton.of(schema).withSeed(1L)
-                    .withProducerByName("id", () -> "fixed-id");
+                    .withOverrideByName("id", () -> "fixed-id");
 
             // then
             var root = parse(gen.generate());
@@ -434,7 +434,7 @@ class GjutonTest {
         }
 
         @Test
-        void nameProducerSharesValueAcrossPositionsWithinOneGenerate() {
+        void overrideByNameSharesValueAcrossPositionsWithinOneGenerate() {
             // given a schema with the same property name at two different paths
             var schema = """
                     {
@@ -450,10 +450,10 @@ class GjutonTest {
                       "required": ["id", "child"]
                     }""";
 
-            // when — a counter proves the producer fires once per generate(), not per position
+            // when — a counter proves the override fires once per generate(), not per position
             var counter = new int[] {0};
             var gen = Gjuton.of(schema).withSeed(1L)
-                    .withProducerByName("id", () -> "id-" + counter[0]++);
+                    .withOverrideByName("id", () -> "id-" + counter[0]++);
 
             // then — both positions share the same value within one generate() call
             var root = parse(gen.generate());
@@ -467,25 +467,25 @@ class GjutonTest {
         }
 
         @Test
-        void pathProducerTakesPrecedenceOverNameProducer() {
+        void pathOverrideTakesPrecedenceOverNameOverride() {
             // when
             var gen = Gjuton.of(TWO_FIELD_SCHEMA).withSeed(1L)
-                    .withProducerByName("role", () -> "by-name")
-                    .withProducer("$.role", () -> "by-path");
+                    .withOverrideByName("role", () -> "by-name")
+                    .withOverrideByPath("$.role", () -> "by-path");
 
             // then
             assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("by-path");
         }
 
         @Test
-        void nameProducerDoesNotMatchArrayElements() {
+        void overrideByNameDoesNotMatchArrayElements() {
             var schema = """
                     { "type": "array", "items": { "type": "integer" }, "minItems": 2 }""";
 
             // when — register a name that happens to be the string "0"
             var fired = new boolean[] {false};
             var gen = Gjuton.of(schema).withSeed(1L)
-                    .withProducerByName("0", () -> {
+                    .withOverrideByName("0", () -> {
                         fired[0] = true;
                         return 999;
                     });
@@ -496,22 +496,22 @@ class GjutonTest {
         }
 
         @Test
-        void withProducerByNameLastCallWinsForSameName() {
+        void withOverrideByNameLastCallWinsForSameName() {
             // when
             var gen = Gjuton.of(TWO_FIELD_SCHEMA).withSeed(1L)
-                    .withProducerByName("role", () -> "first")
-                    .withProducerByName("role", () -> "second");
+                    .withOverrideByName("role", () -> "first")
+                    .withOverrideByName("role", () -> "second");
 
             // then
             assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("second");
         }
 
         @Test
-        void withProducerByNameRejectsNullArguments() {
+        void withOverrideByNameRejectsNullArguments() {
             // then
-            assertThatThrownBy(() -> Gjuton.of(TWO_FIELD_SCHEMA).withProducerByName(null, () -> "x"))
+            assertThatThrownBy(() -> Gjuton.of(TWO_FIELD_SCHEMA).withOverrideByName(null, () -> "x"))
                     .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Gjuton.of(TWO_FIELD_SCHEMA).withProducerByName("role", null))
+            assertThatThrownBy(() -> Gjuton.of(TWO_FIELD_SCHEMA).withOverrideByName("role", null))
                     .isInstanceOf(IllegalArgumentException.class);
         }
     }
