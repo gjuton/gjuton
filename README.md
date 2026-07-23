@@ -130,9 +130,7 @@ Gjuton gen = Gjuton.of(schema)
 `withConstraints(Constraints)` narrows generated values beyond what the schema
 requires, so you can pin fixtures to a realistic or bounded shape without editing
 the schema. Build a `Constraints` from `Constraints.of()` and set only the kinds
-you care about; every kind left unset keeps its schema-driven behavior. A bound
-may be one-sided — pass `null` for the side to leave open. The exception is
-`dateRange`, which requires both bounds.
+you care about; every kind left unset keeps its schema-driven behavior.
 
 Each bound only ever tightens: at every position the effective range is the
 intersection of the schema's own constraint and the matching bound, so a bound
