@@ -26,6 +26,7 @@ public enum StringFormat {
     REGEX("regex"),
     JSON_POINTER("json-pointer"),
     RELATIVE_JSON_POINTER("relative-json-pointer"),
+    DURATION("duration"),
     UNKNOWN(null);
 
     private final String value;
