@@ -1,7 +1,6 @@
 package io.github.gjuton.internal.util;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -29,12 +28,4 @@ public final class CollectionUtil {
         return List.copyOf(result);
     }
 
-    /**
-     * Returns a new list with elements in reverse order.
-     */
-    public static <T> List<T> reversed(List<T> list) {
-        var result = new ArrayList<>(list);
-        Collections.reverse(result);
-        return result;
-    }
 }

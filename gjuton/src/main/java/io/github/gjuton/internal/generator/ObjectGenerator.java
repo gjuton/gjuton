@@ -1,7 +1,6 @@
 package io.github.gjuton.internal.generator;
 
 import static io.github.gjuton.internal.generator.GenerationResult.result;
-import static io.github.gjuton.internal.util.CollectionUtil.reversed;
 import static io.github.gjuton.internal.util.FunctionalUtil.coalesce;
 
 import com.github.curiousoddman.rgxgen.RgxGen;
@@ -10,7 +9,6 @@ import io.github.gjuton.internal.model.ObjectSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.UnsatisfiableSchema;
 import io.github.gjuton.internal.model.UntypedSchema;
-import io.github.gjuton.internal.util.GraphUtil;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -150,22 +148,15 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
      */
     @Override
     protected GenerationPhase advanceToNext(GenerationPhase current) {
-        if (current == GenerationPhase.FOCUS && !allOptionalPropertiesFocused()) {
+        if (current == GenerationPhase.FOCUS && focusCursor < satisfiableOptionalProperties().size()) {
             return GenerationPhase.FOCUS;
         }
         return super.advanceToNext(current);
     }
 
-    private boolean allOptionalPropertiesFocused() {
-        var order = reverseTopologicalOrderDependentProperties();
-        var optionalProperties = satisfiableOptionalProperties(order);
-        return focusCursor >= optionalProperties.size();
-    }
-
     @Override
     protected GenerationResult<Map<String, Object>> generatePhase(GenerationPhase phase) {
-        var order = reverseTopologicalOrderDependentProperties();
-        var optionalProperties = satisfiableOptionalProperties(order);
+        var optionalProperties = satisfiableOptionalProperties();
         advancePastExhaustedFocusProperties(optionalProperties);
         if (phase == GenerationPhase.FOCUS && focusCursor >= optionalProperties.size()) {
             return GenerationResult.skip();
@@ -454,23 +445,12 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     }
 
     /**
-     * Orders the properties so that if property A has a dependentRequired on
-     * property B, then B comes before A in the returned list.
+     * Returns the satisfiable optional properties, filtering out
+     * required properties and unsatisfiable schemas.
      */
-    private List<String> reverseTopologicalOrderDependentProperties() {
-        var depRequired = schema.getDependentRequired();
-        var properties = new LinkedHashSet<>(schema.getProperties().keySet());
-        properties.addAll(schema.getRequired());
-        return reversed(GraphUtil.topologicalSort(properties, depRequired));
-    }
-
-    /**
-     * Returns the satisfiable optional properties, preserving the input order
-     * and filtering out required properties and unsatisfiable schemas.
-     */
-    private List<String> satisfiableOptionalProperties(List<String> order) {
+    private List<String> satisfiableOptionalProperties() {
         var result = new ArrayList<String>();
-        for (var property : order) {
+        for (var property : schema.getProperties().keySet()) {
             if (!requiredAndTransitiveRequired.contains(property)
                     && !(schema.getProperties().get(property) instanceof UnsatisfiableSchema)) {
                 result.add(property);
