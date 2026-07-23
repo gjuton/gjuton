@@ -11,11 +11,14 @@ import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.UnsatisfiableSchema;
 import io.github.gjuton.internal.model.UntypedSchema;
 import io.github.gjuton.internal.util.GraphUtil;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -36,6 +39,7 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     private static final int ADDITIONAL_PROPERTIES_HEADROOM = 3;
 
     private final ObjectSchema schema;
+    private final List<String> requiredAndTransitiveRequired;
     private final Map<Pattern, Schema> compiledPatternProperties;
     private final Map<String, RgxGen> patternGenerators;
 
@@ -76,6 +80,61 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
                         RgxGen::parse,
                         (a, b) -> a,
                         LinkedHashMap::new));
+        var allRequired = new LinkedHashSet<String>();
+        for (var req : schema.getRequired()) {
+            allRequired.addAll(computePropertyClosure(req));
+        }
+        this.requiredAndTransitiveRequired = List.copyOf(allRequired);
+    }
+
+    /**
+     * Returns all properties that must be co-selected when {@code property}
+     * is present, including {@code property} itself. Follows
+     * {@code dependentRequired} edges and {@code dependentSchemas}
+     * transitively — including {@code required} and
+     * {@code dependentRequired} entries introduced by dependent schemas —
+     * until no new properties are discovered.
+     */
+    private Set<String> computePropertyClosure(String property) {
+        var closure = new LinkedHashSet<String>();
+        var queue = new ArrayDeque<String>();
+        queue.add(property);
+        var depRequired = new HashMap<>(schema.getDependentRequired());
+
+        while (!queue.isEmpty()) {
+            var prop = queue.poll();
+            if (!closure.add(prop)) {
+                continue;
+            }
+            for (var dependent : depRequired.getOrDefault(prop, List.of())) {
+                if (!closure.contains(dependent)) {
+                    queue.add(dependent);
+                }
+            }
+            var depSchema = schema.getDependentSchemas().get(prop);
+            if (depSchema instanceof ObjectSchema depObj) {
+                for (var req : depObj.getRequired()) {
+                    if (!closure.contains(req)) {
+                        queue.add(req);
+                    }
+                }
+                for (var entry : depObj.getDependentRequired().entrySet()) {
+                    depRequired.merge(entry.getKey(), entry.getValue(), (a, b) -> {
+                        var combined = new ArrayList<>(a);
+                        combined.addAll(b);
+                        return combined;
+                    });
+                    if (closure.contains(entry.getKey())) {
+                        for (var dep : entry.getValue()) {
+                            if (!closure.contains(dep)) {
+                                queue.add(dep);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return closure;
     }
 
     @Override
