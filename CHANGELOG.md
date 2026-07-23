@@ -11,6 +11,10 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Added
+
+- Support for `format: "duration"` (ISO 8601 durations, e.g. `P3D`, `PT1H30M`).
+
 ## [0.0.1] — 2026-07-23
 
 - First release.

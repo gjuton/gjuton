@@ -3,6 +3,7 @@ package io.github.gjuton.internal.generator;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.generator.format.DateGenerator;
 import io.github.gjuton.internal.generator.format.DateTimeGenerator;
+import io.github.gjuton.internal.generator.format.DurationGenerator;
 import io.github.gjuton.internal.generator.format.EmailGenerator;
 import io.github.gjuton.internal.generator.format.HostnameGenerator;
 import io.github.gjuton.internal.generator.format.IdnEmailGenerator;
@@ -170,6 +171,7 @@ public final class JsonGenerator {
             case JSON_POINTER -> new JsonPointerGenerator(context, schema);
             case RELATIVE_JSON_POINTER -> new RelativeJsonPointerGenerator(context, schema);
             case REGEX -> new RegexGenerator(context, schema);
+            case DURATION -> new DurationGenerator(context, schema);
             default -> new StringGenerator(context, schema);
         };
     }
