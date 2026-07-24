@@ -1,7 +1,6 @@
 package io.github.gjuton.internal.generator;
 
 import static io.github.gjuton.internal.generator.GenerationResult.result;
-import static io.github.gjuton.internal.util.CollectionUtil.reversed;
 import static io.github.gjuton.internal.util.FunctionalUtil.coalesce;
 
 import com.github.curiousoddman.rgxgen.RgxGen;
@@ -10,12 +9,14 @@ import io.github.gjuton.internal.model.ObjectSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.UnsatisfiableSchema;
 import io.github.gjuton.internal.model.UntypedSchema;
-import io.github.gjuton.internal.util.GraphUtil;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -36,6 +37,7 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     private static final int ADDITIONAL_PROPERTIES_HEADROOM = 3;
 
     private final ObjectSchema schema;
+    private final List<String> requiredAndTransitiveRequired;
     private final Map<Pattern, Schema> compiledPatternProperties;
     private final Map<String, RgxGen> patternGenerators;
 
@@ -76,6 +78,61 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
                         RgxGen::parse,
                         (a, b) -> a,
                         LinkedHashMap::new));
+        var allRequired = new LinkedHashSet<String>();
+        for (var req : schema.getRequired()) {
+            allRequired.addAll(computeImpliedProperties(req, schema.getDependentRequired(), schema.getDependentSchemas()));
+        }
+        this.requiredAndTransitiveRequired = List.copyOf(allRequired);
+    }
+
+    /**
+     * Returns all properties that must be present when {@code property}
+     * is present, including {@code property} itself. The result reflects
+     * {@code dependentRequired} and {@code dependentSchemas} constraints
+     * transitively.
+     */
+    static Set<String> computeImpliedProperties(String property,
+                                              Map<String, List<String>> dependentRequired,
+                                              Map<String, Schema> dependentSchemas) {
+        var closure = new LinkedHashSet<String>();
+        var queue = new ArrayDeque<String>();
+        queue.add(property);
+        var depRequired = new HashMap<>(dependentRequired);
+
+        while (!queue.isEmpty()) {
+            var prop = queue.poll();
+            if (!closure.add(prop)) {
+                continue;
+            }
+            for (var dependent : depRequired.getOrDefault(prop, List.of())) {
+                if (!closure.contains(dependent)) {
+                    queue.add(dependent);
+                }
+            }
+            var depSchema = dependentSchemas.get(prop);
+            if (depSchema instanceof ObjectSchema depObj) {
+                for (var req : depObj.getRequired()) {
+                    if (!closure.contains(req)) {
+                        queue.add(req);
+                    }
+                }
+                for (var entry : depObj.getDependentRequired().entrySet()) {
+                    depRequired.merge(entry.getKey(), entry.getValue(), (a, b) -> {
+                        var combined = new ArrayList<>(a);
+                        combined.addAll(b);
+                        return combined;
+                    });
+                    if (closure.contains(entry.getKey())) {
+                        for (var dep : entry.getValue()) {
+                            if (!closure.contains(dep)) {
+                                queue.add(dep);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return closure;
     }
 
     @Override
@@ -91,27 +148,20 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
      */
     @Override
     protected GenerationPhase advanceToNext(GenerationPhase current) {
-        if (current == GenerationPhase.FOCUS && !allOptionalPropertiesFocused()) {
+        if (current == GenerationPhase.FOCUS && focusCursor < satisfiableOptionalProperties().size()) {
             return GenerationPhase.FOCUS;
         }
         return super.advanceToNext(current);
     }
 
-    private boolean allOptionalPropertiesFocused() {
-        var order = reverseTopologicalOrderDependentProperties();
-        var optionalProperties = satisfiableOptionalProperties(order);
-        return focusCursor >= optionalProperties.size();
-    }
-
     @Override
     protected GenerationResult<Map<String, Object>> generatePhase(GenerationPhase phase) {
-        var order = reverseTopologicalOrderDependentProperties();
-        var optionalProperties = satisfiableOptionalProperties(order);
+        var optionalProperties = satisfiableOptionalProperties();
         advancePastExhaustedFocusProperties(optionalProperties);
         if (phase == GenerationPhase.FOCUS && focusCursor >= optionalProperties.size()) {
             return GenerationResult.skip();
         }
-        int requiredCount = schema.getRequired().size();
+        int requiredCount = requiredAndTransitiveRequired.size();
         int effectiveMin = Math.max(requiredCount, coalesce(schema.getMinProperties(), 0));
         int numberOfNamedProperties = requiredCount + optionalProperties.size();
         int effectiveMax;
@@ -152,9 +202,9 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
         };
 
         var focusProperty = phase == GenerationPhase.FOCUS ? optionalProperties.get(focusCursor) : null;
-        Map<String, Object> generated;
+        LinkedHashSet<String> selected;
         try {
-            generated = selectAndResolve(order, optionalProperties, targetCount, effectiveMin, effectiveMax, focusProperty);
+            selected = selectProperties(optionalProperties, targetCount, effectiveMax, focusProperty);
         } catch (UnsatisfiableSchemaException e) {
             // Forcing the focused property proved impossible; skip it so later FOCUS
             // attempts move on instead of re-targeting the same property every retry.
@@ -163,7 +213,7 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             }
             throw e;
         }
-        return result(generated);
+        return result(generateSelected(selected, targetCount, effectiveMin));
     }
 
     /**
@@ -191,33 +241,22 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     }
 
     /**
-     * Selects properties and resolves dependent schemas in one pass,
-     * returning the generated object. Required properties are added first
-     * with full transitive resolution; optional properties are added
-     * tentatively and kept only when the resolved set fits within
-     * {@code targetCount}.
+     * Selects which properties to include. All transitively required
+     * properties are included unconditionally. Optional properties are
+     * included with all properties they transitively depend on, as long
+     * as the total fits within {@code targetCount}.
      *
      * <p>A non-null {@code focusProperty} is included ahead of the
      * {@code targetCount} gate, bounded only by the schema's {@code maxProperties}
-     * - so a property whose mandatory dependencies would otherwise exceed the
+     * — so a property whose mandatory dependencies would otherwise exceed the
      * phase target still appears, and is omitted only when {@code maxProperties}
      * makes it impossible.
      */
-    private Map<String, Object> selectAndResolve(List<String> order,
-                                                 List<String> optionalProperties,
-                                                 int targetCount,
-                                                 int effectiveMin,
-                                                 int effectiveMax,
-                                                 String focusProperty) {
-        var selected = new LinkedHashSet<String>();
-        var effectiveSchema = schema;
-
-        // Add required properties, resolving dependentRequired and dependentSchemas
-        for (var property : order) {
-            if (schema.getRequired().contains(property)) {
-                effectiveSchema = resolveProperty(effectiveSchema, property, selected);
-            }
-        }
+    private LinkedHashSet<String> selectProperties(List<String> optionalProperties,
+                                                   int targetCount,
+                                                   int effectiveMax,
+                                                   String focusProperty) {
+        var selected = new LinkedHashSet<>(requiredAndTransitiveRequired);
 
         if (selected.size() > effectiveMax) {
             throw new UnsatisfiableSchemaException(
@@ -226,35 +265,43 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
         }
 
         if (focusProperty != null && !selected.contains(focusProperty)) {
+            var closure = computeImpliedProperties(focusProperty, schema.getDependentRequired(), schema.getDependentSchemas());
             var tentative = new LinkedHashSet<>(selected);
-            var tentativeSchema = resolveProperty(effectiveSchema, focusProperty, tentative);
+            tentative.addAll(closure);
             Integer maxProperties = schema.getMaxProperties();
             if (maxProperties == null || tentative.size() <= maxProperties) {
                 selected = tentative;
-                effectiveSchema = tentativeSchema;
             }
         }
 
-        // Add optional properties, tentatively resolving to check fit
         for (var property : optionalProperties) {
             if (selected.size() >= targetCount) {
                 break;
             }
             if (!selected.contains(property)) {
+                var closure = computeImpliedProperties(property, schema.getDependentRequired(), schema.getDependentSchemas());
                 var tentative = new LinkedHashSet<>(selected);
-                var tentativeSchema = resolveProperty(effectiveSchema, property, tentative);
+                tentative.addAll(closure);
                 if (tentative.size() <= targetCount) {
                     selected = tentative;
-                    effectiveSchema = tentativeSchema;
                 }
             }
         }
 
+        return selected;
+    }
+
+    /**
+     * Generates a JSON object containing the given properties, using
+     * the effective schema for value generation and synthesizing
+     * additional properties if needed to reach {@code targetCount}.
+     */
+    private Map<String, Object> generateSelected(Set<String> selected, int targetCount, int effectiveMin) {
+        var effectiveSchema = resolveEffectiveSchema(selected);
         var obj = new LinkedHashMap<String, Object>();
-        var schemaForFields = effectiveSchema;
         for (var property : selected) {
             var segment = "." + property;
-            var value = JsonGenerator.generateForPath(context, segment, () -> resolveFieldSchema(schemaForFields, property));
+            var value = JsonGenerator.generateForPath(context, segment, () -> resolveFieldSchema(effectiveSchema, property));
             obj.put(property, value);
         }
         // Synthesize additional properties to reach targetCount
@@ -279,35 +326,24 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     }
 
     /**
-     * Adds a property to {@code selected}, resolves its
-     * {@code dependentRequired} and {@code dependentSchemas}, and
-     * transitively resolves any newly required properties introduced
-     * by the merge.
-     *
-     * @return the effective schema after merging triggered dependent schemas
+     * Returns the schema that applies when the given properties are
+     * present — the base schema narrowed by any {@code dependentSchemas}
+     * constraints the selection triggers.
      */
-    private ObjectSchema resolveProperty(ObjectSchema current, String property, LinkedHashSet<String> selected) {
-        selected.add(property);
-        for (var dependent : schema.getDependentRequired().getOrDefault(property, List.of())) {
-            if (!selected.contains(dependent)) {
-                current = resolveProperty(current, dependent, selected);
+    private ObjectSchema resolveEffectiveSchema(Set<String> selectedProperties) {
+        var schemas = new ArrayList<Schema>();
+        schemas.add(schema);
+        for (var property : selectedProperties) {
+            var depSchema = schema.getDependentSchemas().get(property);
+            if (depSchema != null) {
+                schemas.add(depSchema);
             }
         }
-
-        var depSchema = schema.getDependentSchemas().get(property);
-        if (depSchema != null) {
-            var merged = context.mergedSchema(List.of(current, depSchema));
-            if (merged instanceof ObjectSchema mergedObj) {
-                current = mergedObj;
-            }
+        var merged = context.mergedSchema(schemas);
+        if (merged instanceof ObjectSchema mergedObj) {
+            return mergedObj;
         }
-
-        for (var req : current.getRequired()) {
-            if (!selected.contains(req)) {
-                current = resolveProperty(current, req, selected);
-            }
-        }
-        return current;
+        return schema;
     }
 
     /**
@@ -416,24 +452,13 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     }
 
     /**
-     * Orders the properties so that if property A has a dependentRequired on
-     * property B, then B comes before A in the returned list.
+     * Returns the satisfiable optional properties, filtering out
+     * required properties and unsatisfiable schemas.
      */
-    private List<String> reverseTopologicalOrderDependentProperties() {
-        var depRequired = schema.getDependentRequired();
-        var properties = new LinkedHashSet<>(schema.getProperties().keySet());
-        properties.addAll(schema.getRequired());
-        return reversed(GraphUtil.topologicalSort(properties, depRequired));
-    }
-
-    /**
-     * Returns the satisfiable optional properties, preserving the input order
-     * and filtering out required properties and unsatisfiable schemas.
-     */
-    private List<String> satisfiableOptionalProperties(List<String> order) {
+    private List<String> satisfiableOptionalProperties() {
         var result = new ArrayList<String>();
-        for (var property : order) {
-            if (!schema.getRequired().contains(property)
+        for (var property : schema.getProperties().keySet()) {
+            if (!requiredAndTransitiveRequired.contains(property)
                     && !(schema.getProperties().get(property) instanceof UnsatisfiableSchema)) {
                 result.add(property);
             }
