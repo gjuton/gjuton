@@ -25,7 +25,8 @@ final class ConstGenerator implements Generator<Object> {
         // unsatisfiable.
         var validator = new SchemaValidator(context);
         if (!validator.satisfies(value, validationTarget)) {
-            throw new UnsatisfiableSchemaException("The const value does not satisfy the schema");
+            throw new UnsatisfiableSchemaException("The const value does not satisfy the schema",
+                    context.currentJsonPointer());
         }
         this.value = value;
     }

@@ -1125,6 +1125,245 @@ class SchemaMergerTest {
         }
     }
 
+    @Nested
+    class ConflictLocations {
+
+        @Test
+        void typeConflictReportsLocations() {
+            var a = readSchema("""
+                    {"type": "string"}
+                    """);
+            var b = readSchema("""
+                    {"type": "integer"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("/allOf/0")
+                    .hasMessageContaining("/allOf/1");
+        }
+
+        @Test
+        void nestedPropertyTypeConflictIncludesMergeLocations() {
+            var a = readSchema("""
+                    {"type": "object", "properties": {"age": {"type": "string"}}}
+                    """);
+            var b = readSchema("""
+                    {"type": "object", "properties": {"age": {"type": "integer"}}}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("Cannot merge types string and integer")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void formatConflictReportsLocations() {
+            var a = readSchema("""
+                    {"type": "string", "format": "email"}
+                    """);
+            var b = readSchema("""
+                    {"type": "string", "format": "uuid"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("EMAIL")
+                    .hasMessageContaining("UUID")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void constConflictReportsLocations() {
+            var a = readSchema("""
+                    {"const": "hello"}
+                    """);
+            var b = readSchema("""
+                    {"const": "world"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("hello")
+                    .hasMessageContaining("world")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void disjointEnumsReportsValuesAndLocations() {
+            var a = readSchema("""
+                    {"enum": ["a", "b"]}
+                    """);
+            var b = readSchema("""
+                    {"enum": ["c", "d"]}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("a")
+                    .hasMessageContaining("b")
+                    .hasMessageContaining("c")
+                    .hasMessageContaining("d")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void constNotInEnumReportsLocations() {
+            var a = readSchema("""
+                    {"const": 40}
+                    """);
+            var b = readSchema("""
+                    {"enum": [1, 2, 3]}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("40")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void arrayItemsTypeConflictReportsPath() {
+            var a = readSchema("""
+                    {"type": "array", "items": {"type": "string"}}
+                    """);
+            var b = readSchema("""
+                    {"type": "array", "items": {"type": "integer"}}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("Cannot merge types string and integer")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void threeBranchFoldIncludesAllLocations() {
+            var a = readSchema("""
+                    {"type": "string", "minLength": 1}
+                    """);
+            var b = readSchema("""
+                    {"type": "string", "maxLength": 10}
+                    """);
+            var c = readSchema("""
+                    {"type": "integer"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b, c),
+                    List.of("/allOf/0", "/allOf/1", "/allOf/2"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("merging /allOf/0, /allOf/1, /allOf/2");
+        }
+
+        @Test
+        void mergeWithSchemaPathIncludesItAfterLocations() {
+            var a = readSchema("""
+                    {"type": "string"}
+                    """);
+            var b = readSchema("""
+                    {"type": "integer"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b),
+                    List.of("/allOf/0", "/allOf/1"), "/address"))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("merging /allOf/0, /allOf/1 at /address");
+        }
+
+        @Test
+        void mergeWithRootSchemaPathOmitsIt() {
+            var a = readSchema("""
+                    {"type": "string"}
+                    """);
+            var b = readSchema("""
+                    {"type": "integer"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b),
+                    List.of("/allOf/0", "/allOf/1"), ""))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("(merging /allOf/0, /allOf/1)")
+                    .hasMessageNotContaining(" at ");
+        }
+
+        @Test
+        void numericRangeConflictIncludesMergeLocations() {
+            var a = readSchema("""
+                    {"type": "integer", "minimum": 100}
+                    """);
+            var b = readSchema("""
+                    {"type": "integer", "maximum": 10}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("minimum 100")
+                    .hasMessageContaining("maximum 10")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void nestedNumericRangeConflictIncludesMergeLocations() {
+            var a = readSchema("""
+                    {"type": "object", "properties": {"age": {"type": "integer", "minimum": 100}}}
+                    """);
+            var b = readSchema("""
+                    {"type": "object", "properties": {"age": {"type": "integer", "maximum": 10}}}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("minimum 100")
+                    .hasMessageContaining("maximum 10")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void stringLengthConflictIncludesMergeLocations() {
+            var a = readSchema("""
+                    {"type": "string", "minLength": 50}
+                    """);
+            var b = readSchema("""
+                    {"type": "string", "maxLength": 10}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("minLength 50")
+                    .hasMessageContaining("maxLength 10")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void noLocationsOmitsPathsFromMessage() {
+            var a = readSchema("""
+                    {"type": "string"}
+                    """);
+            var b = readSchema("""
+                    {"type": "integer"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b)))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageNotContaining("(at ");
+        }
+    }
+
     private static Schema readSchema(String json) {
         return SchemaParser.parse(json).getRoot();
     }

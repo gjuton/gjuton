@@ -36,7 +36,8 @@ final class EnumGenerator extends PhaseGenerator<EnumGenerator.GenerationPhase, 
                 .filter(value -> validator.satisfies(value, validationTarget))
                 .toList();
         if (this.values.isEmpty()) {
-            throw new UnsatisfiableSchemaException("No enum value satisfies the schema");
+            throw new UnsatisfiableSchemaException("No enum value satisfies the schema",
+                    context.currentJsonPointer());
         }
     }
 

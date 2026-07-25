@@ -37,7 +37,8 @@ public final class DateGenerator extends StringFormatGenerator<DateGenerator.Dat
         if (schema.getMinLength() != null && schema.getMinLength() > DATE_LENGTH
                 || schema.getMaxLength() != null && schema.getMaxLength() < DATE_LENGTH) {
             throw new UnsatisfiableSchemaException(
-                    "RFC 3339 dates are fixed at " + DATE_LENGTH + " characters; schema length bounds exclude that");
+                    "RFC 3339 dates are fixed at " + DATE_LENGTH + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
         return switch (phase) {
             case LEAP_DAY -> {

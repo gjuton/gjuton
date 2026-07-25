@@ -77,22 +77,26 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
 
         // Merge the base schema into all the oneOf groups
         this.oneOfGroups = new ArrayList<>();
-        for (var group : allOneOfGroups) {
+        for (int i = 0; i < allOneOfGroups.size(); i++) {
+            var group = allOneOfGroups.get(i);
             var mergedGroup = SchemaMerger.mergeEachWith(group, base);
             if (mergedGroup.isEmpty()) {
                 throw new UnsatisfiableSchemaException(
-                        "oneOf has no branch compatible with the parent schema");
+                        "Unable to merge any oneOf branch with the parent schema",
+                        context.currentJsonPointer());
             }
             oneOfGroups.add(mergedGroup);
         }
 
         // Merge the base schema into all the anyOf groups
         this.anyOfGroups = new ArrayList<>();
-        for (var group : allAnyOfGroups) {
+        for (int i = 0; i < allAnyOfGroups.size(); i++) {
+            var group = allAnyOfGroups.get(i);
             var mergedGroup = SchemaMerger.mergeEachWith(group, base);
             if (mergedGroup.isEmpty()) {
                 throw new UnsatisfiableSchemaException(
-                        "anyOf has no branch compatible with the parent schema");
+                        "Unable to merge any anyOf branch with the parent schema",
+                        context.currentJsonPointer());
             }
             anyOfGroups.add(mergedGroup);
         }
@@ -133,6 +137,8 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
                 throw new IllegalArgumentException("allOf must contain at least one sub-schema");
             }
             var branches = new ArrayList<Schema>();
+            var locations = new ArrayList<String>();
+            int locationIndex = 0;
             for (var branch : parent.getAllOf()) {
                 if (branch.getRef() != null) {
                     var resolved = context.resolveRef(branch.getRef());
@@ -140,15 +146,19 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
                     // so == detects self-referential $ref. Self-ref is tautological in
                     // allOf — the value already satisfies this schema by construction.
                     if (resolved == parent) {
+                        locationIndex++;
                         continue;
                     }
                     branches.add(resolveAllOfChain(context, resolved));
                 } else {
                     branches.add(branch);
                 }
+                locations.add("/allOf/" + locationIndex);
+                locationIndex++;
             }
             branches.add(baseTemp);
-            merged = SchemaMerger.merge(branches);
+            locations.add("");
+            merged = SchemaMerger.merge(branches, locations, context.currentJsonPointer());
         } else {
             merged = baseTemp;
         }
@@ -169,7 +179,8 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
         if (context.getGlobalRefDepth() >= context.refHardDepth()) {
             throw new UnsatisfiableSchemaException(
                     "Recursive allOf $ref could not bottom out within " + context.refHardDepth()
-                            + " levels — schema appears to require infinite recursion");
+                            + " levels — schema appears to require infinite recursion",
+                    context.currentJsonPointer());
         }
         // Without this, a branch's own unresolved allOf carries forward onto the merged
         // schema, and mutually-recursive $refs (A's allOf -> B, B's allOf -> A) reconstruct

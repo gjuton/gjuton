@@ -271,7 +271,7 @@ public final class GeneratorContext {
         if (cached != null) {
             return cached;
         }
-        var merged = SchemaMerger.merge(schemas);
+        var merged = SchemaMerger.merge(schemas, null, currentJsonPointer());
         mergedSchemaCache.put(key, merged);
         return merged;
     }
@@ -343,6 +343,22 @@ public final class GeneratorContext {
         }
 
         return null;
+    }
+
+    /**
+     * The current generation position as a JSON Pointer (RFC 6901),
+     * e.g. {@code /address/street}. Returns the empty string at the
+     * root.
+     */
+    public String currentJsonPointer() {
+        var jsonPath = currentPath.toString();
+        if ("$".equals(jsonPath)) {
+            return "";
+        }
+        return jsonPath.substring(1)
+                .replace('.', '/')
+                .replace('[', '/')
+                .replace("]", "");
     }
 
     /**

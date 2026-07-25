@@ -48,7 +48,8 @@ public final class HostnameGenerator extends StringFormatGenerator<HostnameGener
                 || schema.getMaxLength() != null && schema.getMaxLength() < minReachable) {
             throw new UnsatisfiableSchemaException(
                     "Hostnames produced by this generator are between " + minReachable
-                            + " and " + maxReachable + " characters; schema length bounds exclude that");
+                            + " and " + maxReachable + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
     }
 

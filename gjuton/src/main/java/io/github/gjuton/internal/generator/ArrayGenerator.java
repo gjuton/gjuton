@@ -62,7 +62,8 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
         if (effectiveMax < minLength) {
             throw new UnsatisfiableSchemaException(
                     "No valid array length satisfies minItems/maxItems/contains together: effective minimum length "
-                            + minLength + " exceeds effective maximum length " + effectiveMax);
+                            + minLength + " exceeds effective maximum length " + effectiveMax,
+                    context.currentJsonPointer());
         }
         int length = switch (phase) {
             case MIN_LENGTH -> minLength;
@@ -152,7 +153,8 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
             }
         }
         throw new UnsatisfiableSchemaException(
-                "Could not generate a distinct element satisfying uniqueItems within the retry budget");
+                "Could not generate a distinct element satisfying uniqueItems within the retry budget",
+                context.currentJsonPointer());
     }
 
     /**

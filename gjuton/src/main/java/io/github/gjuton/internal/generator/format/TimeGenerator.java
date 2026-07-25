@@ -43,7 +43,8 @@ public final class TimeGenerator extends StringFormatGenerator<TimeGenerator.Tim
                 || schema.getMaxLength() != null && schema.getMaxLength() < MIN_TIME_LENGTH) {
             throw new UnsatisfiableSchemaException(
                     "RFC 3339 times are between " + MIN_TIME_LENGTH + " and " + MAX_TIME_LENGTH
-                            + " characters; schema length bounds exclude that");
+                            + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
         return switch (phase) {
             case MIDNIGHT -> tryCandidate("00:00:00Z");

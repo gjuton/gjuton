@@ -38,7 +38,8 @@ public final class Ipv6Generator extends StringFormatGenerator<Ipv6Generator.Ipv
                 || schema.getMaxLength() != null && schema.getMaxLength() < MIN_IPV6_LENGTH) {
             throw new UnsatisfiableSchemaException(
                     "Uncompressed IPv6 addresses are between " + MIN_IPV6_LENGTH + " and " + MAX_IPV6_LENGTH
-                            + " characters; schema length bounds exclude that");
+                            + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
         return result(randomWithRetry());
     }

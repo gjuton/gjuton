@@ -24,7 +24,8 @@ public final class RelativeJsonPointerGenerator extends StringFormatGenerator<Re
         super(RelativeJsonPointerPhase.class, context, schema);
         if (schema.getMaxLength() != null && schema.getMaxLength() < 1) {
             throw new UnsatisfiableSchemaException(
-                    "Relative JSON pointers are at least 1 character; schema maxLength excludes that");
+                    "Relative JSON pointers are at least 1 character; schema maxLength excludes that",
+                    context.currentJsonPointer());
         }
     }
 
