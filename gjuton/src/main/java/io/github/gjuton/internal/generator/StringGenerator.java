@@ -54,7 +54,8 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
         if (minLength > maxLength) {
             throw new UnsatisfiableSchemaException(
                     "String length bounds are empty after applying constraints: effective minimum " + minLength
-                            + " exceeds effective maximum " + maxLength);
+                            + " exceeds effective maximum " + maxLength,
+                    context.currentJsonPointer());
         }
         if (rgxGen != null) {
             return switch (phase) {
@@ -116,7 +117,8 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
         }
         throw new UnsatisfiableSchemaException(
                 "Not able to generate a string matching pattern '" + schema.getPattern()
-                        + "' within length bounds [" + min + ", " + max + "]");
+                        + "' within length bounds [" + min + ", " + max + "]",
+                context.currentJsonPointer());
     }
 
     private String randomString() {

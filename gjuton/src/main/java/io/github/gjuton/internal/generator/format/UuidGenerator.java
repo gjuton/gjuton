@@ -33,7 +33,8 @@ public final class UuidGenerator extends StringFormatGenerator<UuidGenerator.Uui
         if (schema.getMinLength() != null && schema.getMinLength() > UUID_LENGTH
                 || schema.getMaxLength() != null && schema.getMaxLength() < UUID_LENGTH) {
             throw new UnsatisfiableSchemaException(
-                    "UUIDs are fixed at " + UUID_LENGTH + " characters; schema length bounds exclude that");
+                    "UUIDs are fixed at " + UUID_LENGTH + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
         return result(randomWithRetry());
     }

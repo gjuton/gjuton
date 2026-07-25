@@ -45,7 +45,8 @@ public final class EmailGenerator extends StringFormatGenerator<EmailGenerator.E
                 || schema.getMaxLength() != null && schema.getMaxLength() < minReachable) {
             throw new UnsatisfiableSchemaException(
                     "Email addresses produced by this generator are between " + minReachable
-                            + " and " + maxReachable + " characters; schema length bounds exclude that");
+                            + " and " + maxReachable + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
     }
 

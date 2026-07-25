@@ -27,7 +27,8 @@ abstract class StringFormatGenerator<E extends Enum<E>> extends PhaseGenerator<E
         if (schema.getMinLength() != null && schema.getMaxLength() != null
                 && schema.getMinLength() > schema.getMaxLength()) {
             throw new UnsatisfiableSchemaException(
-                "minLength (" + schema.getMinLength() + ") is greater than maxLength (" + schema.getMaxLength() + ")");
+                "minLength (" + schema.getMinLength() + ") is greater than maxLength (" + schema.getMaxLength() + ")",
+                context.currentJsonPointer());
         }
     }
 
@@ -42,10 +43,9 @@ abstract class StringFormatGenerator<E extends Enum<E>> extends PhaseGenerator<E
                 return candidate;
             }
         }
-        // TODO include schema identity in the message so a failing sub-schema can be located inside
-        //  a larger schema. Needs a project-wide strategy (e.g. Schema.toDebugString) — out of scope here.
         throw new UnsatisfiableSchemaException(
-                "Not able to generate a value satisfying the schema's pattern and length constraints");
+                "Not able to generate a value satisfying the schema's pattern and length constraints",
+                context.currentJsonPointer());
     }
 
     private boolean acceptable(String candidate) {

@@ -38,7 +38,8 @@ public final class DurationGenerator extends StringFormatGenerator<DurationGener
         if (schema.getMaxLength() != null && schema.getMaxLength() < MIN_DURATION_LENGTH) {
             throw new UnsatisfiableSchemaException(
                     "ISO 8601 durations are at least " + MIN_DURATION_LENGTH
-                            + " characters; schema length bounds exclude that");
+                            + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
         return switch (phase) {
             case ZERO -> tryCandidate("P0D");

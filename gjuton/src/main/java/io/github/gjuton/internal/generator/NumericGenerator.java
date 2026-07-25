@@ -223,7 +223,8 @@ final class NumericGenerator extends PhaseGenerator<NumericGenerator.GenerationP
         if (comparison > 0) {
             throw new UnsatisfiableSchemaException(
                     "No valid value satisfies minimum/maximum/multipleOf together: effective lower bound "
-                            + lowestMultiple + " exceeds effective upper bound " + highestMultiple);
+                            + lowestMultiple + " exceeds effective upper bound " + highestMultiple,
+                    context.currentJsonPointer());
         }
         if (comparison == 0) {
             return lowestMultiple;

@@ -36,7 +36,8 @@ public final class Ipv4Generator extends StringFormatGenerator<Ipv4Generator.Ipv
                 || schema.getMaxLength() != null && schema.getMaxLength() < MIN_IPV4_LENGTH) {
             throw new UnsatisfiableSchemaException(
                     "IPv4 dotted-quad addresses are between " + MIN_IPV4_LENGTH + " and " + MAX_IPV4_LENGTH
-                            + " characters; schema length bounds exclude that");
+                            + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
         return result(randomWithRetry());
     }

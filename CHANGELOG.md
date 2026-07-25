@@ -15,6 +15,12 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 - Support for `format: "duration"` (ISO 8601 durations, e.g. `P3D`, `PT1H30M`).
 
+### Changed
+
+- `UnsatisfiableSchemaException` messages from merge conflicts now identify the
+  conflicting schema locations (JSON Pointers) and name the concrete values or
+  types on both sides.
+
 ### Fixed
 
 - Array index out of bounds in the untyped generator in minimal mode.

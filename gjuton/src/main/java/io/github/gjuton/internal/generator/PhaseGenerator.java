@@ -49,7 +49,8 @@ public abstract class PhaseGenerator<E extends Enum<E>, R> implements Generator<
             }
         }
         throw lastException != null ? lastException
-                : new UnsatisfiableSchemaException("Unable to generate a value satisfying the schema");
+                : new UnsatisfiableSchemaException("Unable to generate a value satisfying the schema",
+                        context.currentJsonPointer());
     }
 
     /**

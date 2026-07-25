@@ -31,12 +31,14 @@ public final class UriGenerator extends StringFormatGenerator<UriGenerator.UriPh
         if (schema.getMinLength() != null && schema.getMinLength() > UriReferenceGenerator.MAX_LENGTH) {
             throw new UnsatisfiableSchemaException(
                     "URIs produced by this generator cap at " + UriReferenceGenerator.MAX_LENGTH
-                            + " characters; schema length bounds exclude that");
+                            + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
         if (schema.getMaxLength() != null && schema.getMaxLength() < minAbsolute) {
             throw new UnsatisfiableSchemaException(
                     "URIs produced by this generator are at least " + minAbsolute
-                            + " characters; schema maxLength excludes that");
+                            + " characters; schema maxLength excludes that",
+                    context.currentJsonPointer());
         }
     }
 

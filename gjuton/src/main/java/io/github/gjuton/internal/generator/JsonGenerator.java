@@ -144,7 +144,7 @@ public final class JsonGenerator {
             case ArraySchema s -> new ArrayGenerator(context, s);
             case UntypedSchema ignored -> new UntypedGenerator(context);
             case UnsatisfiableSchema ignored -> throw new UnsatisfiableSchemaException(
-                    "Cannot generate a value for a false schema");
+                    "Cannot generate a value for a false schema", context.currentJsonPointer());
         };
     }
 

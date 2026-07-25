@@ -185,11 +185,13 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
 
         if (effectiveMax < requiredCount) {
             throw new UnsatisfiableSchemaException(
-                    "maxProperties (" + schema.getMaxProperties() + ") is less than required property count (" + requiredCount + ")");
+                    "maxProperties (" + schema.getMaxProperties() + ") is less than required property count (" + requiredCount + ")",
+                    context.currentJsonPointer());
         }
         if (effectiveMin > effectiveMax) {
             throw new UnsatisfiableSchemaException(
-                    "minProperties (" + schema.getMinProperties() + ") exceeds the number of satisfiable properties (" + effectiveMax + ")");
+                    "minProperties (" + schema.getMinProperties() + ") exceeds the number of satisfiable properties (" + effectiveMax + ")",
+                    context.currentJsonPointer());
         }
 
         int targetCount = switch (phase) {
@@ -261,7 +263,8 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
         if (selected.size() > effectiveMax) {
             throw new UnsatisfiableSchemaException(
                     "Required properties with dependentRequired (" + selected.size()
-                            + ") exceed maxProperties (" + schema.getMaxProperties() + ")");
+                            + ") exceed maxProperties (" + schema.getMaxProperties() + ")",
+                    context.currentJsonPointer());
         }
 
         if (focusProperty != null && !selected.contains(focusProperty)) {
@@ -320,7 +323,8 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
         if (obj.size() < effectiveMin) {
             throw new UnsatisfiableSchemaException(
                     "Could not select enough properties to satisfy minProperties (" + schema.getMinProperties()
-                            + "); only " + obj.size() + " satisfiable properties fit within constraints");
+                            + "); only " + obj.size() + " satisfiable properties fit within constraints",
+                    context.currentJsonPointer());
         }
         return obj;
     }
@@ -387,7 +391,8 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
         if (fallback == null) {
             throw new UnsatisfiableSchemaException(
                     "Property '" + property + "' is required but has no schema in properties or patternProperties, "
-                            + "and additionalProperties is false");
+                            + "and additionalProperties is false",
+                    context.currentJsonPointer());
         }
         return fallback;
     }
@@ -412,7 +417,8 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             if (collisions >= PATTERN_NAME_RETRY_BUDGET) {
                 throw new UnsatisfiableSchemaException(
                         "Could not synthesize enough distinct property names matching patternProperties to satisfy minProperties ("
-                                + schema.getMinProperties() + ")");
+                                + schema.getMinProperties() + ")",
+                        context.currentJsonPointer());
             }
             var name = generators.get(generatorIndex % generators.size()).generate(context.random());
             generatorIndex++;

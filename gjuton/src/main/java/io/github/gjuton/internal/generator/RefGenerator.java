@@ -26,7 +26,8 @@ final class RefGenerator implements Generator<Object> {
         if (context.getGlobalRefDepth() >= context.refHardDepth()) {
             throw new UnsatisfiableSchemaException(
                     "Recursive $ref '" + ref + "' could not bottom out within " + context.refHardDepth()
-                            + " levels — schema appears to require infinite recursion");
+                            + " levels — schema appears to require infinite recursion",
+                    context.currentJsonPointer());
         }
         var schema = context.resolveRef(ref);
         var target = context.generatorFor(schema);

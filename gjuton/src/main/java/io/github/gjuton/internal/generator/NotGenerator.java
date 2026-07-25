@@ -30,7 +30,8 @@ final class NotGenerator implements Generator<Object> {
     public Object generate() {
         var value = Probes.firstMatching(candidate -> validator.satisfies(candidate, schema));
         if (value == Probes.NO_MATCH) {
-            throw new UnsatisfiableSchemaException("No candidate value satisfies the schema's 'not' constraint");
+            throw new UnsatisfiableSchemaException("No candidate value satisfies the schema's 'not' constraint",
+                    context.currentJsonPointer());
         }
         context.registerVisit(this, 0);
         return value;

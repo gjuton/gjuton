@@ -46,7 +46,8 @@ public final class UriReferenceGenerator extends StringFormatGenerator<UriRefere
         if (schema.getMinLength() != null && schema.getMinLength() > MAX_LENGTH) {
             throw new UnsatisfiableSchemaException(
                     "URI references produced by this generator cap at " + MAX_LENGTH
-                            + " characters; schema length bounds exclude that");
+                            + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
     }
 

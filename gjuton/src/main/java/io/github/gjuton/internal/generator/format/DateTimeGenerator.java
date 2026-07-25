@@ -51,7 +51,8 @@ public final class DateTimeGenerator extends StringFormatGenerator<DateTimeGener
                 || schema.getMaxLength() != null && schema.getMaxLength() < MIN_DATE_TIME_LENGTH) {
             throw new UnsatisfiableSchemaException(
                     "RFC 3339 date-times are between " + MIN_DATE_TIME_LENGTH + " and " + MAX_DATE_TIME_LENGTH
-                            + " characters; schema length bounds exclude that");
+                            + " characters; schema length bounds exclude that",
+                    context.currentJsonPointer());
         }
         return switch (phase) {
             case Y2038 -> withinRange(Instant.parse(Y2038_LAST_SECOND)) ? tryCandidate(Y2038_LAST_SECOND) : skip();

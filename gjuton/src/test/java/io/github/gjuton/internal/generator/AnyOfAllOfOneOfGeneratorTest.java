@@ -144,6 +144,39 @@ class AnyOfAllOfOneOfGeneratorTest {
         }
 
         @Test
+        void nestedPropertyConflictReportsLocations() {
+            // when / then
+            assertThatThrownBy(() -> generatorFor("""
+                    {
+                        "allOf": [
+                            {"properties": {"age": {"type": "string"}}},
+                            {"properties": {"age": {"type": "integer"}}}
+                        ]
+                    }
+                    """))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("Cannot merge types string and integer")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
+        void nestedNumericRangeConflictReportsLocations() {
+            // when / then
+            assertThatThrownBy(() -> generatorFor("""
+                    {
+                        "allOf": [
+                            {"properties": {"age": {"minimum": 100}}},
+                            {"properties": {"age": {"maximum": 10}}}
+                        ]
+                    }
+                    """))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("minimum 100")
+                    .hasMessageContaining("maximum 10")
+                    .hasMessageContaining("merging /allOf/0, /allOf/1");
+        }
+
+        @Test
         void emptyAllOfThrows() {
             // when / then
             assertThatThrownBy(() -> generatorFor("""
