@@ -1,0 +1,37 @@
+name: Feature request
+description: Request support for a JSON Schema keyword, format, or other capability
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Most requests need about 50 words. Keep it under 150.
+    validations:
+      required: true
+
+  - type: textarea
+    id: schema
+    attributes:
+      label: Sample schema
+      description: A schema that needs the feature.
+      render: json
+    validations:
+      required: false
+
+  - type: input
+    id: spec
+    attributes:
+      label: Spec reference
+      description: Link to the relevant section of the JSON Schema specification, if there is one.
+      placeholder: "https://json-schema.org/draft-07/json-schema-validation#rfc.section.6.1.1"
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Gjuton version
+      placeholder: "0.0.1"
+    validations:
+      required: true

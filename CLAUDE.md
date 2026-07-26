@@ -44,6 +44,10 @@ Issues are tracked on GitHub. After completing work on an issue, close
 it on GitHub, checking off acceptance criteria and revising any
 descriptions that no longer match the implementation.
 
+The shape a ticket takes and the rules for writing one are documented in:
+
+@docs/tickets.md
+
 ## Code conventions
 
 Code style (Google-modified, `var` usage, line-breaking), design conventions

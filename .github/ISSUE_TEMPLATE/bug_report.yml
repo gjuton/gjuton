@@ -1,0 +1,53 @@
+name: Bug report
+description: Report a crash or incorrect generated output
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Most bugs need about 50 words. Keep it under 150.
+    validations:
+      required: true
+
+  - type: textarea
+    id: schema
+    attributes:
+      label: Sample schema
+      description: The smallest schema that reproduces the problem.
+      render: json
+    validations:
+      required: false
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code
+      description: How the generator was called. Include the seed and generation mode if you set them — output is deterministic for a given schema and seed.
+      render: java
+      value: |
+        // Include a minimal code sample that reproduces the problem.
+        // If not applicable leave empty. Remove this comment before submitting.
+        String json = Gjuton.of(schema)
+                .withSeed(42)
+                .withGenerationMode(GenerationMode.EXHAUSTIVE)
+                .generate();
+    validations:
+      required: false
+
+  - type: textarea
+    id: stacktrace
+    attributes:
+      label: Stack trace
+      description: Paste the stack trace if applicable.
+      render: text
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Gjuton version
+      placeholder: "0.0.1"
+    validations:
+      required: true
