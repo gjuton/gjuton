@@ -225,9 +225,12 @@ final class SchemaValidator {
                 return false;
             }
         }
-        if (schema.getContains() != null
-                && list.stream().noneMatch(item -> satisfies(item, schema.getContains()))) {
-            return false;
+        if (schema.getContains() != null) {
+            for (var contains : schema.getContains()) {
+                if (list.stream().noneMatch(item -> satisfies(item, contains))) {
+                    return false;
+                }
+            }
         }
         if (schema.isUniqueItems() && new HashSet<>(list).size() != list.size()) {
             return false;

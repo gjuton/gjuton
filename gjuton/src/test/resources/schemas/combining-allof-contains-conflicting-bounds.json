@@ -1,0 +1,8 @@
+{
+    "type": "array",
+    "items": {"type": "string"},
+    "allOf": [
+        {"contains": {"type": "string", "minLength": 5}},
+        {"contains": {"type": "string", "maxLength": 3}}
+    ]
+}

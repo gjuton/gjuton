@@ -281,7 +281,7 @@ final class SchemaMerger {
 
     private static ArraySchema mergeArraySchemas(ArraySchema a, ArraySchema b, Supplier<String> locations) {
         var items = mergeTwoSchemas(a.getItemSchema(), b.getItemSchema(), locations);
-        var contains = mergeTwoSchemas(a.getContains(), b.getContains(), locations);
+        var contains = mergeContainsClauses(a.getContains(), b.getContains(), locations);
         var prefixA = a.getPrefixSchemas();
         var prefixB = b.getPrefixSchemas();
         List<Schema> mergedPrefix = null;
@@ -304,6 +304,45 @@ final class SchemaMerger {
                 .maxItems(minNullable(a.getMaxItems(), b.getMaxItems()))
                 .uniqueItems(a.isUniqueItems() || b.isUniqueItems())
                 .build();
+    }
+
+    /**
+     * Combines the {@code contains} clauses of two array schemas, or returns
+     * {@code null} when neither side states one. Clauses that one and the same
+     * element could satisfy are combined into a single clause; clauses that no
+     * element could satisfy at once are kept side by side, because each of them
+     * only needs some element of the array to satisfy it, not the same one.
+     *
+     * <p>The clauses returned cover the inputs correctly but are not
+     * necessarily the fewest that would.
+     */
+    private static List<Schema> mergeContainsClauses(List<Schema> a, List<Schema> b, Supplier<String> locations) {
+        var allClauses = concat(a, b);
+        if (allClauses == null) {
+            return null;
+        }
+        var result = new ArrayList<Schema>();
+        // Greedy first-fit: with three or more clauses, which ones end up combined depends on the
+        // order they arrive in, so clauses that fewer elements could cover may still yield one
+        // clause per element.
+        for (var clause : allClauses) {
+            boolean combined = false;
+            for (int i = 0; i < result.size(); i++) {
+                try {
+                    var kept = result.get(i);
+                    var combinedClause = mergeTwoSchemas(kept, clause, locations);
+                    result.set(i, combinedClause);
+                    combined = true;
+                    break;
+                } catch (UnsatisfiableSchemaException ignored) {
+                    // No element can satisfy both — leave that clause alone and try the next.
+                }
+            }
+            if (!combined) {
+                result.add(clause);
+            }
+        }
+        return result;
     }
 
     /**

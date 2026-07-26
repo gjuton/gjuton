@@ -1,0 +1,8 @@
+{
+    "type": "array",
+    "items": {"type": "string"},
+    "allOf": [
+        {"contains": {"const": "A"}},
+        {"contains": {"const": "B"}}
+    ]
+}

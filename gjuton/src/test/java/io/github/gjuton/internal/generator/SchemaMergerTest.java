@@ -628,7 +628,42 @@ class SchemaMergerTest {
         }
 
         @Test
-        void containsMergesRecursivelyWhenBothPresent() {
+        void irreconcilableContainsClausesAreKeptApart() {
+            var a = readSchema("""
+                    {"type": "array", "contains": {"const": "A"}}
+                    """);
+            var b = readSchema("""
+                    {"type": "array", "contains": {"const": "B"}}
+                    """);
+            var clauseA = ((ArraySchema) a).getContains().get(0);
+            var clauseB = ((ArraySchema) b).getContains().get(0);
+
+            // when
+            var merged = (ArraySchema) SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged.getContains()).containsExactly(clauseA, clauseB);
+        }
+
+        @Test
+        void identicalContainsClausesCollapseIntoOne() {
+            var a = readSchema("""
+                    {"type": "array", "contains": {"const": "A"}}
+                    """);
+            var b = readSchema("""
+                    {"type": "array", "contains": {"const": "A"}}
+                    """);
+            var clauseA = ((ArraySchema) a).getContains().get(0);
+
+            // when
+            var merged = (ArraySchema) SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged.getContains()).containsExactly(clauseA);
+        }
+
+        @Test
+        void containsMergesRecursivelyWhenClausesCanShareAnElement() {
             var a = readSchema("""
                     {"type": "array", "contains": {"type": "string", "minLength": 3}}
                     """);
