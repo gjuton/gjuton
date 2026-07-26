@@ -24,6 +24,9 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 ### Fixed
 
 - Array index out of bounds in the untyped generator in minimal mode.
+- `allOf` branches that each declare a `contains` clause no longer report a
+  conflict when no single element can satisfy both; such clauses are now kept
+  apart and each given an element of its own.
 
 ## [0.0.1] — 2026-07-23
 

@@ -438,6 +438,34 @@ class SchemaValidatorTest {
         }
 
         @Test
+        void arraySatisfyingOnlyOneOfSeveralContainsClausesFailsSchema() {
+            var document = SchemaParser.parse("""
+                    {"type": "array", "allOf": [{"contains": {"const": "A"}}, {"contains": {"const": "B"}}]}
+                    """);
+            var merged = SchemaMerger.merge(document.getRoot().getAllOf());
+
+            // when
+            var result = createValidator(document).satisfies(List.of("A", "A"), merged);
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void arraySatisfyingEveryContainsClauseSatisfiesSchema() {
+            var document = SchemaParser.parse("""
+                    {"type": "array", "allOf": [{"contains": {"const": "A"}}, {"contains": {"const": "B"}}]}
+                    """);
+            var merged = SchemaMerger.merge(document.getRoot().getAllOf());
+
+            // when
+            var result = createValidator(document).satisfies(List.of("A", "B"), merged);
+
+            // then
+            assertThat(result).isTrue();
+        }
+
+        @Test
         void arrayWithDuplicateElementsFailsUniqueItemsSchema() {
             var document = SchemaParser.parse("""
                     {"type": "array", "uniqueItems": true}

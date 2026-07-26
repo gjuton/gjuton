@@ -2,6 +2,7 @@ package io.github.gjuton.internal.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.List;
 import lombok.EqualsAndHashCode;
@@ -50,11 +51,19 @@ public final class ArraySchema extends Schema {
     private Object additionalItems;
 
     /**
-     * Schema that at least one element of the array must satisfy.
-     * Corresponds to the JSON Schema {@code contains} keyword.
+     * Clauses each of which at least one element of the array must satisfy,
+     * or {@code null} when the array carries no such constraint. A schema
+     * document states a single clause through the JSON Schema
+     * {@code contains} keyword; several accumulate when schemas that each
+     * declare one are merged, and every clause then has to hold on its own.
      */
+    private List<Schema> contains;
+
+    @JsonSetter("contains")
     @JsonDeserialize(using = SchemaDeserializer.class)
-    private Schema contains;
+    private void setContains(Schema contains) {
+        this.contains = contains == null ? null : List.of(contains);
+    }
 
     private Integer minItems;
     private Integer maxItems;

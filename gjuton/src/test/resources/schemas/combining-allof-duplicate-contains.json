@@ -1,0 +1,9 @@
+{
+    "type": "array",
+    "items": {"type": "string"},
+    "maxItems": 1,
+    "allOf": [
+        {"contains": {"const": "A"}},
+        {"contains": {"const": "A"}}
+    ]
+}

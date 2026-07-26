@@ -8,8 +8,11 @@ import io.github.gjuton.internal.model.ArraySchema;
 import io.github.gjuton.internal.model.NullSchema;
 import io.github.gjuton.internal.model.Schema;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -33,6 +36,7 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
 
     private final ArraySchema schema;
     private final List<Schema> prefixSchemas;
+    private final List<Schema> containsSchemas;
     private final Schema itemSchema;
     private final boolean additionalItemsAllowed;
 
@@ -44,6 +48,7 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
         super(GenerationPhase.class, context);
         this.schema = schema;
         this.prefixSchemas = schema.getPrefixSchemas();
+        this.containsSchemas = coalesce(schema.getContains(), List.of());
         // TODO: when items is absent, JSON Schema allows any element type. Emitting nulls is valid
         // but boring; a varied-type generator (cycling string/int/bool/...) would surface more bugs.
         this.itemSchema = coalesce(schema.getItemSchema(), new NullSchema());
@@ -76,15 +81,13 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
 
     /**
      * The smallest array length that satisfies the schema and caller constraints
-     * together: {@code minItems} raised to the caller's minimum and to at least one
-     * when a {@code contains} schema demands an element.
+     * together: {@code minItems} raised to the caller's minimum and to one element
+     * per {@code contains} clause.
      */
     private int effectiveMinLength() {
         int minLength = coalesce(schema.getMinItems(), 0);
         minLength = Math.max(minLength, context.constraints().arrayMinLength());
-        if (schema.getContains() != null) {
-            minLength = Math.max(minLength, 1);
-        }
+        minLength = Math.max(minLength, containsSchemas.size());
         return minLength;
     }
 
@@ -108,28 +111,28 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
     }
 
     private List<Object> buildList(int length) {
-        int containsIndex = pickContainsIndex(length);
+        var containsPositions = assignContainsPositions(length);
         var list = new ArrayList<>();
         if (schema.isUniqueItems()) {
             var seen = new HashSet<>();
             for (int i = 0; i < length; i++) {
-                var element = generateDistinctElementAt(i, containsIndex, seen);
+                var element = generateDistinctElementAt(i, containsPositions, seen);
                 list.add(element);
                 seen.add(element);
             }
         } else {
             for (int i = 0; i < length; i++) {
-                list.add(generateElementAt(i, containsIndex));
+                list.add(generateElementAt(i, containsPositions));
             }
         }
         return list;
     }
 
-    private Object generateElementAt(int index, int containsIndex) {
+    private Object generateElementAt(int index, Map<Integer, Schema> containsPositions) {
         var segment = "[" + index + "]";
         return JsonGenerator.generateForPath(context, segment, () -> {
-            if (index == containsIndex) {
-                return schema.getContains();
+            if (containsPositions.containsKey(index)) {
+                return containsPositions.get(index);
             } else if (index < prefixSchemas.size()) {
                 return prefixSchemas.get(index);
             } else {
@@ -145,9 +148,9 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
      * @throws UnsatisfiableSchemaException if no distinct element can be
      *         produced within the retry budget
      */
-    private Object generateDistinctElementAt(int index, int containsIndex, Set<Object> seen) {
+    private Object generateDistinctElementAt(int index, Map<Integer, Schema> containsPositions, Set<Object> seen) {
         for (int attempt = 0; attempt < UNIQUE_ITEMS_RETRY_BUDGET; attempt++) {
-            var element = generateElementAt(index, containsIndex);
+            var element = generateElementAt(index, containsPositions);
             if (!seen.contains(element)) {
                 return element;
             }
@@ -158,16 +161,30 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
     }
 
     /**
-     * Picks an index for the {@code contains} element, avoiding positions
-     * inside the tuple prefix when there is room past it.
+     * Maps array positions to the {@code contains} clause each one has to
+     * satisfy. No two clauses share a position, and the tuple prefix is left
+     * untouched unless every clause cannot otherwise be placed past it.
+     *
+     * <p>{@code length} must be at least the number of clauses.
      */
-    private int pickContainsIndex(int length) {
-        if (schema.getContains() == null) {
-            return -1;
+    private Map<Integer, Schema> assignContainsPositions(int length) {
+        if (containsSchemas.isEmpty()) {
+            return Map.of();
         }
-        if (length > prefixSchemas.size()) {
-            return prefixSchemas.size() + context.random().nextInt(length - prefixSchemas.size());
+        int clauseCount = containsSchemas.size();
+        int roomPastPrefix = length - prefixSchemas.size();
+        int firstCandidate = roomPastPrefix >= clauseCount ? prefixSchemas.size() : 0;
+        var candidates = new ArrayList<Integer>();
+        for (int i = firstCandidate; i < length; i++) {
+            candidates.add(i);
         }
-        return context.random().nextInt(length);
+        Collections.shuffle(candidates, context.random());
+        var positions = new HashMap<Integer, Schema>();
+        for (int i = 0; i < clauseCount; i++) {
+            int position = candidates.get(i);
+            var clause = containsSchemas.get(i);
+            positions.put(position, clause);
+        }
+        return positions;
     }
 }

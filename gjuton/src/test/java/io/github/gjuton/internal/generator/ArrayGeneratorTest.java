@@ -181,6 +181,30 @@ class ArrayGeneratorTest {
     }
 
     @Test
+    void everyContainsClauseGetsAMatchingElement() {
+        var generator = mergedArrayGenerator("""
+                {
+                    "type": "array",
+                    "allOf": [
+                        {"contains": {"const": "A"}},
+                        {"contains": {"const": "B"}}
+                    ]
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> {
+            assertThat(arr).hasSizeGreaterThanOrEqualTo(2);
+            assertThat(arr).contains("A", "B");
+        });
+    }
+
+    @Test
     void draft7TupleProducesCorrectlyTypedPositionalElements() {
         var generator = arrayGenerator("""
                 {
@@ -527,5 +551,17 @@ class ArrayGeneratorTest {
     private static ArrayGenerator arrayGenerator(String json) {
         var document = SchemaParser.parse(json);
         return new ArrayGenerator(new GeneratorContext(document, new Random(42)), (ArraySchema) document.getRoot());
+    }
+
+    /**
+     * Builds a generator for the schema obtained by merging the {@code allOf}
+     * branches of {@code json}. Needed for constraints such as several
+     * {@code contains} clauses, which no single schema document can express.
+     */
+    private static ArrayGenerator mergedArrayGenerator(String json) {
+        var document = SchemaParser.parse(json);
+        var branches = document.getRoot().getAllOf();
+        var merged = (ArraySchema) SchemaMerger.merge(branches);
+        return new ArrayGenerator(new GeneratorContext(document, new Random(42)), merged);
     }
 }

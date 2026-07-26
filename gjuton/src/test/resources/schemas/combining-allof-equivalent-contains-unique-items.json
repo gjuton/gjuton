@@ -1,0 +1,9 @@
+{
+    "type": "array",
+    "items": {"type": "string"},
+    "uniqueItems": true,
+    "allOf": [
+        {"contains": {"const": "A"}},
+        {"contains": {"enum": ["A"]}}
+    ]
+}
