@@ -42,6 +42,11 @@ class IntegrationTest {
     private static final long DEFAULT_SEED = 42L;
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
+    // Building a generator resolves remote $refs over the network, so this is far
+    // more generous than the others: single fetches have been observed to take
+    // ~6s, and a schema with several remote refs resolves them one at a time.
+    private static final long BUILD_TIMEOUT_SECONDS = 10;
+
     // Generous enough to avoid false positives at ITERATIONS while keeping a
     // pathological schema from hanging the suite. A single generate() call or
     // validation should complete in milliseconds; these bound the outliers.
@@ -97,7 +102,7 @@ class IntegrationTest {
     private static List<Arguments> generateRows(String name, String content, Path path, long seed, GenerationMode mode) {
         Gjuton gen;
         try {
-            gen = callWithTimeout(() -> Gjuton.of(path.toFile()).withSeed(seed).withGenerationMode(mode), GENERATION_TIMEOUT_SECONDS);
+            gen = callWithTimeout(() -> Gjuton.of(path.toFile()).withSeed(seed).withGenerationMode(mode), BUILD_TIMEOUT_SECONDS);
         } catch (RuntimeException e) {
             return List.of(failureRow(name, content, path, "schema build " + e.getMessage()));
         }
