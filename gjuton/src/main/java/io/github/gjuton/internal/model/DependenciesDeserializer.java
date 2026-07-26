@@ -46,7 +46,7 @@ class DependenciesDeserializer extends JsonDeserializer<Map<String, Object>> {
                 if (!tree.has("type")) {
                     tree.put("type", "object");
                 }
-                result.put(key, p.getCodec().treeToValue(tree, Schema.class));
+                result.put(key, SchemaDeserializer.fromTree(tree, p.getCodec()));
             }
         }
         return result;

@@ -4,6 +4,7 @@ import static io.github.gjuton.internal.generator.GenerationResult.result;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.model.ObjectSchema;
+import io.github.gjuton.internal.model.RefSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.util.RandomUtil;
 import java.util.ArrayList;
@@ -140,8 +141,8 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
             var locations = new ArrayList<String>();
             int locationIndex = 0;
             for (var branch : parent.getAllOf()) {
-                if (branch.getRef() != null) {
-                    var resolved = context.resolveRef(branch.getRef());
+                if (branch instanceof RefSchema ref) {
+                    var resolved = context.resolveRef(ref.getRef());
                     // Identity check: the parser reuses the same Schema instance for "#",
                     // so == detects self-referential $ref. Self-ref is tautological in
                     // allOf — the value already satisfies this schema by construction.

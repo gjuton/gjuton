@@ -9,6 +9,7 @@ import io.github.gjuton.internal.model.ArraySchema;
 import io.github.gjuton.internal.model.NullSchema;
 import io.github.gjuton.internal.model.NumericSchema;
 import io.github.gjuton.internal.model.ObjectSchema;
+import io.github.gjuton.internal.model.RefSchema;
 import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import io.github.gjuton.internal.model.UnsatisfiableSchema;
@@ -262,6 +263,73 @@ class SchemaParserTest {
                     """))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("#/definitions/Missing");
+        }
+    }
+
+    @Nested
+    class RefSiblingIgnoring {
+
+        @Test
+        void bareRefParsesToRefSchema() {
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "definitions": {
+                            "Name": {"type": "string"}
+                        },
+                        "type": "object",
+                        "properties": {
+                            "name": {"$ref": "#/definitions/Name"}
+                        }
+                    }
+                    """);
+
+            // then
+            var name = ((ObjectSchema) document.getRoot()).getProperties().get("name");
+            assertThat(name).isInstanceOf(RefSchema.class);
+            assertThat(((RefSchema) name).getRef()).isEqualTo("#/definitions/Name");
+        }
+
+        @Test
+        void refWithPropertiesSiblingParsesToRefSchema() {
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "definitions": {
+                            "Person": {
+                                "type": "object",
+                                "properties": {"name": {"type": "string"}},
+                                "required": ["name"]
+                            }
+                        },
+                        "properties": {"extra": {"type": "boolean"}},
+                        "$ref": "#/definitions/Person"
+                    }
+                    """);
+
+            // then
+            assertThat(document.getRoot()).isInstanceOf(RefSchema.class);
+            assertThat(((RefSchema) document.getRoot()).getRef()).isEqualTo("#/definitions/Person");
+        }
+
+        @Test
+        void refWithTypeSiblingParsesToRefSchema() {
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "definitions": {
+                            "Name": {"type": "string", "minLength": 1}
+                        },
+                        "type": "object",
+                        "$ref": "#/definitions/Name",
+                        "properties": {"shouldBeIgnored": {"type": "integer"}},
+                        "required": ["shouldBeIgnored"]
+                    }
+                    """);
+
+            // then
+            assertThat(document.getRoot()).isInstanceOf(RefSchema.class);
+            assertThat(((RefSchema) document.getRoot()).getRef()).isEqualTo("#/definitions/Name");
         }
     }
 

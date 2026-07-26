@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.github.gjuton.internal.model.RefSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.SchemaDocument;
 import java.io.IOException;
@@ -56,7 +57,7 @@ public final class SchemaParser {
             var rootNode = MAPPER.readTree(jsonSchema);
             rewriteTypeArrays(rootNode);
             TypeInferrer.inferMissingTypes(rootNode);
-            var rootSchema = MAPPER.treeToValue(rootNode, Schema.class);
+            var rootSchema = toSchema(rootNode);
             var refs = new HashMap<String, Schema>();
             // Self-reference always resolves to the same root Schema instance so phase state
             // is shared between the root and any "#" ref.
@@ -169,13 +170,23 @@ public final class SchemaParser {
 
     private static Schema resolveFragment(String pointer, JsonNode root) throws JsonProcessingException {
         if (pointer.isEmpty()) {
-            return MAPPER.treeToValue(root, Schema.class);
+            return toSchema(root);
         }
         var target = root.at(pointer);
         if (target.isMissingNode()) {
             throw new IllegalArgumentException("Unresolved $ref fragment: #" + pointer);
         }
-        return MAPPER.treeToValue(target, Schema.class);
+        return toSchema(target);
+    }
+
+    private static Schema toSchema(JsonNode node) throws JsonProcessingException {
+        if (node.isObject() && node.has("$ref")) {
+            var refNode = node.get("$ref");
+            if (refNode.isTextual()) {
+                return RefSchema.builder().ref(refNode.asText()).build();
+            }
+        }
+        return MAPPER.treeToValue(node, Schema.class);
     }
 
     /**

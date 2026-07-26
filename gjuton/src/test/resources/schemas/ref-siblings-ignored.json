@@ -1,0 +1,15 @@
+{
+    "definitions": {
+        "Name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10
+        }
+    },
+    "$ref": "#/definitions/Name",
+    "type": "object",
+    "properties": {
+        "shouldBeIgnored": {"type": "integer"}
+    },
+    "required": ["shouldBeIgnored"]
+}

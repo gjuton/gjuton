@@ -7,6 +7,7 @@ import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.model.ArraySchema;
 import io.github.gjuton.internal.model.NumericSchema;
 import io.github.gjuton.internal.model.ObjectSchema;
+import io.github.gjuton.internal.model.RefSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.UnsatisfiableSchema;
 import io.github.gjuton.internal.parser.SchemaParser;
@@ -845,7 +846,8 @@ class SchemaMergerTest {
             var merged = SchemaMerger.merge(List.of(blank, ref));
 
             // then
-            assertThat(merged.getRef()).isEqualTo("#/definitions/Foo");
+            assertThat(merged).isInstanceOf(RefSchema.class);
+            assertThat(((RefSchema) merged).getRef()).isEqualTo("#/definitions/Foo");
         }
 
         @Test
@@ -861,7 +863,8 @@ class SchemaMergerTest {
             var merged = SchemaMerger.merge(List.of(ref, blank));
 
             // then
-            assertThat(merged.getRef()).isEqualTo("#/definitions/Foo");
+            assertThat(merged).isInstanceOf(RefSchema.class);
+            assertThat(((RefSchema) merged).getRef()).isEqualTo("#/definitions/Foo");
         }
     }
 

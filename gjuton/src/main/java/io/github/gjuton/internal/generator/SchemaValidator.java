@@ -5,6 +5,7 @@ import io.github.gjuton.internal.model.BooleanSchema;
 import io.github.gjuton.internal.model.NullSchema;
 import io.github.gjuton.internal.model.NumericSchema;
 import io.github.gjuton.internal.model.ObjectSchema;
+import io.github.gjuton.internal.model.RefSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
@@ -55,11 +56,11 @@ final class SchemaValidator {
             // owns its correctness.
             return true;
         }
-        if (schema.getRef() != null) {
+        if (schema instanceof RefSchema ref) {
             if (refDepth >= MAX_REF_DEPTH) {
                 return true;
             }
-            return satisfies(value, context.resolveRef(schema.getRef()), refDepth + 1);
+            return satisfies(value, context.resolveRef(ref.getRef()), refDepth + 1);
         }
         if (schema.getConstValue() != null && !valuesEqual(schema.getConstValue(), value)) {
             return false;
@@ -108,6 +109,8 @@ final class SchemaValidator {
             case ArraySchema s -> satisfiesArray(value, s);
             case UntypedSchema ignored -> true;
             case UnsatisfiableSchema ignored -> false;
+            case RefSchema ref -> refDepth < MAX_REF_DEPTH
+                    && satisfies(value, context.resolveRef(ref.getRef()), refDepth + 1);
         };
     }
 

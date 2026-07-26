@@ -24,6 +24,7 @@ import io.github.gjuton.internal.model.BooleanSchema;
 import io.github.gjuton.internal.model.NullSchema;
 import io.github.gjuton.internal.model.NumericSchema;
 import io.github.gjuton.internal.model.ObjectSchema;
+import io.github.gjuton.internal.model.RefSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.SchemaDocument;
 import io.github.gjuton.internal.model.StringSchema;
@@ -115,8 +116,8 @@ public final class JsonGenerator {
     }
 
     private static Generator<?> buildDelegate(Schema schema, GeneratorContext context) {
-        if (schema.getRef() != null) {
-            return new RefGenerator(context, schema.getRef());
+        if (schema instanceof RefSchema ref) {
+            return new RefGenerator(context, ref.getRef());
         }
         if (schema.getConstValue() != null) {
             return new ConstGenerator(context, schema.getConstValue(), schema);
@@ -145,6 +146,7 @@ public final class JsonGenerator {
             case UntypedSchema ignored -> new UntypedGenerator(context);
             case UnsatisfiableSchema ignored -> throw new UnsatisfiableSchemaException(
                     "Cannot generate a value for a false schema", context.currentJsonPointer());
+            case RefSchema ref -> new RefGenerator(context, ref.getRef());
         };
     }
 

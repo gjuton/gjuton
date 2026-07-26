@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -32,10 +33,10 @@ class ItemsDeserializer extends JsonDeserializer<Object> {
         if (p.currentToken() == JsonToken.START_ARRAY) {
             var schemas = new ArrayList<Schema>();
             while (p.nextToken() != JsonToken.END_ARRAY) {
-                schemas.add(p.getCodec().readValue(p, Schema.class));
+                schemas.add(SchemaDeserializer.fromTree((JsonNode) p.readValueAsTree(), p.getCodec()));
             }
             return List.copyOf(schemas);
         }
-        return p.getCodec().readValue(p, Schema.class);
+        return SchemaDeserializer.fromTree((JsonNode) p.readValueAsTree(), p.getCodec());
     }
 }

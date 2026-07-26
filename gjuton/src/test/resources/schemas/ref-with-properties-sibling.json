@@ -1,0 +1,16 @@
+{
+    "definitions": {
+        "Person": {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "age": {"type": "integer"}
+            },
+            "required": ["name"]
+        }
+    },
+    "properties": {
+        "extra": {"type": "boolean"}
+    },
+    "$ref": "#/definitions/Person"
+}
