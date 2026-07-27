@@ -1,0 +1,55 @@
+The OpenAPI descriptions in this directory are sourced from the APIs.guru
+OpenAPI Directory: https://github.com/APIs-guru/openapi-directory
+
+    APIs.guru OpenAPI Directory
+    Licensed under CC0 1.0 Universal
+
+Each description remains the work of the API provider that published it, and
+is redistributed here under the license that provider declares in the
+description's own `info.license` field. Only descriptions declaring Apache 2.0
+or CC-BY were selected — both state their terms in full, so redistributing them
+needs nothing the provider did not supply:
+
+    googleapis.com-groupsmigration-v1.yaml      CC-BY 3.0
+    twilio.com-twilio_frontline_v1-1.55.0.yaml  Apache 2.0
+    quarantine.country-1.0.yaml                 Apache 2.0
+    deutschebahn.com-fasta-2.1.yaml             CC-BY 4.0
+    byautomata.io-1.0.1.yaml                    Apache 2.0
+    amazonaws.com-cur-2017-01-06.yaml           Apache 2.0
+    apideck.com-proxy-10.0.0.yaml               Apache 2.0
+    javatpoint.com-v1.yaml                      CC-BY 3.0
+    kumpeapps.com-5.0.0.yaml                    Apache 2.0
+    slicebox.local-2.0.yaml                     Apache 2.0
+    conjur.local-5.3.0.yaml                     Apache 2.0
+    google.com-v3.yaml                          CC-BY 3.0
+    ato.gov.au-0.0.6.yaml                       CC-BY 3.0 Australia
+    gambitcomm.local-mimic-21.00.yaml           Apache 2.0
+    6-dot-authentiqio.appspot.com-6.yaml        Apache 2.0
+    apicurio.local-registry-1.3.2.Final.yaml    Apache 2.0
+    axesso.de-1.0.0.yaml                        Apache 2.0
+    codesearch.debian.net-1.4.0.yaml            Apache 2.0
+    googleapis.com-apphub-v1.yaml               CC-BY 3.0
+    googleapis.com-youtubeAnalytics-v1.yaml     CC-BY 3.0
+    nasa.gov-apod-1.0.0.yaml                    Apache 2.0
+    openbankingproject.ch-1.3.8.yaml            CC-BY 4.0
+    openapi-generator.tech-6.5.0.yaml           Apache 2.0
+    openpolicy.local-0.28.0.yaml                Apache 2.0
+    papinet.io-order_status-1.0.0.yaml          Apache 2.0
+    patrowl.local-1.0.0.yaml                    Apache 2.0
+    ptv.vic.gov.au-v3.yaml                      CC-BY 4.0
+    qualpay.com-1.7.0.yaml                      Apache 2.0
+    regcheck.org.uk-1.0.0.yaml                  Apache 2.0
+    swagger.io-generator-2.4.31.yaml            Apache 2.0
+    traccar.org-5.6.yaml                        Apache 2.0
+    viator.com-1.0.0.yaml                       CC-BY 4.0
+
+The files are used unmodified apart from being renamed from their
+`<provider>/<version>/{openapi,swagger}.yaml` paths in the source repository
+to a flat `<provider>-<version>.yaml` layout.
+
+License texts:
+
+    Apache 2.0            the LICENSE file at the root of this repository
+    CC-BY 3.0             https://creativecommons.org/licenses/by/3.0/legalcode
+    CC-BY 3.0 Australia   https://creativecommons.org/licenses/by/3.0/au/legalcode
+    CC-BY 4.0             https://creativecommons.org/licenses/by/4.0/legalcode
