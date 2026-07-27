@@ -1,0 +1,8 @@
+The JSON Schema files in this directory are sourced from the SchemaStore
+project: https://github.com/SchemaStore/schemastore
+
+    JSON Schema Store
+    Copyright 2015-Current Mads Kristensen and Contributors
+
+These files are licensed under the Apache License, Version 2.0; see the
+LICENSE file at the root of this repository.

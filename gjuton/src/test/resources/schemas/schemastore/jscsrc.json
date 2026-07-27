@@ -1,0 +1,3794 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json.schemastore.org/jscsrc.json",
+  "additionalProperties": true,
+  "definitions": {
+    "blockKeywords": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "enum": [
+              "catch",
+              "do",
+              "else",
+              "finally",
+              "for",
+              "function",
+              "if",
+              "try",
+              "while"
+            ]
+          },
+          "uniqueItems": true
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "braceRules": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "beforeOpeningRoundBrace": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "beforeOpeningCurlyBrace": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "esprimaNodeTypes": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "enum": [
+              "ArrayExpression",
+              "ArrayPattern",
+              "ArrowFunctionExpression",
+              "AssignmentExpression",
+              "AssignmentPattern",
+              "BinaryExpression",
+              "BlockStatement",
+              "BreakStatement",
+              "CallExpression",
+              "CatchClause",
+              "ClassBody",
+              "ClassDeclaration",
+              "ClassExpression",
+              "ConditionalExpression",
+              "ContinueStatement",
+              "DebuggerStatement",
+              "DoWhileStatement",
+              "EmptyStatement",
+              "ExportAllDeclaration",
+              "ExportDefaultDeclaration",
+              "ExportNamedDeclaration",
+              "ExportSpecifier",
+              "ExpressionStatement",
+              "ForInStatement",
+              "ForStatement",
+              "FunctionDeclaration",
+              "FunctionExpression",
+              "Identifier",
+              "IfStatement",
+              "ImportDeclaration",
+              "ImportDefaultSpecifier",
+              "ImportNamespaceSpecifier",
+              "ImportSpecifier",
+              "LabeledStatement",
+              "Literal",
+              "LogicalExpression",
+              "MemberExpression",
+              "MethodDefinition",
+              "NewExpression",
+              "ObjectExpression",
+              "ObjectPattern",
+              "Program",
+              "Property",
+              "RestElement",
+              "ReturnStatement",
+              "SequenceExpression",
+              "SpreadElement",
+              "Super",
+              "SwitchCase",
+              "SwitchStatement",
+              "TaggedTemplateExpression",
+              "TemplateElement",
+              "TemplateLiteral",
+              "ThisExpression",
+              "ThrowStatement",
+              "TryStatement",
+              "UnaryExpression",
+              "UpdateExpression",
+              "VariableDeclaration",
+              "VariableDeclarator",
+              "WhileStatement",
+              "WithStatement"
+            ]
+          },
+          "uniqueItems": true
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "jsDoc": {
+      "description": "Validate jsdoc comments.",
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "checkAnnotations": {
+          "description": "Checks whether tag names are valid.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/nullRule"
+            },
+            {
+              "description": "By default, any tag from any preset is allowed.  You can pass Object to select preset with preset field and add custom tags with extra field.",
+              "type": "object",
+              "properties": {
+                "preset": {
+                  "type": "string",
+                  "oneOf": [
+                    {
+                      "description": "https://github.com/google/closure-compiler",
+                      "const": "closurecompiler"
+                    },
+                    {
+                      "description": "https://github.com/jsdoc3/jsdoc",
+                      "const": "jsdoc3"
+                    },
+                    {
+                      "description": "https://github.com/senchalabs/jsduck",
+                      "const": "jsduck5"
+                    }
+                  ]
+                },
+                "extra": {
+                  "description": "Add custom tags with the extra field.  The extra field should contain tags in keys with true, false, or \"some\" for the values.",
+                  "type": "object",
+                  "additionalProperties": {
+                    "oneOf": [
+                      {
+                        "type": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "const": "some"
+                      }
+                    ]
+                  }
+                }
+              }
+            },
+            {
+              "description": "There are 3 presets:  Closure Compiler, JSDoc3 and JSDuck5.",
+              "type": "string",
+              "oneOf": [
+                {
+                  "description": "https://github.com/google/closure-compiler",
+                  "const": "closurecompiler"
+                },
+                {
+                  "description": "https://github.com/jsdoc3/jsdoc",
+                  "const": "jsdoc3"
+                },
+                {
+                  "description": "https://github.com/senchalabs/jsduck",
+                  "const": "jsduck5"
+                }
+              ]
+            }
+          ]
+        },
+        "checkParamExistence": {
+          "description": "Checks whether all parameters are documented.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkParamNames": {
+          "description": "Checks whether param names in jsdoc and in function declaration are equal.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requireParamTypes": {
+          "description": "Checks whether params in jsdoc contains type.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkRedundantParams": {
+          "description": "Reports redundant params in jsdoc.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkReturnTypes": {
+          "description": "Checks for differences between the jsdoc and actual return types if both exist.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkRedundantReturns": {
+          "description": "Report statements for functions without a return, which are described with an @return tag.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requireReturnTypes": {
+          "description": "Checks whether @returns in jsdoc contains type.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "checkTypes": {
+          "description": "Reports invalid types for bunch of tags.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/nullRule"
+            },
+            {
+              "description": "Can equal \"strictNativeCase\" or \"capitalizedNativeCase\".",
+              "type": "string",
+              "oneOf": [
+                {
+                  "description": "The strictNativeCase mode checks that case of natives is the same as in this list: boolean, number, string, Object, Array, Date, RegExp.",
+                  "const": "strictNativeCase"
+                },
+                {
+                  "description": "The capitalizedNativeCase mode checks that the first letter in all native types and primitives is uppercased except the case with function in google closure format:  {function(...)}.",
+                  "const": "capitalizedNativeCase"
+                }
+              ]
+            }
+          ]
+        },
+        "checkRedundantAccess": {
+          "description": "Reports redundant access declarations.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/nullRule"
+            },
+            {
+              "type": "string",
+              "oneOf": [
+                {
+                  "description": "If an @access tag is specified, the function name must contain a leading _underscore.",
+                  "const": "enforceLeadingUnderscore"
+                },
+                {
+                  "description": "If an @access tag is specified, the function name must contain a trailing underscore_.",
+                  "const": "enforceTrailingUnderscore"
+                }
+              ]
+            }
+          ]
+        },
+        "leadingUnderscoreAccess": {
+          "description": "Checks whether access declaration is set for _underscored function names.  Ignores a bunch of popular identifiers: __filename, __dirname, __proto__, __defineGetter__, super_, __constructor, etc.",
+          "oneOf": [
+            {
+              "description": "true (means not public).  Report if @private or @protected is absent from _underscored function names.",
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/nullRule"
+            },
+            {
+              "type": "string",
+              "oneOf": [
+                {
+                  "description": "Enforce only @private for all _underscored function names.",
+                  "const": "private"
+                },
+                {
+                  "description": "Enforce only @protected for all _underscored function names.",
+                  "const": "protected"
+                }
+              ]
+            }
+          ]
+        },
+        "enforceExistence": {
+          "description": "Checks whether jsdoc block exists.",
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "$ref": "#/definitions/nullRule"
+            },
+            {
+              "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+              "type": "object",
+              "properties": {
+                "allExcept": {
+                  "description": "Array of quoted keywords to exempt.",
+                  "type": "array",
+                  "minItems": 0,
+                  "items": {
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "description": "Skip expression functions.",
+                        "const": "expressions"
+                      },
+                      {
+                        "description": "Skip module.exports = function () {};",
+                        "const": "exports"
+                      },
+                      {
+                        "description": "Functions without parameters and with empty return statements will be skipped.",
+                        "const": "paramless-procedures"
+                      }
+                    ]
+                  },
+                  "uniqueItems": true
+                }
+              }
+            },
+            {
+              "description": "Deprecated in favor of the object \"allExcept\": [\"exports\"] rule format.",
+              "type": "string",
+              "oneOf": [
+                {
+                  "description": "Skip expression functions.",
+                  "const": "exceptExports"
+                }
+              ]
+            }
+          ]
+        },
+        "requireHyphenBeforeDescription": {
+          "description": "Checks whether a jsdoc param description has a hyphen before it (checks for -).",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requireNewlineAfterDescription": {
+          "description": "Checks whether a jsdoc comment description has a padding (trailing) newline separator between it and additional @tags.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "disallowNewlineAfterDescription": {
+          "description": "Checks whether a jsdoc comment description has no padding (trailing) newline separator between it and additional @tags.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requireDescriptionCompleteSentence": {
+          "description": "Checks whether a jsdoc comment description is a complete sentence.  A complete sentence is defined as starting with an upper case letter and ending with a period.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requireParamDescription": {
+          "description": "Checks whether a jsdoc param description exists.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "requireReturnDescription": {
+          "description": "Checks whether a jsdoc return description exists.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "keywords": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "enum": [
+              "break",
+              "case",
+              "catch",
+              "continue",
+              "debugger",
+              "default",
+              "delete",
+              "do",
+              "else",
+              "finally",
+              "for",
+              "function",
+              "if",
+              "in",
+              "instanceof",
+              "new",
+              "return",
+              "switch",
+              "this",
+              "throw",
+              "try",
+              "typeof",
+              "var",
+              "void",
+              "while",
+              "with"
+            ]
+          },
+          "uniqueItems": true
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "keywords2": {
+      "oneOf": [
+        {
+          "$ref": "#/definitions/keywords"
+        },
+        {
+          "type": "boolean"
+        }
+      ]
+    },
+    "nullRule": {
+      "description": "Removes the rule.",
+      "type": "null"
+    },
+    "operators": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "enum": [
+              ",",
+              ":",
+              "?",
+              "^",
+              "^=",
+              "|",
+              "||",
+              "|=",
+              "&",
+              "&&",
+              "&=",
+              "+",
+              "+=",
+              "-",
+              "-=",
+              "%",
+              "%=",
+              "/",
+              "/=",
+              "*",
+              "*=",
+              "=",
+              "==",
+              "===",
+              "!=",
+              "!==",
+              ">",
+              ">>",
+              ">>>",
+              ">=",
+              ">>=",
+              ">>>=",
+              "<",
+              "<<",
+              "<=",
+              "<<=",
+              null
+            ]
+          },
+          "uniqueItems": true
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "equalityOperators": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "enum": ["==", "===", "!=", "!==", null]
+          },
+          "uniqueItems": true
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "unaryOperators": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "enum": ["++", "--", "+", "-", "~", "!"]
+          },
+          "uniqueItems": true
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    }
+  },
+  "properties": {
+    "additionalRules": {
+      "description": "Path to load additional rules",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "disallowAnonymousFunctions": {
+      "description": "Requires that a function expression be named. Named functions provide more information in the error stack trace than anonymous functions.  This option does not help if you use Arrow functions (ES6) which are always anonymous.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowArrowFunctions": {
+      "description": "Disallows arrow functions.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowCapitalizedComments": {
+      "description": "Requires the first alphabetical character of a comment to be lowercase.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowCommaBeforeLineBreak": {
+      "description": "Disallows commas as last token on a line in lists.",
+      "oneOf": [
+        {
+          "description": "For default behavior (strict mode, comma on the same line).",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "const": "function"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowCurlyBraces": {
+      "$ref": "#/definitions/keywords2",
+      "description": "Disallows curly braces after statements."
+    },
+    "disallowDanglingUnderscores": {
+      "description": "Disallows identifiers that start or end in _.  Some popular identifiers are automatically listed as exceptions:  __proto__ (javascript), _ (underscore.js), __filename (node.js global), __dirname (node.js global), super_ (node.js, used by util.inherits).",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowEmptyBlocks": {
+      "description": "Disallows empty blocks (except for catch blocks).",
+      "oneOf": [
+        {
+          "description": "For default behavior (strict mode, no empty blocks allowed).",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.  Blocks containing only comments would not be considered empty.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "const": "comments"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowFunctionDeclarations": {
+      "description": "Disallows function declarations.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowIdenticalDestructuringNames": {
+      "description": "Disallows identical destructuring names for the key and value in favor of using shorthand destructuring.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowIdentifierNames": {
+      "description": "Disallows a specified set of identifier names.",
+      "oneOf": [
+        {
+          "description": "An array of strings, which should be disallowed as identifier names.",
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "disallowImplicitTypeConversion": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "enum": ["numeric", "boolean", "binary", "string"]
+          },
+          "uniqueItems": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Disallows implicit type conversion."
+    },
+    "disallowKeywordsInComments": {
+      "description": "Disallows one or more keywords in comments.",
+      "oneOf": [
+        {
+          "description": "An array of strings, which should be disallowed keywords in comments.",
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        {
+          "description": "If true, \"TODO\" and \"FIXME\" will be disallowed in comments.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "A valid Regular Expression.",
+          "type": "string"
+        }
+      ]
+    },
+    "disallowKeywordsOnNewLine": {
+      "$ref": "#/definitions/keywords",
+      "description": "Disallows placing the specified keywords on a new line."
+    },
+    "disallowKeywords": {
+      "$ref": "#/definitions/keywords",
+      "description": "Disallows usage of the specified keywords."
+    },
+    "disallowMixedSpacesAndTabs": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        },
+        {
+          "type": "string",
+          "const": "smart"
+        }
+      ],
+      "description": "Requires lines to not contain both spaces and tabs consecutively, or spaces after tabs only for alignment if \"smart"
+    },
+    "disallowMultiLineTernary": {
+      "description": "Disallows the test, consequent and alternate to be on separate lines when using the ternary operator.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowMultipleLineBreaks": {
+      "description": "Disallows multiple blank lines in a row.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowMultipleLineStrings": {
+      "description": "Disallows strings that span multiple lines without using concatenation.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowMultipleSpaces": {
+      "description": "Disallows multiple indentation characters (tabs or spaces) between identifiers, keywords, and any other token.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains a \"allowEOLComments\" key equal to a boolean.",
+          "type": "object",
+          "properties": {
+            "allowEOLComments": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "disallowMultipleVarDecl": {
+      "description": "Disallows multiple `var` declaration (except for-loop).",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains a \"allowEOLComments\" key equal to a boolean.",
+          "type": "object",
+          "properties": {
+            "strict": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Allows declarations where all variables are importing external modules with require.",
+                    "const": "require"
+                  },
+                  {
+                    "description": "Allows declarations where all variables are not defined.",
+                    "const": "undefined"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowNamedUnassignedFunctions": {
+      "description": "Disallows unassigned functions to be named inline.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowNestedTernaries": {
+      "description": "Disallows nested ternaries.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains a \"maxLevel\" property equal to an integer indicating the maximum levels of nesting to be allowed.",
+          "type": "object",
+          "properties": {
+            "maxLevel": {
+              "description": "The maximum levels of ternary nesting to be allowed.",
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      ]
+    },
+    "disallowNewlineBeforeBlockStatements": {
+      "description": "Disallows newline before opening curly brace of all block statements.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/blockKeywords"
+        },
+        {
+          "description": "A value of true will always disallow newline before curly brace of block statements.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains a \"value\" key equal to a boolean or an array, and / or an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "value": {
+              "anyOf": [
+                {
+                  "type": "array"
+                },
+                {
+                  "type": "boolean"
+                }
+              ]
+            },
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.  If `multiline` is specified, when the conditions span on multiple lines, require a new line before the curly brace.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "const": "multiline"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowNodeTypes": {
+      "$ref": "#/definitions/esprimaNodeTypes",
+      "description": "Disallow use of certain node types (from Esprima/ESTree).  Value equals an array of parser node types to be disallowed."
+    },
+    "disallowNotOperatorsInConditionals": {
+      "description": "Disallows the not, not equals, and strict not equals operators in conditionals.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowObjectKeysOnNewLine": {
+      "description": "Disallows placing object keys on new line.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowOperatorBeforeLineBreak": {
+      "$ref": "#/definitions/operators",
+      "description": "Requires putting certain operators on the next line rather than on the current line before a line break."
+    },
+    "disallowPaddingNewLinesAfterBlocks": {
+      "description": "Disallow a newline after blocks.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowPaddingNewLinesAfterUseStrict": {
+      "description": "Disallow a blank line after 'use strict'; statements.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowPaddingNewLinesBeforeExport": {
+      "description": "Disallows newline before module.exports.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowPaddingNewlinesBeforeKeywords": {
+      "$ref": "#/definitions/keywords2",
+      "description": "Disallow an empty line above the specified keywords."
+    },
+    "disallowPaddingNewLinesBeforeLineComments": {
+      "description": "Disallows newline before line comments.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "disallowPaddingNewlinesInBlocks": {
+      "description": "Disallows blocks from beginning or ending with 2 newlines.",
+      "oneOf": [
+        {
+          "description": "A value of true validates all non-empty blocks.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains a \"open\" key equal to a boolean, an \"close\" key equal to a boolean, and / or an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "close": {
+              "description": "A value of true validates that there is a newline before the closing brace in a block.  A value of false ignores the newline validation before the closing brace in a block.",
+              "type": "boolean"
+            },
+            "open": {
+              "description": "A value of true validates that there is a newline after the opening brace in a block.  A value of false ignores the newline validation after the opening brace in a block.",
+              "type": "boolean"
+            },
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.  If `conditionals` is specified, conditionals (if, else if, else) blocks are ignored.  If `functions` is specified, function blocks are ignored.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "enum": ["conditionals", "functions"]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowPaddingNewLinesInObjects": {
+      "description": "Disallows newlines adjacent to curly braces in all object literals.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowParenthesesAroundArrowParam": {
+      "description": "Disallows parentheses around arrow function expressions that contain a single parameter.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowQuotedKeysInObjects": {
+      "description": "Disallows quoted keys in object if possible.",
+      "oneOf": [
+        {
+          "description": "Set to true for strict mode.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "description": "Allows ES3+ reserved words to remain quoted which is helpful when using this option with JSHint's es3 flag.",
+                    "const": "reserved"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "description": "Deprecated in favor of the object \"allExcept\": [\"reserved\"] rule format.",
+          "type": "string",
+          "const": "allButReserved"
+        }
+      ]
+    },
+    "disallowSemicolons": {
+      "description": "Disallows lines from ending in a semicolon.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowShorthandArrowFunctions": {
+      "description": "Require arrow functions to use a block statement (explicit return).",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowSpaceAfterBinaryOperators": {
+      "$ref": "#/definitions/operators",
+      "description": "Requires sticking binary operators to the right."
+    },
+    "disallowSpaceAfterComma": {
+      "description": "Disallows spaces after commas.",
+      "oneOf": [
+        {
+          "description": "A value of true will disallow any spaces after any comma.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Allow spaces in place of absent values in sparse arrays.",
+                    "const": "sparseArrays"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowSpaceAfterKeywords": {
+      "$ref": "#/definitions/keywords2",
+      "description": "Disallows space after the specified keywords.  A value of true will require spaces after all possible keywords."
+    },
+    "disallowSpaceAfterLineComment": {
+      "description": "Requires that a line comment (//) not be followed by a space.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowSpaceAfterObjectKeys": {
+      "description": "Disallows space after object keys.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Ignores objects if the object only takes up a single line.",
+                    "const": "singleline"
+                  },
+                  {
+                    "description": "Ignores objects if the object takes up multiple lines.",
+                    "const": "multiline"
+                  },
+                  {
+                    "description": "Ignores aligned object properties.",
+                    "const": "aligned"
+                  },
+                  {
+                    "description": "Ignores method declarations.",
+                    "const": "method"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "description": "Deprecated in favor of the object \"allExcept\": [] rule format.",
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "Ignores objects if the object only takes up a single line.",
+              "const": "ignoreSingleLine"
+            },
+            {
+              "description": "Ignores objects if the object takes up multiple lines.",
+              "const": "ignoreMultiLine"
+            }
+          ]
+        }
+      ]
+    },
+    "disallowSpaceAfterPrefixUnaryOperators": {
+      "$ref": "#/definitions/unaryOperators",
+      "description": "Requires sticking unary operators to the right."
+    },
+    "disallowSpaceBeforeBinaryOperators": {
+      "$ref": "#/definitions/operators",
+      "description": "Requires sticking binary operators to the left."
+    },
+    "disallowSpaceBeforeBlockStatements": {
+      "description": "Disallows space before block statements (for loops, control structures).",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowSpaceBeforeComma": {
+      "description": "Disallows spaces before commas.",
+      "oneOf": [
+        {
+          "description": "A value of true will disallow any spaces before any comma.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Allow spaces in place of absent values in sparse arrays.",
+                    "const": "sparseArrays"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "description": "Deprecated in favor of the object \"allExcept\": [\"exports\"] rule format.",
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "Skip expression functions.",
+              "const": "exceptExports"
+            }
+          ]
+        }
+      ]
+    },
+    "disallowSpaceBeforeKeywords": {
+      "$ref": "#/definitions/keywords2",
+      "description": "Disallows space before keyword."
+    },
+    "disallowSpaceBeforeObjectValues": {
+      "description": "Disallows space before object values.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowSpaceBeforePostfixUnaryOperators": {
+      "$ref": "#/definitions/unaryOperators",
+      "description": "Requires sticking unary operators to the left."
+    },
+    "disallowSpaceBeforeSemicolon": {
+      "description": "Disallows spaces before semicolons.",
+      "oneOf": [
+        {
+          "description": "A value of true will disallow any spaces before any semicolon.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception tokens.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted tokens to exempt (allows whitespace before semicolon if preceded by the specified token).",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "anyOf": [
+                  {
+                    "const": "("
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 1
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowSpaceBetweenArguments": {
+      "description": "Ensure there are no spaces after argument separators in call expressions.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowSpacesInAnonymousFunctionExpression": {
+      "$ref": "#/definitions/braceRules",
+      "description": "Disallows space before () or {} in anonymous function expressions."
+    },
+    "disallowSpacesInCallExpression": {
+      "description": "Disallows space before () in call expressions.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowSpacesInConditionalExpression": {
+      "description": "Disallows space before and/or after ? or : in conditional expressions.",
+      "anyOf": [
+        {
+          "description": "A value of true will set all properties [afterTest, beforeConsequent, afterConsequent, beforeAlternate] to true.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "description": "An object that contains keys of type boolean.",
+          "properties": {
+            "afterConsequent": {
+              "type": "boolean"
+            },
+            "afterTest": {
+              "type": "boolean"
+            },
+            "beforeAlternate": {
+              "type": "boolean"
+            },
+            "beforeConsequent": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "disallowSpacesInForStatement": {
+      "description": "Disallow spaces in between for statement.",
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "disallowSpacesInFunction": {
+      "$ref": "#/definitions/braceRules",
+      "description": "Disallows space before `()` or `{}` in function expressions (both named and anonymous) and function declarations."
+    },
+    "disallowSpacesInFunctionDeclaration": {
+      "$ref": "#/definitions/braceRules",
+      "description": "Disallows space before () or {} in function declarations."
+    },
+    "disallowSpacesInFunctionExpression": {
+      "$ref": "#/definitions/braceRules",
+      "description": "Disallows space before `()` or `{}` in function expressions (both named and anonymous)."
+    },
+    "disallowSpacesInGenerator": {
+      "description": "Disallow space before or after * in generator functions.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "At least one of the object properties must be present and it must be set to true.",
+          "type": "object",
+          "properties": {
+            "beforeStar": {
+              "description": "A value of true disallows space before *.",
+              "type": "boolean"
+            },
+            "afterStar": {
+              "description": "A value of true disallows space after *.",
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "disallowSpacesInNamedFunctionExpression": {
+      "$ref": "#/definitions/braceRules",
+      "description": "Disallows space before () or {} in named function expressions"
+    },
+    "disallowSpacesInsideArrayBrackets": {
+      "description": "Disallows space after opening array square bracket and before closing.  Reports only on arrays, not on property accessors.  Use disallowSpacesInsideBrackets to report on all brackets.",
+      "oneOf": [
+        {
+          "description": "Use \"all\" or true for strict mode.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "all"
+            }
+          ]
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception tokens.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted tokens to exempt.  Tokens should consist of an opener with a matching closer () {} [] etc.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Tokens should consist of an opener with a matching closer () {} [] etc.",
+                    "enum": ["(", ")", "{", "}", "[", "]"]
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "description": "Deprecated in favor of the object \"allExcept\": [] rule format.",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "nested"
+            }
+          ]
+        }
+      ]
+    },
+    "disallowSpacesInsideBrackets": {
+      "description": "Disallows space after opening square bracket and before closing.  Reports on all on brackets, even on property accessors.  Use disallowSpacesInsideArrayBrackets to exclude property accessors.",
+      "oneOf": [
+        {
+          "description": "Use true for strict mode.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception tokens.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted tokens to exempt.  Tokens should consist of an opener with a matching closer () {} [] etc.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Tokens should consist of an opener with a matching closer () {} [] etc.",
+                    "enum": ["(", ")", "{", "}", "[", "]"]
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowSpacesInsideObjectBrackets": {
+      "description": "Disallows space after opening object curly brace and before closing.",
+      "oneOf": [
+        {
+          "description": "Use \"all\" or true for strict mode.",
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "all"
+            }
+          ]
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception tokens.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted tokens to exempt.  Applies only to closer tokens:  e.g. ) } ].  If a (closer) token is specified, the rule ignores contiguous (closer) tokens.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Tokens should consist of an closer:  ) } ] etc.",
+                    "enum": [")", "}", "]"]
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "description": "Deprecated in favor of the object \"allExcept\": [] rule format.",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "nested"
+            }
+          ]
+        }
+      ]
+    },
+    "disallowSpacesInsideParentheses": {
+      "description": "Disallows space after opening round bracket and before closing.",
+      "oneOf": [
+        {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string",
+              "const": "all"
+            }
+          ]
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"only\" key equal to an array of values which indicate where to apply this rule.",
+          "type": "object",
+          "properties": {
+            "only": {
+              "description": "Array of quoted values to target.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "anyOf": [
+                  {
+                    "enum": ["(", ")", "{", "}", "[", "]", "function"]
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowSpacesInsideParenthesizedExpression": {
+      "description": "Disallows space after opening and before closing grouping parentheses.",
+      "oneOf": [
+        {
+          "description": "If true, always disallow spaces inside grouping parentheses.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted tokens or items to exempt.  Tokens should consist of an opener with a matching closer () {} [] or `function`.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Tokens should consist of an opener with a matching closer () {} [] etc. or `function`.",
+                    "enum": ["(", ")", "{", "}", "[", "]", "function"]
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "disallowSpacesInsideTemplateStringPlaceholders": {
+      "description": "Disallows spaces before and after curly brace inside template string placeholders.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "disallowTabs": {
+      "description": "Disallows tabs everywhere.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "disallowTrailingComma": {
+      "description": "Disallows an extra comma following the final element of an array or object literal.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "disallowTrailingWhitespace": {
+      "description": "Requires all lines to end on a non-whitespace character. Use \"ignoreEmptyLines\" to allow whitespace on empty lines (default is false).",
+      "default": false,
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "const": "ignoreEmptyLines"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "disallowUnusedParams": {
+      "description": "Disallows unused params in function expression and function declaration.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "disallowVar": {
+      "description": "Disallows declaring variables with var.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "disallowYodaConditions": {
+      "$ref": "#/definitions/equalityOperators",
+      "description": "Requires the variable to be the left hand operator when doing a boolean comparison.  Array of quoted operators or true to disallow yoda conditions for most possible comparison operators."
+    },
+    "excludeFiles": {
+      "description": "Disables style checking for specified paths.",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "jsDoc": {
+      "$ref": "#/definitions/jsDoc"
+    },
+    "maximumLineLength": {
+      "description": "Requires all lines to be at most the number of characters specified.",
+      "oneOf": [
+        {
+          "description": "Lines should be at most the number of characters specified.",
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array an array of conditions that will exempt a line, in addition to other attributes.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of conditions that will exempt a line.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "description": "Allows comments to break the rule.",
+                    "const": "comments"
+                  },
+                  {
+                    "description": "Allows function definitions to break the rule.",
+                    "const": "functionSignature"
+                  },
+                  {
+                    "description": "Allows regular expression literals to break the rule.",
+                    "const": "regex"
+                  },
+                  {
+                    "description": "Allows require expressions to break the rule.",
+                    "const": "require"
+                  },
+                  {
+                    "description": "Allows comments with long urls to break the rule.",
+                    "const": "urlComments"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            },
+            "tabSize": {
+              "description": "Considered the tab character as number of specified spaces.",
+              "type": "integer",
+              "minimum": 1
+            },
+            "value": {
+              "description": "Lines should be at most the number of characters specified.",
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": ["value"]
+        }
+      ]
+    },
+    "maximumNumberOfLines": {
+      "description": "Requires the file to be at most the number of lines specified.",
+      "oneOf": [
+        {
+          "description": "File should be at most the number of lines specified.",
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array an array of conditions that will exempt a line, in addition to other attributes.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of conditions that will exempt a line.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "description": "Allows comments to break the rule.",
+                    "const": "comments"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            },
+            "value": {
+              "description": "Lines should be at most the number of characters specified.",
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": ["value"]
+        }
+      ]
+    },
+    "preset": {
+      "description": "Extends defined rules with preset rules.",
+      "type": "string",
+      "enum": [
+        "airbnb",
+        "crockford",
+        "google",
+        "grunt",
+        "idiomatic",
+        "jquery",
+        "mdcs",
+        "node-style-guide",
+        "wikimedia",
+        "wordpress",
+        "yandex"
+      ]
+    },
+    "requireAlignedMultilineParams": {
+      "description": "Enforces indentation of parameters in multiline functions.",
+      "oneOf": [
+        {
+          "description": "If true, require parameters to align with the body of the function.",
+          "type": "boolean"
+        },
+        {
+          "description": "The number of columns the parameters should be indented past the function body.",
+          "type": "integer"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "Use `firstParam` to require parameters on a new line to be aligned with the first parameter(s) on the previous line.",
+          "type": "string",
+          "const": "firstParam"
+        }
+      ]
+    },
+    "requireAlignedObjectValues": {
+      "description": "Requires proper alignment in object literals.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "Use for strict mode.",
+              "const": "all"
+            },
+            {
+              "description": "Ignores objects if one of the property values is a function expression.",
+              "const": "ignoreFunction"
+            },
+            {
+              "description": "Ignores objects if there are line breaks between properties.",
+              "const": "ignoreLineBreak"
+            }
+          ]
+        }
+      ]
+    },
+    "requireAnonymousFunctions": {
+      "description": "Requires that a function expression be anonymous.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "description": "Ignores function declarations.",
+                    "const": "declarations"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireArrayDestructuring": {
+      "description": "Requires that variable assignment from array values are * destructured.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireArrowFunctions": {
+      "description": "Requires that arrow functions are used instead of anonymous function expressions in callbacks.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireBlocksOnNewline": {
+      "description": "Requires blocks to begin and end with a newline.",
+      "oneOf": [
+        {
+          "description": "If true, validates all non-empty blocks.",
+          "type": "boolean"
+        },
+        {
+          "description": "Specifies a minimum number of lines containing elements in the block before validating.",
+          "type": "integer"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "includeComments": {
+              "description": "If true, includes comments as part of the validation.",
+              "type": "boolean"
+            },
+            "minLines": {
+              "description": "Specifies a minimum number of lines containing elements in the block before validating.",
+              "type": "integer"
+            }
+          }
+        }
+      ]
+    },
+    "requireCamelCaseOrUpperCaseIdentifiers": {
+      "description": "Requires identifiers to be camelCased or UPPERCASE_WITH_UNDERSCORES.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values, in addition to other attributes.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of String, RegExp, or ESTree RegExpLiteral values permitted as exceptions.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            },
+            "allowedPrefixes": {
+              "description": "Array of String, RegExp, or ESTree RegExpLiteral values permitted as prefixes.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            },
+            "allowedSuffixes": {
+              "description": "Array of String, RegExp, or ESTree RegExpLiteral values permitted as suffixes.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            },
+            "ignoreProperties": {
+              "description": "If true, allows an exception for object property names.",
+              "type": "boolean"
+            },
+            "strict": {
+              "description": "If true, forces the first character to not be capitalized.",
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "description": "Deprecated in favor of the object \"ignoreProperties\" rule format.",
+          "type": "string",
+          "const": "ignoreProperties"
+        }
+      ]
+    },
+    "requireCapitalizedComments": {
+      "description": "Requires the first alphabetical character of a comment to be uppercase, unless it is part of a multi-line textblock.  This rule automatically ignores jscs, jshint, eslint, and istanbul specific comments.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions, in addition to other attributes.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            },
+            "inlined": {
+              "description": "If true, ignore comments in the middle of the code line.",
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "requireCapitalizedConstructorsNew": {
+      "description": "Requires capitalized constructors to to use the new keyword.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireCapitalizedConstructors": {
+      "description": "Requires constructors to be capitalized (except for \"this\")",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireCommaBeforeLineBreak": {
+      "description": "Requires commas as last token on a line in lists.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireCurlyBraces": {
+      "description": "Requires curly braces after statements.  A value of true will require curly braces for all the necessary keywords:  if, else, for, while do, try, catch, case, and default.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/keywords2"
+        },
+        {
+          "description": "An object that contains a \"keywords\" or \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "keywords": {
+              "description": "Array of quoted keywords that would require curly braces.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            },
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.  Allows not using braces in some instances; ex.  /*allowed:*/ if (x) return; /* not allowed*/ if (x) i++; given \"allExcept\": [\"return\", \"continue\", \"break\", ...],",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireDollarBeforejQueryAssignment": {
+      "description": "Require a $ before variable names that are jquery assignments.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "string",
+          "const": "ignoreProperties"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireDotNotation": {
+      "description": "Requires member expressions to use dot notation when possible.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Allow quoted identifiers made of reserved words.",
+                    "const": "keywords"
+                  },
+                  {
+                    "description": "Allow quoted snake cased identifiers.",
+                    "const": "snake_case"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "description": "Deprecated in favor of the object \"allExcept\": [\"snake_case\"] rule format.",
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "Allow quoted snake cased identifiers.",
+              "const": "except_snake_case"
+            }
+          ]
+        }
+      ]
+    },
+    "requireEarlyReturn": {
+      "description": "Requires early return in a function.",
+      "oneOf": [
+        {
+          "description": "If true, disallow the use of `else` if the corresponding parent `if` block contains a return.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireEnhancedObjectLiterals": {
+      "description": "Requires declaring objects via ES6 enhanced object literals.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireFunctionDeclarations": {
+      "description": "Requires function declarations by disallowing assignment of functions expressions to variables. Function expressions are allowed in all other contexts, including when passed as function arguments or immediately invoked.  Assignment of function expressions to object members is also permitted, since these can't be declared.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireImportAlphabetized": {
+      "description": "Requires imports to be alphabetized (A-Z).",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireKeywordsOnNewLine": {
+      "$ref": "#/definitions/keywords",
+      "description": "Requires placing the specified keywords on a new line."
+    },
+    "requireLineBreakAfterVariableAssignment": {
+      "description": "Requires placing line feed after assigning a variable.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireLineFeedAtFileEnd": {
+      "description": "Requires placing line feed at file end.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireMatchingFunctionName": {
+      "description": "Requires function names to match member and property names.  It doesn't affect anonymous functions nor functions assigned to members or properties named with a reserved word.  Assigning to module.exports is also ignored, unless includeModuleExports: true is configured.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"includeModuleExports\" key of boolean type.",
+          "type": "object",
+          "properties": {
+            "includeModuleExports": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "requireMultiLineTernary": {
+      "description": "Requires the test, consequent and alternate to be on separate lines when using the ternary operator.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireMultipleVarDecl": {
+      "description": "Requires multiple `var` declaration.",
+      "oneOf": [
+        {
+          "description": "If true, it will report only consecutive vars.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "`require` statements are allowed to have a var declaration per variable.",
+                    "const": "require"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "type": "string",
+          "description": "If equal to 'onevar', requireMultipleVarDecl will allow only one var per function scope.",
+          "const": "onevar"
+        }
+      ]
+    },
+    "requireNamedUnassignedFunctions": {
+      "description": "Require unassigned functions to be named inline.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireNewlineBeforeBlockStatements": {
+      "$ref": "#/definitions/keywords2",
+      "description": "Requires newline before opening curly brace of all block statements.  If true, always requires newline before curly brace of block statements.  Array specifies block-type keywords after which newlines are required before curly brace."
+    },
+    "requireNumericLiterals": {
+      "description": "Requires use of binary, hexadecimal, and octal literals instead of parseInt.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireObjectDestructuring": {
+      "description": "Requires variable declarations from objects via destructuring.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireObjectKeysOnNewLine": {
+      "description": "Requires placing object keys on new line.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Ignores the rule if all the keys and values are on the same line.",
+                    "const": "sameLine"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireOperatorBeforeLineBreak": {
+      "$ref": "#/definitions/operators",
+      "description": "Requires operators to appear before line breaks and not after."
+    },
+    "requirePaddingNewLineAfterVariableDeclaration": {
+      "description": "Requires an extra blank newline after var declarations, as long as it is not the last expression in the current block.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requirePaddingNewLinesAfterBlocks": {
+      "description": "Requires newline after blocks.",
+      "oneOf": [
+        {
+          "description": "If true, always require a newline after blocks.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Blocks don't need a line of padding in function argument lists.",
+                    "const": "inCallExpressions"
+                  },
+                  {
+                    "description": "Blocks don't need a line of padding in constructor argument lists.",
+                    "const": "inNewExpressions"
+                  },
+                  {
+                    "description": "Blocks don't need a line of padding in arrays.",
+                    "const": "inArrayExpressions"
+                  },
+                  {
+                    "description": "Blocks don't need a line of padding as object properties.",
+                    "const": "inProperties"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requirePaddingNewLinesAfterUseStrict": {
+      "description": "Requires a blank line after 'use strict'; statements.",
+      "oneOf": [
+        {
+          "description": "If true, require blank line after 'use strict' statements.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Allows 'require' statements to occur immediately after 'use strict'.",
+                    "const": "require"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requirePaddingNewLinesBeforeExport": {
+      "description": "Requires newline before module.exports.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requirePaddingNewlinesBeforeKeywords": {
+      "$ref": "#/definitions/keywords2",
+      "description": "Requires an empty line above the specified keywords unless the keyword is the first expression in a block.  If true, specifies that the spacedKeywords found in the utils module require an empty line above it.  Array values indicate keywords that require an empty line above it."
+    },
+    "requirePaddingNewLinesBeforeLineComments": {
+      "description": "Requires newline before line comments.",
+      "oneOf": [
+        {
+          "description": "If true, always require a newline before line comments.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Comments may be first line of block without extra padding.",
+                    "const": "firstAfterCurly"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requirePaddingNewlinesInBlocks": {
+      "description": "Requires blocks to begin and end with 2 newlines.",
+      "oneOf": [
+        {
+          "description": "If true, validates all non-empty blocks.",
+          "type": "boolean"
+        },
+        {
+          "description": "Specifies a minimum number of lines containing elements in the block before validating.",
+          "type": "integer"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "At least one of the object properties must be true.",
+          "type": "object",
+          "properties": {
+            "open": {
+              "description": "If true, validates that there is a newline after the opening brace in a block.",
+              "type": "boolean"
+            },
+            "close": {
+              "description": "If true, validates that there is a newline before the closing brace in a block.",
+              "type": "boolean"
+            },
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Ignores conditional (if, else if, else) blocks.",
+                    "const": "conditionals"
+                  },
+                  {
+                    "description": "Ignores function blocks.",
+                    "const": "functions"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requirePaddingNewLinesInObjects": {
+      "description": "Requires newline inside curly braces of all objects.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireParenthesesAroundArrowParam": {
+      "description": "Requires parentheses around arrow function expressions with a single parameter.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireParenthesesAroundIIFE": {
+      "description": "Requires parentheses around immediately invoked function expressions.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireQuotedKeysInObjects": {
+      "description": "Requires quoted keys in objects.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireSemicolons": {
+      "description": "Requires semicolon after:  var declaration, expression statement, return, throw, break, continue, do-while.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireShorthandArrowFunctions": {
+      "description": "Require arrow functions to use an expression body when returning a single statement (no block statement, implicit return).",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireSpaceAfterBinaryOperators": {
+      "$ref": "#/definitions/operators",
+      "description": "Disallows sticking binary operators to the right."
+    },
+    "requireSpaceAfterComma": {
+      "description": "Requires space after comma.",
+      "oneOf": [
+        {
+          "description": "If true, require a space after any comma.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of quoted exceptions.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Ignore trailing commas.",
+                    "const": "trailing"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireSpaceAfterKeywords": {
+      "$ref": "#/definitions/keywords2",
+      "description": "Requires space after the specified keywords.  A value of true will disallow spaces after all possible keywords."
+    },
+    "requireSpaceAfterLineComment": {
+      "description": "Requires that a line comment (`//`) be followed by a space.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of allowed strings before space.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "description": "Deprecated in favor of the object \"allExcept\": [\"/\"] rule format.",
+          "type": "string",
+          "oneOf": [
+            {
+              "const": "allowSlash"
+            }
+          ]
+        }
+      ]
+    },
+    "requireSpaceAfterObjectKeys": {
+      "description": "Requires space after object keys.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireSpaceAfterPrefixUnaryOperators": {
+      "$ref": "#/definitions/unaryOperators",
+      "description": "Disallows sticking unary operators to the right."
+    },
+    "requireSpaceBeforeBinaryOperators": {
+      "$ref": "#/definitions/operators",
+      "description": "Disallows sticking binary operators to the left."
+    },
+    "requireSpaceBeforeBlockStatements": {
+      "description": "Requires space before block statements (for loops, control structures).",
+      "oneOf": [
+        {
+          "description": "If true, require at least a single space.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "Require at least the specified number of spaces.  Value must be greater than or equal to 1.",
+          "type": "integer",
+          "minimum": 1
+        }
+      ]
+    },
+    "requireSpaceBeforeComma": {
+      "description": "Requires a space before a comma.",
+      "oneOf": [
+        {
+          "description": "If true, require a space before any comma.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireSpaceBeforeKeywords": {
+      "description": "Requires a space before a keyword.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/blockKeywords"
+        },
+        {
+          "description": "If true, report on all possible ES3 keywords except `function`.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of allowed strings before space.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireSpaceBeforeObjectValues": {
+      "description": "Requires space after object keys.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireSpaceBeforePostfixUnaryOperators": {
+      "$ref": "#/definitions/unaryOperators",
+      "description": "Disallows sticking unary operators to the left."
+    },
+    "requireSpaceBetweenArguments": {
+      "description": "Ensure there are spaces after argument separators in call expressions.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireSpacesInAnonymousFunctionExpression": {
+      "description": "Requires space before `()` or `{}` in function expressions (both named and anonymous).",
+      "oneOf": [
+        {
+          "description": "An object with the following properties (one of \"beforeOpeningRoundBrace\" and \"beforeOpeningCurlyBrace\" must be provided):",
+          "type": "object",
+          "properties": {
+            "beforeOpeningRoundBrace": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "beforeOpeningCurlyBrace": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "allExcept": {
+              "description": "A boolean or an array of quoted exceptions.",
+              "oneOf": [
+                {
+                  "description": "If true, enable all configuration exceptions.",
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/definitions/nullRule"
+                },
+                {
+                  "description": "Array of quoted keywords to exempt.",
+                  "type": "array",
+                  "minItems": 0,
+                  "items": {
+                    "type": "string",
+                    "oneOf": [
+                      {
+                        "description": "If \"shorthand\" is provided, spaces will not be required for ES6 method definitions.",
+                        "const": "shorthand"
+                      }
+                    ]
+                  },
+                  "uniqueItems": true
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "requireSpacesInCallExpression": {
+      "description": "Requires space before `()` in call expressions.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireSpacesInConditionalExpression": {
+      "description": "Requires space before and/or after `?` or `:` in conditional expressions.",
+      "oneOf": [
+        {
+          "description": "If true, set all properties to true.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "afterTest": {
+              "type": "boolean"
+            },
+            "beforeConsequent": {
+              "type": "boolean"
+            },
+            "afterConsequent": {
+              "type": "boolean"
+            },
+            "beforeAlternate": {
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "requireSpacesInForStatement": {
+      "description": "Requires spaces in between `for` statement.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireSpacesInFunction": {
+      "$ref": "#/definitions/braceRules",
+      "description": "Requires space before `()` or `{}` in function expressions (both named and anonymous) and function declarations."
+    },
+    "requireSpacesInFunctionDeclaration": {
+      "$ref": "#/definitions/braceRules",
+      "description": "Requires space before `()` or `{}` in function declarations."
+    },
+    "requireSpacesInFunctionExpression": {
+      "$ref": "#/definitions/braceRules",
+      "description": "Requires space before `()` or `{}` in function expressions (both named and anonymous)."
+    },
+    "requireSpacesInGenerator": {
+      "description": "Requires space before and after `*` in generator functions.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object where at least one of its properties must be present and it must be set to true.",
+          "type": "object",
+          "properties": {
+            "beforeStar": {
+              "description": "If true, validates that there is a space before `*`.",
+              "type": "boolean"
+            },
+            "afterStar": {
+              "description": "If true, validates that there is a space after `*`.",
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "requireSpacesInNamedFunctionExpression": {
+      "$ref": "#/definitions/braceRules",
+      "description": "Requires space before `()` or `{}` in named function expressions."
+    },
+    "requireSpacesInsideArrayBrackets": {
+      "description": "Requires space after opening array square bracket and before closing.  Reports only on arrays, not on property accessors.  Use requireSpacesInsideBrackets to report on all brackets.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception tokens.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted tokens that can occur after an opening square bracket or before a closing square bracket without a space.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "enum": ["{", "}", "[", "]"]
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "Strict mode.",
+              "const": "all"
+            },
+            {
+              "description": "Deprecated in favor of the object \"allExcept\": [\"[\", \"]\"] format.",
+              "const": "allButNested"
+            }
+          ]
+        }
+      ]
+    },
+    "requireSpacesInsideBrackets": {
+      "description": "Requires space after opening square bracket and before closing.  Reports on all on brackets, even on property accessors.  Use requireSpacesInsideArrayBrackets to exclude property accessors.",
+      "oneOf": [
+        {
+          "description": "For default behavior (strict mode).",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception tokens.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted tokens that can occur after an opening square bracket or before a closing square bracket without a space.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "enum": ["{", "}", "[", "]"]
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireSpacesInsideObjectBrackets": {
+      "description": "Requires space after opening object curly brace and before closing.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception tokens.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted tokens that can occur after an opening object brace or before a closing object brace without a space.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "enum": ["(", ")", "{", "}", "[", "]"]
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "Strict mode.",
+              "const": "all"
+            },
+            {
+              "description": "Deprecated in favor of the object \"allExcept\": [\"}\"] format.",
+              "const": "allButNested"
+            }
+          ]
+        }
+      ]
+    },
+    "requireSpacesInsideParentheses": {
+      "description": "Requires space after opening round bracket and before closing.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"except\" key equal to an array of exception tokens, in addition to other attributes.",
+          "type": "object",
+          "properties": {
+            "all": {
+              "type": "boolean"
+            },
+            "ignoreParenthesizedExpression": {
+              "type": "boolean"
+            },
+            "except": {
+              "description": "Array of quoted tokens that can occur after an opening bracket or before a closing bracket without a space.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "anyOf": [
+                  {
+                    "enum": ["(", ")", "{", "}", "[", "]"]
+                  },
+                  {
+                    "type": "string",
+                    "maxLength": 1
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        {
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "Strict mode.",
+              "const": "all"
+            },
+            {
+              "description": "Deprecated in favor of the object \"except\": [\"(\", \")\"] format.  Ignores nested brackets in a row.",
+              "const": "allButNested"
+            }
+          ]
+        }
+      ]
+    },
+    "requireSpacesInsideParenthesizedExpression": {
+      "description": "Requires space after opening and before closing grouping parentheses.",
+      "oneOf": [
+        {
+          "description": "If true, always require spaces inside grouping parentheses.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Ignore parenthesized objects and functions.",
+                    "enum": ["{", "}", "function"]
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireSpread": {
+      "description": "Disallows using `.apply` in favor of the spread operator.",
+      "oneOf": [
+        {
+          "description": "If true, specifies that apply `.apply` is disallowed.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireTemplateStrings": {
+      "description": "Requires the use of template strings instead of string concatenation.",
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "An object that contains an \"allExcept\" key equal to an array of exception values.",
+          "type": "object",
+          "properties": {
+            "allExcept": {
+              "description": "Array of quoted keywords to exempt.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Ignores strings concatenated with other strings.",
+                    "const": "stringConcatenation"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "requireTrailingComma": {
+      "description": "Requires an extra comma following the final element of an array or object literal.",
+      "oneOf": [
+        {
+          "description": "If true, validates all arrays and objects.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "ignoreSingleValue": {
+              "description": "If true, allows single property objects and single element arrays to not require a trailing comma.",
+              "type": "boolean"
+            },
+            "ignoreSingleLine": {
+              "description": "If true, allows objects and arrays on a single line to not require a trailing comma.",
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "requireVarDeclFirst": {
+      "description": "Requires `var` declaration to be on the top of an enclosing scope.",
+      "oneOf": [
+        {
+          "description": "If true, specifies that `var` declarations must occur the top of a function scope.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "requireYodaConditions": {
+      "description": "Requires the variable to be the right hand operator when doing a boolean comparison.  An array of quoted operators can be supplied to indicate which operators requires yoda conditions.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/equalityOperators"
+        },
+        {
+          "description": "If true, specifies that yoda conditions are required for most possible comparison operators.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        }
+      ]
+    },
+    "safeContextKeyword": {
+      "description": "Option to check `var that = this` expressions.",
+      "oneOf": [
+        {
+          "description": "Array of quoted keywords that can be assigned to `this` context.",
+          "type": "array",
+          "minItems": 0,
+          "items": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              }
+            ]
+          },
+          "uniqueItems": true
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "description": "Represents the keyword that can be assigned to `this` context.",
+          "type": "string",
+          "minLength": 1
+        }
+      ]
+    },
+    "validateAlignedFunctionParameters": {
+      "description": "Validates proper alignment of function parameters.",
+      "oneOf": [
+        {
+          "description": "If true, this is the same as validating the rule using `{lineBreakAfterOpeningBrace: true, lineBreakBeforeClosingBrace: true}`.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "lineBreakAfterOpeningBrace": {
+              "description": "If true, specifies that the first function parameter must not be on the same line as the opening parenthesis `(` of the function parameters list.",
+              "type": "boolean"
+            },
+            "lineBreakBeforeClosingBrace": {
+              "description": "If true, specifies that the last function parameter must not be on the same line as the closing parenthesis `)` of the function parameters list.",
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "validateCommentPosition": {
+      "description": "This rule is for validating the positioning of line comments.  Block comments are ignored.  Comments that start with the following keywords are also ignored:  `eslint`, `jshint`, `jslint`, `istanbul`, `global`, `exported`, `jscs`, `falls through` eg. // jshint strict: true",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "position": {
+              "type": "string",
+              "enum": ["above", "beside"]
+            },
+            "allExcept": {
+              "description": "Array of quoted exceptions (comments that start with these values will be excepted).",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string"
+              },
+              "uniqueItems": true
+            }
+          }
+        }
+      ]
+    },
+    "validateIndentation": {
+      "description": "Validates indentation for switch statements and block statements.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "description": "A positive number of spaces.",
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "value": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            },
+            "includeEmptyLines": {
+              "description": "Deprecated.  Require empty lines to be indented.",
+              "type": "boolean",
+              "default": false
+            },
+            "allExcept": {
+              "description": "Array of quoted exceptions.",
+              "type": "array",
+              "minItems": 0,
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  {
+                    "description": "Ignores comments.",
+                    "const": "comments"
+                  },
+                  {
+                    "description": "Ignores empty lines, included by default.",
+                    "const": "emptyLines"
+                  }
+                ]
+              },
+              "uniqueItems": true
+            }
+          },
+          "required": ["value"]
+        }
+      ]
+    },
+    "validateLineBreaks": {
+      "description": "Option to check line break characters.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "character": {
+              "type": "string",
+              "enum": ["CR", "LF", "CRLF"]
+            },
+            "reportOncePerFile": {
+              "description": "If true, specifies that validation for the file should stop running upon encountering the first rule violation and return the details of that violation in the report.",
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "description": "Setting this is the same as validating the rule using `{character: String, reportOncePerFile: false}`.",
+          "type": "string",
+          "enum": ["CR", "LF", "CRLF"]
+        }
+      ]
+    },
+    "validateNewlineAfterArrayElements": {
+      "description": "Requires each element in array on a single line when array length is more than passed maximum number or array fills more than one line.",
+      "oneOf": [
+        {
+          "description": "If true, this is the same as validating the rule using `{maximum: Infinity, ignoreBrackets: false}`.",
+          "type": "boolean"
+        },
+        {
+          "description": "Setting this is the same as validating the rule using `{maximum: Integer, ignoreBrackets: false}`.",
+          "type": "integer",
+          "minimum": 0
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "maximum": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "ignoreBrackets": {
+              "description": "If true, specifies that the `[` and `]` brackets can be placed on the same line as the array elements.",
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "validateOrderInObjectKeys": {
+      "description": "Validates the order in object keys.",
+      "oneOf": [
+        {
+          "description": "If true, alias to `asc`.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "Requires sorting in ascending order.",
+              "const": "asc"
+            },
+            {
+              "description": "Requires sorting in ascending order (case-insensitive).",
+              "const": "asc-insensitive"
+            },
+            {
+              "description": "Requires sorting in ascending natural order.",
+              "const": "asc-natural"
+            },
+            {
+              "description": "Requires sorting in descending order.",
+              "const": "desc"
+            },
+            {
+              "description": "Requires sorting in descending order (case-insensitive).",
+              "const": "desc-insensitive"
+            },
+            {
+              "description": "Requires sorting in descending natural order.",
+              "const": "desc-natural"
+            }
+          ]
+        }
+      ]
+    },
+    "validateParameterSeparator": {
+      "description": "Enable validation of separators between function parameters.  Will ignore newlines.",
+      "oneOf": [
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "Function parameters are immediately followed by a comma.",
+              "const": ","
+            },
+            {
+              "description": "Function parameters are immediately followed by a comma and then a space.",
+              "const": ", "
+            },
+            {
+              "description": "Function parameters are immediately followed by a space and then a comma.",
+              "const": " ,"
+            },
+            {
+              "description": "Function parameters are immediately followed by a space, a comma, and then a space.",
+              "const": " , "
+            }
+          ]
+        }
+      ]
+    },
+    "validateQuoteMarks": {
+      "description": "Requires all quote marks to be either the supplied value, or consistent if `true`.",
+      "oneOf": [
+        {
+          "description": "If true, all strings require the quote mark first encountered in the source code.",
+          "type": "boolean"
+        },
+        {
+          "$ref": "#/definitions/nullRule"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "escape": {
+              "description": "Allow the \"other\" quote mark to be used, but only to avoid having to escape.",
+              "type": "boolean"
+            },
+            "mark": {
+              "description": "The same effect as the non-object values.",
+              "type": "string",
+              "oneOf": [
+                {
+                  "description": "All strings require double quotes.",
+                  "const": "\""
+                },
+                {
+                  "description": "All strings require single quotes.",
+                  "const": "'"
+                }
+              ]
+            },
+            "ignoreJSX": {
+              "description": "Ignore JSX nodes.",
+              "type": "boolean"
+            }
+          }
+        },
+        {
+          "type": "string",
+          "oneOf": [
+            {
+              "description": "All strings require double quotes.",
+              "const": "\""
+            },
+            {
+              "description": "All strings require single quotes.",
+              "const": "'"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "title": "JSON schema for JSCS configuration files",
+  "type": "object"
+}

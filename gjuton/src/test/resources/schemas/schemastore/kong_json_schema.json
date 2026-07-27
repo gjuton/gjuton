@@ -1,0 +1,1690 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json.schemastore.org/kong_json_schema.json",
+  "additionalProperties": false,
+  "definitions": {
+    "ACLGroup": {
+      "required": ["group"],
+      "properties": {
+        "consumer": {
+          "$ref": "#/definitions/Consumer"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "group": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ActiveHealthcheck": {
+      "properties": {
+        "concurrency": {
+          "type": "integer"
+        },
+        "healthy": {
+          "$ref": "#/definitions/Healthy"
+        },
+        "http_path": {
+          "type": "string"
+        },
+        "https_sni": {
+          "type": "string"
+        },
+        "https_verify_certificate": {
+          "type": "boolean"
+        },
+        "timeout": {
+          "type": "integer"
+        },
+        "type": {
+          "type": "string"
+        },
+        "unhealthy": {
+          "$ref": "#/definitions/Unhealthy"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "BasicAuth": {
+      "required": ["username", "password"],
+      "properties": {
+        "consumer": {
+          "$ref": "#/definitions/Consumer"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CACertificate": {
+      "properties": {
+        "cert": {
+          "type": "string"
+        },
+        "cert_digest": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "CIDRPort": {
+      "properties": {
+        "ip": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Certificate": {
+      "properties": {
+        "cert": {
+          "type": "string"
+        },
+        "cert_alt": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "key_alt": {
+          "type": "string"
+        },
+        "snis": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Consumer": {
+      "properties": {
+        "created_at": {
+          "type": "integer"
+        },
+        "custom_id": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ConsumerGroup": {
+      "properties": {
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "ConsumerGroupPlugin": {
+      "properties": {
+        "config": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "consumer_group": {
+          "$ref": "#/definitions/ConsumerGroup"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FCACertificate": {
+      "required": ["cert"],
+      "properties": {
+        "cert": {
+          "type": "string"
+        },
+        "cert_digest": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FCertificate": {
+      "required": ["id", "cert", "key"],
+      "properties": {
+        "cert": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "snis": {
+          "items": {
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FConsumer": {
+      "properties": {
+        "acls": {
+          "items": {
+            "$ref": "#/definitions/ACLGroup"
+          },
+          "type": "array"
+        },
+        "basicauth_credentials": {
+          "items": {
+            "$ref": "#/definitions/BasicAuth"
+          },
+          "type": "array"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "custom_id": {
+          "type": "string"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/definitions/ConsumerGroup"
+          },
+          "type": "array"
+        },
+        "hmacauth_credentials": {
+          "items": {
+            "$ref": "#/definitions/HMACAuth"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "jwt_secrets": {
+          "items": {
+            "$ref": "#/definitions/JWTAuth"
+          },
+          "type": "array"
+        },
+        "keyauth_credentials": {
+          "items": {
+            "$ref": "#/definitions/KeyAuth"
+          },
+          "type": "array"
+        },
+        "mtls_auth_credentials": {
+          "items": {
+            "$ref": "#/definitions/MTLSAuth"
+          },
+          "type": "array"
+        },
+        "oauth2_credentials": {
+          "items": {
+            "$ref": "#/definitions/Oauth2Credential"
+          },
+          "type": "array"
+        },
+        "plugins": {
+          "items": {
+            "$ref": "#/definitions/FPlugin"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "anyOf": [
+        {
+          "properties": {
+            "username": {
+              "$ref": "#/definitions/FConsumer/properties/username"
+            }
+          },
+          "required": ["username"]
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/FConsumer/properties/id"
+            }
+          },
+          "required": ["id"]
+        }
+      ]
+    },
+    "FConsumerGroupObject": {
+      "properties": {
+        "consumers": {
+          "items": {
+            "$ref": "#/definitions/Consumer"
+          },
+          "type": "array"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "plugins": {
+          "items": {
+            "$ref": "#/definitions/ConsumerGroupPlugin"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FDocument": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "published": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FPlugin": {
+      "required": ["name"],
+      "properties": {
+        "_config": {
+          "type": "string"
+        },
+        "config": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "consumer": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "ordering": {
+          "$ref": "#/definitions/PluginOrdering"
+        },
+        "protocols": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "route": {
+          "type": "string"
+        },
+        "run_on": {
+          "type": "string"
+        },
+        "service": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FRBACEndpointPermission": {
+      "required": ["workspace", "endpoint"],
+      "properties": {
+        "actions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "comment": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "endpoint": {
+          "type": "string"
+        },
+        "negative": {
+          "type": "boolean"
+        },
+        "role": {
+          "$ref": "#/definitions/RBACRole"
+        },
+        "workspace": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FRBACRole": {
+      "required": ["name"],
+      "properties": {
+        "comment": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "endpoint_permissions": {
+          "items": {
+            "$ref": "#/definitions/FRBACEndpointPermission"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FRoute": {
+      "properties": {
+        "created_at": {
+          "type": "integer"
+        },
+        "destinations": {
+          "items": {
+            "$ref": "#/definitions/CIDRPort"
+          },
+          "type": "array"
+        },
+        "expression": {
+          "type": "string"
+        },
+        "headers": {
+          "patternProperties": {
+            ".*": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "hosts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "https_redirect_status_code": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "methods": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path_handling": {
+          "type": "string"
+        },
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "plugins": {
+          "items": {
+            "$ref": "#/definitions/FPlugin"
+          },
+          "type": "array"
+        },
+        "preserve_host": {
+          "type": "boolean"
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "protocols": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "regex_priority": {
+          "type": "integer"
+        },
+        "request_buffering": {
+          "type": "boolean"
+        },
+        "response_buffering": {
+          "type": "boolean"
+        },
+        "service": {
+          "$ref": "#/definitions/Service"
+        },
+        "snis": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/definitions/CIDRPort"
+          },
+          "type": "array"
+        },
+        "strip_path": {
+          "type": "boolean"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "updated_at": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "anyOf": [
+        {
+          "properties": {
+            "name": {
+              "$ref": "#/definitions/FRoute/properties/name"
+            }
+          },
+          "required": ["name"]
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/FRoute/properties/id"
+            }
+          },
+          "required": ["id"]
+        }
+      ]
+    },
+    "FService": {
+      "properties": {
+        "ca_certificates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "client_certificate": {
+          "type": "string"
+        },
+        "connect_timeout": {
+          "type": "integer"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "host": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "plugins": {
+          "items": {
+            "$ref": "#/definitions/FPlugin"
+          },
+          "type": "array"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "read_timeout": {
+          "type": "integer"
+        },
+        "retries": {
+          "type": "integer"
+        },
+        "routes": {
+          "items": {
+            "$ref": "#/definitions/FRoute"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tls_verify": {
+          "type": "boolean"
+        },
+        "tls_verify_depth": {
+          "type": "integer"
+        },
+        "updated_at": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string"
+        },
+        "write_timeout": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object",
+      "anyOf": [
+        {
+          "properties": {
+            "name": {
+              "$ref": "#/definitions/FService/properties/name"
+            }
+          },
+          "required": ["name"]
+        },
+        {
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/FService/properties/id"
+            }
+          },
+          "required": ["id"]
+        }
+      ]
+    },
+    "FServicePackage": {
+      "required": ["name"],
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "document": {
+          "$ref": "#/definitions/FDocument"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "versions": {
+          "items": {
+            "$ref": "#/definitions/FServiceVersion"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FServiceVersion": {
+      "required": ["version"],
+      "properties": {
+        "document": {
+          "$ref": "#/definitions/FDocument"
+        },
+        "id": {
+          "type": "string"
+        },
+        "implementation": {
+          "$ref": "#/definitions/Implementation"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FTarget": {
+      "required": ["target"],
+      "properties": {
+        "created_at": {
+          "type": "number"
+        },
+        "id": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target": {
+          "type": "string"
+        },
+        "upstream": {
+          "$ref": "#/definitions/Upstream"
+        },
+        "weight": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FUpstream": {
+      "required": ["name"],
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "client_certificate": {
+          "$ref": "#/definitions/Certificate"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "hash_fallback": {
+          "type": "string"
+        },
+        "hash_fallback_header": {
+          "type": "string"
+        },
+        "hash_fallback_query_arg": {
+          "type": "string"
+        },
+        "hash_fallback_uri_capture": {
+          "type": "string"
+        },
+        "hash_on": {
+          "type": "string"
+        },
+        "hash_on_cookie": {
+          "type": "string"
+        },
+        "hash_on_cookie_path": {
+          "type": "string"
+        },
+        "hash_on_header": {
+          "type": "string"
+        },
+        "hash_on_query_arg": {
+          "type": "string"
+        },
+        "hash_on_uri_capture": {
+          "type": "string"
+        },
+        "healthchecks": {
+          "$ref": "#/definitions/Healthcheck"
+        },
+        "host_header": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slots": {
+          "type": "integer"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "targets": {
+          "items": {
+            "$ref": "#/definitions/FTarget"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "FVault": {
+      "properties": {
+        "config": {
+          "additionalProperties": true,
+          "type": "object"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "description": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "updated_at": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "HMACAuth": {
+      "required": ["username", "secret"],
+      "properties": {
+        "consumer": {
+          "$ref": "#/definitions/Consumer"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "secret": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "username": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Healthcheck": {
+      "properties": {
+        "active": {
+          "$ref": "#/definitions/ActiveHealthcheck"
+        },
+        "passive": {
+          "$ref": "#/definitions/PassiveHealthcheck"
+        },
+        "threshold": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Healthy": {
+      "properties": {
+        "http_statuses": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "successes": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Implementation": {
+      "required": ["type", "kong"],
+      "properties": {
+        "kong": {
+          "$ref": "#/definitions/Kong"
+        },
+        "type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Info": {
+      "properties": {
+        "defaults": {
+          "$ref": "#/definitions/KongDefaults"
+        },
+        "select_tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "JWTAuth": {
+      "required": ["algorithm", "key", "secret"],
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "consumer": {
+          "$ref": "#/definitions/Consumer"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "rsa_public_key": {
+          "type": "string"
+        },
+        "secret": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "KeyAuth": {
+      "required": ["key"],
+      "properties": {
+        "consumer": {
+          "$ref": "#/definitions/Consumer"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ttl": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Kong": {
+      "properties": {
+        "service": {
+          "$ref": "#/definitions/FService"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "KongDefaults": {
+      "properties": {
+        "route": {
+          "$ref": "#/definitions/Route"
+        },
+        "service": {
+          "$ref": "#/definitions/Service"
+        },
+        "target": {
+          "$ref": "#/definitions/Target"
+        },
+        "upstream": {
+          "$ref": "#/definitions/Upstream"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Konnect": {
+      "properties": {
+        "control_plane_name": {
+          "type": "string"
+        },
+        "runtime_group_name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "MTLSAuth": {
+      "required": ["id", "subject_name"],
+      "properties": {
+        "ca_certificate": {
+          "$ref": "#/definitions/CACertificate"
+        },
+        "consumer": {
+          "$ref": "#/definitions/Consumer"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "subject_name": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Oauth2Credential": {
+      "required": ["name", "client_id", "client_secret"],
+      "properties": {
+        "client_id": {
+          "type": "string"
+        },
+        "client_secret": {
+          "type": "string"
+        },
+        "client_type": {
+          "type": "string"
+        },
+        "consumer": {
+          "$ref": "#/definitions/Consumer"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "hash_secret": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "redirect_uris": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "PassiveHealthcheck": {
+      "properties": {
+        "healthy": {
+          "$ref": "#/definitions/Healthy"
+        },
+        "type": {
+          "type": "string"
+        },
+        "unhealthy": {
+          "$ref": "#/definitions/Unhealthy"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "PluginOrdering": {
+      "properties": {
+        "after": {
+          "patternProperties": {
+            ".*": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "before": {
+          "patternProperties": {
+            ".*": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "RBACRole": {
+      "properties": {
+        "comment": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "is_default": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Route": {
+      "properties": {
+        "created_at": {
+          "type": "integer"
+        },
+        "destinations": {
+          "items": {
+            "$ref": "#/definitions/CIDRPort"
+          },
+          "type": "array"
+        },
+        "expression": {
+          "type": "string"
+        },
+        "headers": {
+          "patternProperties": {
+            ".*": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "hosts": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "https_redirect_status_code": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "methods": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path_handling": {
+          "type": "string"
+        },
+        "paths": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "preserve_host": {
+          "type": "boolean"
+        },
+        "priority": {
+          "type": "integer"
+        },
+        "protocols": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "regex_priority": {
+          "type": "integer"
+        },
+        "request_buffering": {
+          "type": "boolean"
+        },
+        "response_buffering": {
+          "type": "boolean"
+        },
+        "service": {
+          "$ref": "#/definitions/Service"
+        },
+        "snis": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/definitions/CIDRPort"
+          },
+          "type": "array"
+        },
+        "strip_path": {
+          "type": "boolean"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "updated_at": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "SNI": {
+      "properties": {
+        "certificate": {
+          "$ref": "#/definitions/Certificate"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Service": {
+      "properties": {
+        "ca_certificates": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "client_certificate": {
+          "$ref": "#/definitions/Certificate"
+        },
+        "connect_timeout": {
+          "type": "integer"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "enabled": {
+          "type": "boolean"
+        },
+        "host": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "port": {
+          "type": "integer"
+        },
+        "protocol": {
+          "type": "string"
+        },
+        "read_timeout": {
+          "type": "integer"
+        },
+        "retries": {
+          "type": "integer"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "tls_verify": {
+          "type": "boolean"
+        },
+        "tls_verify_depth": {
+          "type": "integer"
+        },
+        "updated_at": {
+          "type": "integer"
+        },
+        "url": {
+          "type": "string"
+        },
+        "write_timeout": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Target": {
+      "properties": {
+        "created_at": {
+          "type": "number"
+        },
+        "id": {
+          "type": "string"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "target": {
+          "type": "string"
+        },
+        "upstream": {
+          "$ref": "#/definitions/Upstream"
+        },
+        "weight": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Unhealthy": {
+      "properties": {
+        "http_failures": {
+          "type": "integer"
+        },
+        "http_statuses": {
+          "items": {
+            "type": "integer"
+          },
+          "type": "array"
+        },
+        "interval": {
+          "type": "integer"
+        },
+        "tcp_failures": {
+          "type": "integer"
+        },
+        "timeouts": {
+          "type": "integer"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "Upstream": {
+      "properties": {
+        "algorithm": {
+          "type": "string"
+        },
+        "client_certificate": {
+          "$ref": "#/definitions/Certificate"
+        },
+        "created_at": {
+          "type": "integer"
+        },
+        "hash_fallback": {
+          "type": "string"
+        },
+        "hash_fallback_header": {
+          "type": "string"
+        },
+        "hash_fallback_query_arg": {
+          "type": "string"
+        },
+        "hash_fallback_uri_capture": {
+          "type": "string"
+        },
+        "hash_on": {
+          "type": "string"
+        },
+        "hash_on_cookie": {
+          "type": "string"
+        },
+        "hash_on_cookie_path": {
+          "type": "string"
+        },
+        "hash_on_header": {
+          "type": "string"
+        },
+        "hash_on_query_arg": {
+          "type": "string"
+        },
+        "hash_on_uri_capture": {
+          "type": "string"
+        },
+        "healthchecks": {
+          "$ref": "#/definitions/Healthcheck"
+        },
+        "host_header": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slots": {
+          "type": "integer"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    }
+  },
+  "properties": {
+    "_format_version": {
+      "type": "string"
+    },
+    "_info": {
+      "$ref": "#/definitions/Info"
+    },
+    "_konnect": {
+      "$ref": "#/definitions/Konnect"
+    },
+    "_plugin_configs": {
+      "patternProperties": {
+        ".*": {
+          "additionalProperties": true,
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "_transform": {
+      "type": "boolean"
+    },
+    "_workspace": {
+      "type": "string"
+    },
+    "ca_certificates": {
+      "items": {
+        "$ref": "#/definitions/FCACertificate"
+      },
+      "type": "array"
+    },
+    "certificates": {
+      "items": {
+        "$ref": "#/definitions/FCertificate"
+      },
+      "type": "array"
+    },
+    "consumer_groups": {
+      "items": {
+        "$ref": "#/definitions/FConsumerGroupObject"
+      },
+      "type": "array"
+    },
+    "consumers": {
+      "items": {
+        "$ref": "#/definitions/FConsumer"
+      },
+      "type": "array"
+    },
+    "plugins": {
+      "items": {
+        "$ref": "#/definitions/FPlugin"
+      },
+      "type": "array"
+    },
+    "rbac_roles": {
+      "items": {
+        "$ref": "#/definitions/FRBACRole"
+      },
+      "type": "array"
+    },
+    "routes": {
+      "items": {
+        "$ref": "#/definitions/FRoute"
+      },
+      "type": "array"
+    },
+    "service_packages": {
+      "items": {
+        "$ref": "#/definitions/FServicePackage"
+      },
+      "type": "array"
+    },
+    "services": {
+      "items": {
+        "$ref": "#/definitions/FService"
+      },
+      "type": "array"
+    },
+    "upstreams": {
+      "items": {
+        "$ref": "#/definitions/FUpstream"
+      },
+      "type": "array"
+    },
+    "vaults": {
+      "items": {
+        "$ref": "#/definitions/FVault"
+      },
+      "type": "array"
+    }
+  },
+  "type": "object"
+}
