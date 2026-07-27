@@ -1,0 +1,189 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json.schemastore.org/jsonld.json",
+  "anyOf": [
+    {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "context": {
+          "$ref": "#/definitions/context"
+        },
+        "graph": {
+          "$ref": "#/definitions/graph"
+        },
+        "common": {
+          "$ref": "#/definitions/common"
+        }
+      }
+    },
+    {
+      "type": "array",
+      "items": {
+        "$ref": "#",
+        "type": "object"
+      }
+    }
+  ],
+  "definitions": {
+    "context": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "@context": {
+          "anyOf": [
+            {
+              "type": "object"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Used to define the short-hand names that are used throughout a JSON-LD document."
+        }
+      }
+    },
+    "graph": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "@graph": {
+          "description": "Used to express a graph.",
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/common"
+              }
+            },
+            {
+              "$ref": "#/definitions/common",
+              "type": "object"
+            }
+          ]
+        }
+      }
+    },
+    "common": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/common"
+      },
+      "properties": {
+        "@id": {
+          "description": "Used to uniquely identify things that are being described in the document with IRIs or blank node identifiers.",
+          "type": "string",
+          "format": "uri"
+        },
+        "@value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Used to specify the data that is associated with a particular property in the graph."
+        },
+        "@language": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Used to specify the language for a particular string value or the default language of a JSON-LD document."
+        },
+        "@type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Used to set the data type of a node or typed value."
+        },
+        "@container": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": ["@language", "@list", "@index", "@set"]
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Used to set the default container type for a term."
+        },
+        "@list": {
+          "description": "Used to express an ordered set of data."
+        },
+        "@set": {
+          "description": "Used to express an unordered set of data and to ensure that values are always represented as arrays."
+        },
+        "@reverse": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/definitions/common"
+              }
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Used to express reverse properties."
+        },
+        "@base": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uri"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Used to set the base IRI against which relative IRIs are resolved"
+        },
+        "@vocab": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uri"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Used to expand properties and values in @type with a common prefix IRI"
+        }
+      }
+    }
+  },
+  "title": "Schema for JSON-LD"
+}

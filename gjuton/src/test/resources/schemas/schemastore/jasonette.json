@@ -1,0 +1,299 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json.schemastore.org/jasonette.json",
+  "definitions": {
+    "style": {
+      "type": "object",
+      "properties": {
+        "font": {
+          "type": "string"
+        },
+        "size": {
+          "type": "integer"
+        },
+        "padding": {
+          "type": "integer"
+        },
+        "color": {
+          "type": "string",
+          "format": "color"
+        }
+      }
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "oneOf": [
+            {
+              "title": "custom",
+              "type": "string"
+            },
+            {
+              "$ref": "#/definitions/builtinActionsEnum",
+              "title": "builtins"
+            }
+          ]
+        },
+        "options": {
+          "type": "object"
+        },
+        "success": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "options": {
+              "type": "object"
+            }
+          }
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "options": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "required": ["type"]
+    },
+    "builtinActionsEnum": {
+      "type": "string",
+      "enum": [
+        "$render",
+        "$reload",
+        "$snapshot",
+        "$href",
+        "$close",
+        "$back",
+        "$network.request",
+        "$network.upload",
+        "$session.set",
+        "$session.reset",
+        "$set",
+        "$get",
+        "$cache.set",
+        "$cache.reset",
+        "$global.set",
+        "$global.reset",
+        "$util.banner",
+        "$util.toast",
+        "$util.alert",
+        "$util.share",
+        "$util.picker",
+        "$util.datepicker",
+        "$util.addressbook",
+        "$media.camera",
+        "$media.picker",
+        "media.player",
+        "$audio.play",
+        "$audio.pause",
+        "$audio.stop",
+        "$audio.seek",
+        "$audio.position",
+        "$audio.duration",
+        "audio.record",
+        "$geo.get",
+        "$timer.start",
+        "$timer.stop",
+        "$convert.csv",
+        "$convert.rss"
+      ]
+    },
+    "template": {
+      "type": "object"
+    },
+    "imgUrl": {
+      "type": "string",
+      "format": "url",
+      "links": [
+        {
+          "href": "{{self}}",
+          "mediaType": "image/png"
+        }
+      ]
+    },
+    "data": {
+      "type": "object"
+    },
+    "advancedTitle": {
+      "title": "Advanced Title",
+      "type": "object",
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "type": "object",
+          "title": "Title with Image",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "image"
+            },
+            "url": {
+              "$ref": "#/definitions/imgUrl"
+            },
+            "style": {
+              "type": "object",
+              "properties": {
+                "width": {
+                  "type": "integer"
+                },
+                "height": {
+                  "type": "integer"
+                }
+              },
+              "required": ["width", "height"]
+            }
+          },
+          "required": ["type", "url"]
+        },
+        {
+          "type": "object",
+          "title": "Title with Label",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "label"
+            },
+            "text": {
+              "type": "string",
+              "format": "text"
+            }
+          },
+          "required": ["type", "text"]
+        }
+      ]
+    }
+  },
+  "properties": {
+    "head": {
+      "type": "object",
+      "description": "The head contains a set of metadata that doesn't get displayed directly",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon": {
+          "$ref": "#/definitions/imgUrl"
+        },
+        "offline": {
+          "type": "boolean"
+        },
+        "styles": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/style"
+          }
+        },
+        "actions": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/action"
+          }
+        },
+        "templates": {},
+        "data": {}
+      }
+    },
+    "body": {
+      "type": "object",
+      "description": "Body contains everything that gets displayed on the screen.",
+      "properties": {
+        "ads": {},
+        "header": {
+          "type": "object",
+          "description": "Header describes the top header bar and its components.",
+          "properties": {
+            "title": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "$ref": "#/definitions/advancedTitle"
+                }
+              ]
+            },
+            "search": {
+              "type": "object",
+              "description": "Search component. Calls an action you define when user submits a query.",
+              "properties": {
+                "name": {
+                  "description": "The value inside the search input is automatically stored to the local variable named by this property",
+                  "type": "string"
+                },
+                "placeholder": {},
+                "action": {
+                  "$ref": "#/definitions/action",
+                  "description": "Action to trigger if defined"
+                },
+                "style": {
+                  "type": "object",
+                  "properties": {
+                    "background": {
+                      "description": "background color",
+                      "type": "string",
+                      "format": "color"
+                    }
+                  }
+                }
+              }
+            },
+            "menu": {},
+            "style": {
+              "$ref": "#/definitions/style"
+            }
+          }
+        },
+        "sections": {},
+        "layers": {},
+        "footer": {},
+        "style": {
+          "type": "object",
+          "properties": {
+            "background": {
+              "description": "setting the background of the view",
+              "oneOf": [
+                {
+                  "title": "color",
+                  "type": "string",
+                  "format": "color"
+                },
+                {
+                  "$ref": "#/definitions/imgUrl",
+                  "title": "img url"
+                }
+              ]
+            },
+            "border": {
+              "description": "setting the border color for section items",
+              "oneOf": [
+                {
+                  "title": "none",
+                  "type": "string",
+                  "const": "none"
+                },
+                {
+                  "title": "border color",
+                  "type": "string",
+                  "format": "color"
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "title": "$jason",
+  "type": "object"
+}

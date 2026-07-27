@@ -1,0 +1,156 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://json.schemastore.org/jdt.json",
+  "additionalProperties": {
+    "$ref": "#"
+  },
+  "definitions": {
+    "@jdt.path": {
+      "type": "string",
+      "description": "Use JSONPath syntax to navigate to the node where the transform should be applied."
+    },
+    "@jdt.value": {
+      "type": "string",
+      "description": "The transformation value that should be applied."
+    }
+  },
+  "properties": {
+    "@jdt.rename": {
+      "anyOf": [
+        {
+          "type": "object",
+          "description": "Renames nodes",
+          "properties": {
+            "@jdt.path": {
+              "$ref": "#/definitions/@jdt.path"
+            },
+            "@jdt.value": {
+              "$ref": "#/definitions/@jdt.value"
+            }
+          }
+        },
+        {
+          "type": "array",
+          "description": "Renames nodes",
+          "items": {
+            "type": "object",
+            "properties": {
+              "@jdt.path": {
+                "$ref": "#/definitions/@jdt.path"
+              },
+              "@jdt.value": {
+                "$ref": "#/definitions/@jdt.value"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "@jdt.replace": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "@jdt.path": {
+                "$ref": "#/definitions/@jdt.path"
+              },
+              "@jdt.value": {
+                "$ref": "#/definitions/@jdt.value"
+              }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "@jdt.path": {
+              "$ref": "#/definitions/@jdt.path"
+            },
+            "@jdt.value": {
+              "$ref": "#/definitions/@jdt.value"
+            }
+          }
+        }
+      ],
+      "description": "Replaces the current node with the given value. "
+    },
+    "@jdt.remove": {
+      "anyOf": [
+        {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "object"
+              },
+              {
+                "type": "string"
+              }
+            ]
+          }
+        },
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "@jdt.path": {
+              "$ref": "#/definitions/@jdt.path"
+            }
+          }
+        },
+        {
+          "type": "string"
+        }
+      ],
+      "description": "Removes the node with the given name from the current level."
+    },
+    "@jdt.merge": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "@jdt.path": {
+              "$ref": "#/definitions/@jdt.path"
+            },
+            "@jdt.value": {
+              "$ref": "#/definitions/@jdt.value"
+            }
+          }
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "@jdt.path": {
+                "$ref": "#/definitions/@jdt.path"
+              },
+              "@jdt.value": {
+                "$ref": "#/definitions/@jdt.value"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Merges the current node value with the given object."
+    }
+  },
+  "title": "JSON schema for JSON Document Transforms",
+  "type": "object"
+}
