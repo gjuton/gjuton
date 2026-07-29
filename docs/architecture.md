@@ -9,7 +9,12 @@ walked to produce a JSON value.
 1. **Parser** — deserializes a JSON Schema document into the internal schema
    model using Jackson data-binding. The parser is a thin wrapper around
    `ObjectMapper.readValue()`; the mapping itself is expressed as Jackson
-   annotations on the model classes.
+   annotations on the model classes. A few constructs cannot be expressed
+   that way, and for those the parser rewrites the JSON tree before
+   deserialization — the `"type": ["string", "null"]` shorthand becomes an
+   explicit `oneOf`, for example. Rewriting is a last resort: it moves the
+   shape a schema may take out of the model classes, which is where a reader
+   looks for it.
 2. **Model** — Java classes representing schema constructs (type, constraints,
    `$ref`, combining keywords, and so on). Model classes carry the Jackson
    annotations that drive deserialization.

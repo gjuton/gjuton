@@ -162,7 +162,6 @@ class IntegrationTest {
             // Schema build fails: unresolved $ref fragment
             "dss-2.0.0.json", // schema build: unresolved percent-encoded $ref fragment
             "opspec-io-0.1.7.json", // schema build: unresolved percent-encoded $ref fragment
-            "schema-draft-v4.json", // schema build failed: cannot parse as JSON Schema
 
             // Crashes during generation (StackOverflowError)
             "json-patch.json", // StackOverflowError during generation

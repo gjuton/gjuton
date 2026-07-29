@@ -14,6 +14,9 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 ### Added
 
 - Support for `format: "duration"` (ISO 8601 durations, e.g. `P3D`, `PT1H30M`).
+- Support for Draft 4 style boolean `exclusiveMinimum`/`exclusiveMaximum`, the
+  form used by OpenAPI 3.0 and Swagger 2.0. The bound is taken from the
+  accompanying `minimum`/`maximum`; previously such a schema failed to parse.
 
 ### Changed
 

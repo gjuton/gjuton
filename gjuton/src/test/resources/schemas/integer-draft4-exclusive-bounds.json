@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "integer",
+  "minimum": 5,
+  "maximum": 10,
+  "exclusiveMinimum": true
+}
