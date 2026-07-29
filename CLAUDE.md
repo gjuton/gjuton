@@ -40,13 +40,20 @@ a test case.
 
 ## Issues
 
-Issues are tracked on GitHub. After completing work on an issue, close
-it on GitHub, checking off acceptance criteria and revising any
-descriptions that no longer match the implementation.
+Issues are tracked on GitHub. Never close an issue — that is the user's
+decision, or happens when the PR merges.
 
 The shape a ticket takes and the rules for writing one are documented in:
 
 @docs/tickets.md
+
+## Commits
+
+Conventional commits without a scope: `<type>: <description>`. The project
+is focused enough that a scope adds noise without signal. Keep the subject
+short, around 50 characters. Types in use: feat, fix, refactor, test, docs,
+chore, build, ci, perf, style. A ticket reference goes at the end of the
+subject in parentheses: `fix: refs in example fails parse (#163)`.
 
 ## Code conventions
 
