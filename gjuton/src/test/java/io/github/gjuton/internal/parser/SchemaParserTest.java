@@ -1159,6 +1159,121 @@ class SchemaParserTest {
             // then
             assertThat(document.getRoot()).isInstanceOf(UntypedSchema.class);
         }
+
+        @Test
+        void untypedRefTargetUnderNonKeywordContainerIsInferred() {
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "$ref": "#/components/schemas/Address",
+                        "components": {
+                            "schemas": {
+                                "Address": {
+                                    "properties": {"city": {"type": "string"}},
+                                    "required": ["city"]
+                                }
+                            }
+                        }
+                    }
+                    """);
+
+            // then
+            var target = document.resolveRef("#/components/schemas/Address");
+            assertThat(target).isInstanceOf(ObjectSchema.class);
+            assertThat(((ObjectSchema) target).getProperties()).containsKey("city");
+        }
+
+        @Test
+        void untypedSchemaNestedInsideRefTargetUnderNonKeywordContainerIsInferred() {
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "$ref": "#/components/schemas/Address",
+                        "components": {
+                            "schemas": {
+                                "Address": {
+                                    "properties": {
+                                        "postcode": {"pattern": "^[0-9]{5}$"}
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    """);
+
+            // then
+            var target = (ObjectSchema) document.resolveRef("#/components/schemas/Address");
+            var postcode = target.getProperties().get("postcode");
+            assertThat(postcode).isInstanceOf(StringSchema.class);
+            assertThat(((StringSchema) postcode).getPattern()).isEqualTo("^[0-9]{5}$");
+        }
+
+        @Test
+        void selfRecursiveRefTargetUnderNonKeywordContainerIsInferred() {
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "components": {
+                            "schemas": {
+                                "Node": {
+                                    "properties": {
+                                        "child": {"$ref": "#/components/schemas/Node"}
+                                    },
+                                    "required": ["child"]
+                                }
+                            }
+                        },
+                        "type": "object",
+                        "properties": {
+                            "root": {"$ref": "#/components/schemas/Node"}
+                        }
+                    }
+                    """);
+
+            // then
+            var target = document.resolveRef("#/components/schemas/Node");
+            assertThat(target).isInstanceOf(ObjectSchema.class);
+            assertThat(((ObjectSchema) target).getProperties()).containsKey("child");
+        }
+
+        @Test
+        void constPayloadInsideRefTargetUnderNonKeywordContainerIsNotWalked() {
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "$ref": "#/components/schemas/Marker",
+                        "components": {
+                            "schemas": {
+                                "Marker": {"const": {"pattern": "^abc$"}}
+                            }
+                        }
+                    }
+                    """);
+
+            // then
+            var target = document.resolveRef("#/components/schemas/Marker");
+            assertThat(target.getConstValue()).isEqualTo(java.util.Map.of("pattern", "^abc$"));
+        }
+
+        @Test
+        void enumPayloadInsideRefTargetUnderNonKeywordContainerIsNotWalked() {
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "$ref": "#/components/schemas/Marker",
+                        "components": {
+                            "schemas": {
+                                "Marker": {"enum": [{"properties": {"a": 1}}]}
+                            }
+                        }
+                    }
+                    """);
+
+            // then
+            var target = document.resolveRef("#/components/schemas/Marker");
+            assertThat(target.getEnumValues())
+                    .containsExactly(java.util.Map.of("properties", java.util.Map.of("a", 1)));
+        }
     }
 
     private static Path testResourcePath(String relativePath) throws URISyntaxException {

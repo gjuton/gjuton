@@ -76,10 +76,6 @@ class OpenApiIntegrationTest {
             // path templates put {braces} in. Parked in IntegrationTest too. See issue #150.
             "conjur.local-5.3.0.yaml",
 
-            // Generated output silently violates the schema: four of its schemas declare
-            // properties without a type, and components/schemas is never inferred. See #161.
-            "6-dot-authentiqio.appspot.com-6.yaml",
-
             // Schema build fails for every schema it declares: one draft-04 boolean
             // exclusiveMinimum, which gjuton takes only as a number, sinks it. See issue #157.
             "openbankingproject.ch-1.3.8.yaml"
