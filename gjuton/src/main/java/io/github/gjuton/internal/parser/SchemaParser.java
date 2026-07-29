@@ -161,13 +161,17 @@ public final class SchemaParser {
                         qualifyRefsWithinExternalDocument(targetDoc, baseUri);
                         targetDocUri = baseUri;
                     }
-                    // Recording the ref before walking on is what terminates a cycle.
-                    var targetSchema = resolveFragment(fragment, targetDoc);
-                    refs.put(ref, targetSchema);
                     // The target may sit outside any sub-schema position and so be
                     // reachable only by following the ref that points at it. An empty
                     // fragment names the document itself.
                     var target = targetDoc.at(fragment);
+                    // Out of reach of the document-wide pass for that same reason, so the
+                    // target is inferred here, where following the ref has established it
+                    // is a schema.
+                    TypeInferrer.inferMissingTypes(target);
+                    // Recording the ref before walking on is what terminates a cycle.
+                    var targetSchema = resolveFragment(fragment, targetDoc);
+                    refs.put(ref, targetSchema);
                     collectRefs(target, targetDoc, refs, baseDir, targetDocUri);
                 }
             }

@@ -23,6 +23,14 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ### Fixed
 
+- A `$ref` appearing inside data rather than in a schema position — in an
+  `example`, an `enum` payload, or under a property that happens to be named
+  after a keyword — is no longer resolved as a schema, which could fail the
+  parse of the whole document.
+- `$ref` targets that sit outside any schema position, such as an OpenAPI
+  `components/schemas` entry, are now type-inferred like any other schema.
+  Previously a target that omitted `type` produced output violating its own
+  constraints.
 - Array index out of bounds in the untyped generator in minimal mode.
 - `allOf` branches that each declare a `contains` clause no longer report a
   conflict when no single element can satisfy both; such clauses are now kept
