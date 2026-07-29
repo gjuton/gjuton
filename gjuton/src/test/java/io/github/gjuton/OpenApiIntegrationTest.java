@@ -68,17 +68,13 @@ class OpenApiIntegrationTest {
 
     // Well above what any curated description reaches, so it never hides a failure. It only
     // bounds a bulk copy of machine-generated descriptions, which run to thousands each.
-    private static final int MAX_SCHEMAS_PER_DESCRIPTION = 100;
+    private static final int MAX_SCHEMAS_PER_DESCRIPTION = 200;
 
     // Bugs in gjuton itself. Dropping an entry is the acceptance test for the fix it names.
     private static final Set<String> NON_WORKING_DESCRIPTIONS = Set.of(
             // Schema build fails on a percent-encoded pointer in a $ref into #/paths/..., which
             // path templates put {braces} in. Parked in IntegrationTest too. See issue #150.
-            "conjur.local-5.3.0.yaml",
-
-            // Schema build fails for every schema it declares: one draft-04 boolean
-            // exclusiveMinimum, which gjuton takes only as a number, sinks it. See issue #157.
-            "openbankingproject.ch-1.3.8.yaml"
+            "conjur.local-5.3.0.yaml"
     );
 
     // Descriptions are parsed before anything is generated, so these bound gjuton alone.

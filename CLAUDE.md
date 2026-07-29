@@ -17,7 +17,8 @@ mvn test                 # run unit tests
 
 Use `mvnd verify -Pfast` during work to keep the iteration loop tight.
 Run plain `mvn clean verify` once before declaring a task done so style
-and static-analysis gates are checked.
+and static-analysis gates are checked, and confirm `CHANGELOG.md` has an
+entry for the change.
 
 ### mvnd (Maven Daemon)
 
@@ -54,6 +55,15 @@ is focused enough that a scope adds noise without signal. Keep the subject
 short, around 50 characters. Types in use: feat, fix, refactor, test, docs,
 chore, build, ci, perf, style. A ticket reference goes at the end of the
 subject in parentheses: `fix: refs in example fails parse (#163)`.
+
+## Changelog
+
+Every change a user could notice gets an entry under `## [Unreleased]` in
+`CHANGELOG.md`, in the same working tree as the change itself — new
+features, bug fixes, behaviour changes, anything affecting the public API.
+Internal refactors, tests, build and docs changes get no entry. Write it
+from the user's side: what they can now do, or what no longer misbehaves,
+not which class changed.
 
 ## Code conventions
 
