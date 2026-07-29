@@ -80,10 +80,6 @@ class OpenApiIntegrationTest {
             // properties without a type, and components/schemas is never inferred. See #161.
             "6-dot-authentiqio.appspot.com-6.yaml",
 
-            // Schema build fails: $ref strings in its example payloads are resolved as schema
-            // references, and one lands on a null, surfacing as a bare NPE. See issue #163.
-            "viator.com-1.0.0.yaml",
-
             // Schema build fails for every schema it declares: one draft-04 boolean
             // exclusiveMinimum, which gjuton takes only as a number, sinks it. See issue #157.
             "openbankingproject.ch-1.3.8.yaml"

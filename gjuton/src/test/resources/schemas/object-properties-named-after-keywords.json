@@ -1,0 +1,38 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "type": {"type": "string", "enum": ["dog", "cat"]},
+    "oneOf": {"type": "string", "minLength": 2},
+    "allOf": {"type": "integer", "minimum": 1, "maximum": 10},
+    "anyOf": {"type": "boolean"},
+    "not": {"type": "string"},
+    "if": {"type": "boolean"},
+    "then": {"type": "string"},
+    "else": {"type": "string"},
+    "properties": {"type": "string"},
+    "patternProperties": {"type": "integer"},
+    "propertyNames": {"type": "string"},
+    "additionalProperties": {"type": "boolean"},
+    "items": {"type": "array", "items": {"type": "string"}},
+    "prefixItems": {"type": "string"},
+    "additionalItems": {"type": "string"},
+    "contains": {"type": "integer"},
+    "dependencies": {"type": "string"},
+    "required": {"type": "string"},
+    "enum": {"type": "string"},
+    "const": {"type": "string"},
+    "default": {"type": "string"},
+    "example": {"type": "string"},
+    "definitions": {"type": "string"},
+    "$defs": {"type": "string"},
+    "$ref": {"type": "string"}
+  },
+  "required": [
+    "type", "oneOf", "allOf", "anyOf", "not", "if", "then", "else",
+    "properties", "patternProperties", "propertyNames", "additionalProperties",
+    "items", "prefixItems", "additionalItems", "contains", "dependencies",
+    "required", "enum", "const", "default", "example",
+    "definitions", "$defs", "$ref"
+  ]
+}

@@ -27,12 +27,16 @@ final class TypeInferrer {
      * Describes how a JSON Schema keyword's value relates to sub-schemas,
      * so the walker knows how to recurse into it.
      */
-    private enum SchemaShape {
+    enum SchemaShape {
         /** The value is a single sub-schema (e.g. {@code if}, {@code not}). */
         SCHEMA,
         /** The value is an array of sub-schemas (e.g. {@code oneOf}). */
         SCHEMA_ARRAY,
-        /** The value is an object whose values are sub-schemas (e.g. {@code properties}). */
+        /**
+         * The value is an object whose values are sub-schemas (e.g. {@code properties}).
+         * An entry may hold data instead — a Draft 7 {@code dependencies} entry is
+         * either a sub-schema or a property-name array — which walkers skip.
+         */
         SCHEMA_MAP,
         /** The value is either a single sub-schema or an array of sub-schemas (e.g. {@code items}). */
         SCHEMA_OR_SCHEMA_ARRAY
@@ -55,11 +59,17 @@ final class TypeInferrer {
             "items", "prefixItems", "additionalItems",
             "contains", "minItems", "maxItems", "uniqueItems");
 
-    private static final Map<String, SchemaShape> SCHEMA_FIELDS = Map.ofEntries(
+    /**
+     * The JSON Schema keywords whose values hold sub-schemas, and the shape
+     * each one takes. Any keyword absent from this map holds data, not a
+     * schema.
+     */
+    static final Map<String, SchemaShape> SCHEMA_FIELDS = Map.ofEntries(
             entry("properties", SchemaShape.SCHEMA_MAP),
             entry("definitions", SchemaShape.SCHEMA_MAP),
             entry("$defs", SchemaShape.SCHEMA_MAP),
             entry("dependentSchemas", SchemaShape.SCHEMA_MAP),
+            entry("dependencies", SchemaShape.SCHEMA_MAP),
             entry("patternProperties", SchemaShape.SCHEMA_MAP),
             entry("oneOf", SchemaShape.SCHEMA_ARRAY),
             entry("anyOf", SchemaShape.SCHEMA_ARRAY),
@@ -126,23 +136,6 @@ final class TypeInferrer {
                     }
                 }
                 default -> throw new IllegalStateException("Unhandled field type: " + field.getValue());
-            }
-        }
-        inferMissingTypesInDependencies(objectNode);
-    }
-
-    /**
-     * In Draft 7 {@code dependencies}, each entry is either a sub-schema
-     * (object) or a property-name list (array). Only the sub-schema form
-     * is walked.
-     */
-    private static void inferMissingTypesInDependencies(ObjectNode node) {
-        var value = node.get("dependencies");
-        if (value != null && value.isObject()) {
-            for (var entry : value.properties()) {
-                if (entry.getValue().isObject()) {
-                    inferMissingTypes(entry.getValue());
-                }
             }
         }
     }
