@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "type": {"$ref": "#/definitions/Name"},
+    "oneOf": {"$ref": "#/definitions/Name"},
+    "definitions": {"$ref": "#/definitions/Count"},
+    "patternProperties": {"$ref": "#/definitions/Count"},
+    "$ref": {"$ref": "#/definitions/Name"},
+    "enum": {
+      "type": "object",
+      "properties": {"const": {"$ref": "#/definitions/Name"}},
+      "required": ["const"]
+    }
+  },
+  "required": ["type", "oneOf", "definitions", "patternProperties", "$ref", "enum"],
+  "patternProperties": {
+    "^extra": {"$ref": "#/definitions/Count"}
+  },
+  "definitions": {
+    "Name": {"type": "string", "minLength": 3},
+    "Count": {"type": "integer", "minimum": 5, "maximum": 9}
+  }
+}

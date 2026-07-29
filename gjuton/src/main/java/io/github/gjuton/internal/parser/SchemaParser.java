@@ -141,28 +141,57 @@ public final class SchemaParser {
             if (refNode != null && refNode.isTextual()) {
                 var ref = refNode.asText();
                 if (!refs.containsKey(ref)) {
+                    // Split the ref into the document it names and the fragment within it:
+                    // "defs.json#/definitions/Address" sets targetDoc to the loaded defs.json,
+                    // targetDocUri to "defs.json" and fragment to "/definitions/Address", while
+                    // "#/definitions/Address" leaves targetDoc and targetDocUri as the current
+                    // document and sets fragment to "/definitions/Address".
+                    var targetDoc = root;
+                    var targetDocUri = currentDocUri;
+                    String fragment;
                     if (ref.startsWith("#")) {
-                        refs.put(ref, resolveFragment(ref.substring(1), root));
+                        fragment = ref.substring(1);
                     } else if (currentDocUri != null && ref.startsWith(currentDocUri + "#")) {
-                        var fragment = ref.substring(ref.indexOf('#') + 1);
-                        refs.put(ref, resolveFragment(fragment, root));
+                        fragment = ref.substring(ref.indexOf('#') + 1);
                     } else {
                         int fragIdx = ref.indexOf('#');
                         var baseUri = fragIdx >= 0 ? ref.substring(0, fragIdx) : ref;
-                        var fragment = fragIdx >= 0 ? ref.substring(fragIdx + 1) : "";
-                        var externalDoc = loadExternalDocument(baseUri, baseDir);
-                        qualifyRefsWithinExternalDocument(externalDoc, baseUri);
-                        refs.put(ref, resolveFragment(fragment, externalDoc));
-                        collectRefs(externalDoc, externalDoc, refs, baseDir, baseUri);
+                        fragment = fragIdx >= 0 ? ref.substring(fragIdx + 1) : "";
+                        targetDoc = loadExternalDocument(baseUri, baseDir);
+                        qualifyRefsWithinExternalDocument(targetDoc, baseUri);
+                        targetDocUri = baseUri;
                     }
+                    // Recording the ref before walking on is what terminates a cycle.
+                    var targetSchema = resolveFragment(fragment, targetDoc);
+                    refs.put(ref, targetSchema);
+                    // The target may sit outside any sub-schema position and so be
+                    // reachable only by following the ref that points at it. An empty
+                    // fragment names the document itself.
+                    var target = targetDoc.at(fragment);
+                    collectRefs(target, targetDoc, refs, baseDir, targetDocUri);
                 }
             }
             for (var property : node.properties()) {
-                collectRefs(property.getValue(), root, refs, baseDir, currentDocUri);
+                var shape = TypeInferrer.SCHEMA_FIELDS.get(property.getKey());
+                if (shape == null) {
+                    continue;
+                }
+                var value = property.getValue();
+                if (shape == TypeInferrer.SchemaShape.SCHEMA_MAP) {
+                    // The keys of a schema map are user-chosen property or definition
+                    // names, so its schemas sit one level below the keyword.
+                    for (var entry : value.properties()) {
+                        collectRefs(entry.getValue(), root, refs, baseDir, currentDocUri);
+                    }
+                } else {
+                    collectRefs(value, root, refs, baseDir, currentDocUri);
+                }
             }
         } else if (node.isArray()) {
-            for (var item : node) {
-                collectRefs(item, root, refs, baseDir, currentDocUri);
+            // Only reachable from a whitelisted keyword above, so an array of
+            // schemas is walked while an enum payload is never entered.
+            for (var element : node) {
+                collectRefs(element, root, refs, baseDir, currentDocUri);
             }
         }
     }
@@ -175,7 +204,11 @@ public final class SchemaParser {
         if (target.isMissingNode()) {
             throw new IllegalArgumentException("Unresolved $ref fragment: #" + pointer);
         }
-        return MAPPER.treeToValue(target, Schema.class);
+        var schema = MAPPER.treeToValue(target, Schema.class);
+        if (schema == null) {
+            throw new IllegalArgumentException("$ref target is not a schema: #" + pointer);
+        }
+        return schema;
     }
 
     /**

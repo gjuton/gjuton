@@ -263,6 +263,89 @@ class SchemaParserTest {
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("#/definitions/Missing");
         }
+
+        @Test
+        void refOntoNonSchemaTargetThrowsNamingTheRef() {
+            // when / then
+            assertThatThrownBy(() -> SchemaParser.parse("""
+                    {
+                        "$ref": "#/definitions/x",
+                        "definitions": {"x": null}
+                    }
+                    """))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("#/definitions/x");
+        }
+
+        @Test
+        void refInsideExamplePayloadIsNotResolved() {
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "type": "object",
+                        "properties": {"a": {"type": "string"}},
+                        "example": {"a": {"$ref": "#/nope/x"}}
+                    }
+                    """);
+
+            // then
+            assertThat(document.getRoot()).isInstanceOf(ObjectSchema.class);
+        }
+
+        @Test
+        void refNestedInsideRefTargetIsCollected() {
+            // The target sits under a container that is not a schema keyword, so it is
+            // only reachable by following the ref that points at it.
+            var document = SchemaParser.parse("""
+                    {
+                        "$ref": "#/components/schemas/Order",
+                        "components": {
+                            "schemas": {
+                                "Order": {
+                                    "type": "object",
+                                    "properties": {
+                                        "customer": {"$ref": "#/components/schemas/Customer"}
+                                    }
+                                },
+                                "Customer": {
+                                    "type": "object",
+                                    "properties": {"name": {"type": "string"}}
+                                }
+                            }
+                        }
+                    }
+                    """);
+
+            // when
+            var resolved = document.resolveRef("#/components/schemas/Customer");
+
+            // then
+            assertThat(resolved).isNotNull();
+        }
+
+        @Test
+        void refInsideDependenciesSubSchemaIsCollected() {
+            var document = SchemaParser.parse("""
+                    {
+                        "type": "object",
+                        "properties": {"a": {"type": "string"}},
+                        "dependencies": {
+                            "a": {
+                                "properties": {"b": {"$ref": "#/definitions/B"}}
+                            }
+                        },
+                        "definitions": {
+                            "B": {"type": "string"}
+                        }
+                    }
+                    """);
+
+            // when
+            var resolved = document.resolveRef("#/definitions/B");
+
+            // then
+            assertThat(resolved).isNotNull();
+        }
     }
 
     @Nested
