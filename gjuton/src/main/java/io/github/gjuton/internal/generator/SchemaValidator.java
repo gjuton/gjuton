@@ -45,69 +45,103 @@ final class SchemaValidator {
      */
     private static final int MAX_REF_DEPTH = 100;
 
+    /**
+     * Ceiling on how much of a value a violation message quotes, so one
+     * oversized string or object cannot push the rest of the line off screen.
+     */
+    private static final int MAX_DESCRIBED_LENGTH = 60;
+
+    /**
+     * Ceiling on how many branches of an unmatched {@code oneOf}/{@code anyOf}
+     * group explain themselves, so a group of dozens stays readable.
+     */
+    private static final int MAX_REPORTED_BRANCHES = 3;
+
     boolean satisfies(Object value, Schema schema) {
-        return satisfies(value, schema, 0);
+        return violation(value, schema) == null;
     }
 
     private boolean satisfies(Object value, Schema schema, int refDepth) {
+        return violation(value, schema, refDepth) == null;
+    }
+
+    /**
+     * Names the first constraint {@code value} violates, or {@code null} if it
+     * satisfies {@code schema}. A nested violation reads outermost-first, so
+     * the message locates the offending part of the value as well as naming
+     * the constraint. Long values are abbreviated.
+     */
+    String violation(Object value, Schema schema) {
+        return violation(value, schema, 0);
+    }
+
+    private String violation(Object value, Schema schema, int refDepth) {
         if (value instanceof OverriddenValue) {
             // A caller-supplied override is exempt from validation; the caller
             // owns its correctness.
-            return true;
+            return null;
         }
         if (schema.getRef() != null) {
             if (refDepth >= MAX_REF_DEPTH) {
-                return true;
+                return null;
             }
-            return satisfies(value, context.resolveRef(schema.getRef()), refDepth + 1);
+            return violation(value, context.resolveRef(schema.getRef()), refDepth + 1);
         }
         if (schema.getConstValue() != null && !valuesEqual(schema.getConstValue(), value)) {
-            return false;
+            return "const mismatch: expected " + describe(schema.getConstValue()) + ", got " + describe(value);
         }
         if (schema.getEnumValues() != null
                 && schema.getEnumValues().stream().noneMatch(allowed -> valuesEqual(allowed, value))) {
-            return false;
+            return describe(value) + " is not one of the " + schema.getEnumValues().size() + " enum values";
         }
         if (schema.getAllOf() != null) {
-            for (var branch : schema.getAllOf()) {
-                if (!satisfies(value, branch, refDepth)) {
-                    return false;
+            for (int i = 0; i < schema.getAllOf().size(); i++) {
+                var nested = violation(value, schema.getAllOf().get(i), refDepth);
+                if (nested != null) {
+                    return "allOf branch " + i + ": " + nested;
                 }
             }
         }
         if (schema.getAnyOf() != null) {
             for (var group : schema.getAnyOf()) {
                 if (group.stream().noneMatch(branch -> satisfies(value, branch, refDepth))) {
-                    return false;
+                    return "no anyOf branch matched — " + branchViolations(value, group, refDepth);
                 }
             }
         }
         if (schema.getOneOf() != null) {
             for (var group : schema.getOneOf()) {
-                if (group.stream().filter(branch -> satisfies(value, branch, refDepth)).count() != 1) {
-                    return false;
+                long matched = group.stream().filter(branch -> satisfies(value, branch, refDepth)).count();
+                if (matched == 0) {
+                    return "no oneOf branch matched — " + branchViolations(value, group, refDepth);
+                }
+                if (matched > 1) {
+                    return matched + " of " + group.size() + " oneOf branches matched, expected exactly 1";
                 }
             }
         }
         for (var conditional : schema.getConditionals()) {
-            var branch = satisfies(value, conditional.ifSchema(), refDepth)
-                    ? conditional.thenSchema() : conditional.elseSchema();
-            if (branch != null && !satisfies(value, branch, refDepth)) {
-                return false;
+            boolean ifMatched = satisfies(value, conditional.ifSchema(), refDepth);
+            var branch = ifMatched ? conditional.thenSchema() : conditional.elseSchema();
+            if (branch != null) {
+                var nested = violation(value, branch, refDepth);
+                if (nested != null) {
+                    return (ifMatched ? "then" : "else") + " branch: " + nested;
+                }
             }
         }
         if (schema.getNotSchema() != null && satisfies(value, schema.getNotSchema(), refDepth)) {
-            return false;
+            return describe(value) + " matches the not schema";
         }
         return switch (schema) {
-            case StringSchema s -> satisfiesString(value, s);
-            case NumericSchema s -> satisfiesNumeric(value, s);
-            case BooleanSchema ignored -> value instanceof Boolean;
-            case NullSchema ignored -> value == null;
-            case ObjectSchema s -> satisfiesObject(value, s);
-            case ArraySchema s -> satisfiesArray(value, s);
-            case UntypedSchema ignored -> true;
-            case UnsatisfiableSchema ignored -> false;
+            case StringSchema s -> stringViolation(value, s);
+            case NumericSchema s -> numericViolation(value, s);
+            case BooleanSchema ignored -> value instanceof Boolean ? null : typeMismatch("boolean", value);
+            case NullSchema ignored -> value == null ? null : typeMismatch("null", value);
+            case ObjectSchema s -> objectViolation(value, s);
+            case ArraySchema s -> arrayViolation(value, s);
+            case UntypedSchema ignored -> null;
+            case UnsatisfiableSchema ignored -> "the schema admits no value at all";
         };
     }
 
@@ -118,124 +152,177 @@ final class SchemaValidator {
      * validator per {@link StringFormat}
      * variant.
      */
-    private boolean satisfiesString(Object value, StringSchema schema) {
+    private String stringViolation(Object value, StringSchema schema) {
         if (!(value instanceof String s)) {
-            return false;
+            return typeMismatch("string", value);
         }
         if (schema.getMinLength() != null && s.length() < schema.getMinLength()) {
-            return false;
+            return "length " + s.length() + " is below minLength " + schema.getMinLength();
         }
         if (schema.getMaxLength() != null && s.length() > schema.getMaxLength()) {
-            return false;
+            return "length " + s.length() + " is above maxLength " + schema.getMaxLength();
         }
         if (schema.getPattern() != null && !Pattern.compile(schema.getPattern()).matcher(s).find()) {
-            return false;
+            return describe(s) + " does not match pattern " + schema.getPattern();
         }
-        return true;
+        return null;
     }
 
-    private boolean satisfiesNumeric(Object value, NumericSchema schema) {
+    private String numericViolation(Object value, NumericSchema schema) {
         if (!(value instanceof Number n)) {
-            return false;
+            return typeMismatch("number", value);
         }
         var v = toBigDecimal(n);
         if (schema.isInteger() && v.stripTrailingZeros().scale() > 0) {
-            return false;
+            return v + " is not an integer";
         }
         if (schema.getMinimum() != null && v.compareTo(schema.getMinimum()) < 0) {
-            return false;
+            return v + " is below minimum " + schema.getMinimum();
         }
         if (schema.getMaximum() != null && v.compareTo(schema.getMaximum()) > 0) {
-            return false;
+            return v + " is above maximum " + schema.getMaximum();
         }
         if (schema.getExclusiveMinimum() != null && v.compareTo(schema.getExclusiveMinimum()) <= 0) {
-            return false;
+            return v + " is not above exclusiveMinimum " + schema.getExclusiveMinimum();
         }
         if (schema.getExclusiveMaximum() != null && v.compareTo(schema.getExclusiveMaximum()) >= 0) {
-            return false;
+            return v + " is not below exclusiveMaximum " + schema.getExclusiveMaximum();
         }
         if (schema.getMultipleOf() != null
                 && v.remainder(schema.getMultipleOf()).compareTo(BigDecimal.ZERO) != 0) {
-            return false;
+            return v + " is not a multiple of " + schema.getMultipleOf();
         }
-        return true;
+        return null;
     }
 
-    private boolean satisfiesObject(Object value, ObjectSchema schema) {
+    private String objectViolation(Object value, ObjectSchema schema) {
         if (!(value instanceof Map<?, ?> map)) {
-            return false;
+            return typeMismatch("object", value);
         }
         for (var required : schema.getRequired()) {
             if (!map.containsKey(required)) {
-                return false;
+                return "missing required property '" + required + "'";
             }
         }
         if (schema.getMinProperties() != null && map.size() < schema.getMinProperties()) {
-            return false;
+            return map.size() + " properties is below minProperties " + schema.getMinProperties();
         }
         if (schema.getMaxProperties() != null && map.size() > schema.getMaxProperties()) {
-            return false;
+            return map.size() + " properties is above maxProperties " + schema.getMaxProperties();
         }
         for (var entry : map.entrySet()) {
             var propertySchema = schema.getProperties().get(entry.getKey());
             if (propertySchema != null) {
-                if (!satisfies(entry.getValue(), propertySchema)) {
-                    return false;
+                var nested = violation(entry.getValue(), propertySchema);
+                if (nested != null) {
+                    return "property '" + entry.getKey() + "': " + nested;
                 }
             } else if (Boolean.FALSE.equals(schema.getAdditionalProperties())) {
-                return false;
-            } else if (schema.getAdditionalProperties() instanceof Schema additionalSchema
-                    && !satisfies(entry.getValue(), additionalSchema)) {
-                return false;
+                return "property '" + entry.getKey() + "' is not allowed by additionalProperties";
+            } else if (schema.getAdditionalProperties() instanceof Schema additionalSchema) {
+                var nested = violation(entry.getValue(), additionalSchema);
+                if (nested != null) {
+                    return "additional property '" + entry.getKey() + "': " + nested;
+                }
             }
         }
         for (var entry : schema.getDependentRequired().entrySet()) {
             if (map.containsKey(entry.getKey()) && !map.keySet().containsAll(entry.getValue())) {
-                return false;
+                return "property '" + entry.getKey() + "' requires " + entry.getValue();
             }
         }
         for (var entry : schema.getDependentSchemas().entrySet()) {
-            if (map.containsKey(entry.getKey()) && !satisfies(value, entry.getValue())) {
-                return false;
+            if (map.containsKey(entry.getKey())) {
+                var nested = violation(value, entry.getValue());
+                if (nested != null) {
+                    return "dependentSchemas for '" + entry.getKey() + "': " + nested;
+                }
             }
         }
-        return true;
+        return null;
     }
 
-    private boolean satisfiesArray(Object value, ArraySchema schema) {
+    private String arrayViolation(Object value, ArraySchema schema) {
         if (!(value instanceof List<?> list)) {
-            return false;
+            return typeMismatch("array", value);
         }
         if (schema.getMinItems() != null && list.size() < schema.getMinItems()) {
-            return false;
+            return list.size() + " items is below minItems " + schema.getMinItems();
         }
         if (schema.getMaxItems() != null && list.size() > schema.getMaxItems()) {
-            return false;
+            return list.size() + " items is above maxItems " + schema.getMaxItems();
         }
         var prefixSchemas = schema.getPrefixSchemas();
         var itemSchema = schema.getItemSchema();
         for (int i = 0; i < list.size(); i++) {
             if (i < prefixSchemas.size()) {
-                if (!satisfies(list.get(i), prefixSchemas.get(i))) {
-                    return false;
+                var nested = violation(list.get(i), prefixSchemas.get(i));
+                if (nested != null) {
+                    return "item " + i + ": " + nested;
                 }
             } else if (!schema.areAdditionalItemsAllowed()) {
-                return false;
-            } else if (itemSchema != null && !satisfies(list.get(i), itemSchema)) {
-                return false;
+                return "item " + i + " is beyond the " + prefixSchemas.size() + " allowed prefix items";
+            } else if (itemSchema != null) {
+                var nested = violation(list.get(i), itemSchema);
+                if (nested != null) {
+                    return "item " + i + ": " + nested;
+                }
             }
         }
         if (schema.getContains() != null) {
             for (var contains : schema.getContains()) {
                 if (list.stream().noneMatch(item -> satisfies(item, contains))) {
-                    return false;
+                    return "no item satisfies the contains schema";
                 }
             }
         }
         if (schema.isUniqueItems() && new HashSet<>(list).size() != list.size()) {
-            return false;
+            return "items are not unique";
         }
-        return true;
+        return null;
+    }
+
+    /**
+     * Why each branch of a {@code oneOf}/{@code anyOf} group rejected the
+     * value, so a group that nothing matched explains itself rather than only
+     * reporting the count. Long groups are cut short, with the number of
+     * branches left unreported stated rather than silently dropped.
+     */
+    private String branchViolations(Object value, List<Schema> group, int refDepth) {
+        int reported = Math.min(group.size(), MAX_REPORTED_BRANCHES);
+        var reasons = new StringBuilder();
+        for (int i = 0; i < reported; i++) {
+            if (i > 0) {
+                reasons.append("; ");
+            }
+            reasons.append("branch ").append(i).append(": ").append(violation(value, group.get(i), refDepth));
+        }
+        if (group.size() > reported) {
+            reasons.append("; and ").append(group.size() - reported).append(" more");
+        }
+        return reasons.toString();
+    }
+
+    private static String typeMismatch(String expected, Object value) {
+        if (value == null) {
+            return "expected " + expected + ", got null";
+        }
+        return "expected " + expected + ", got " + value.getClass().getSimpleName();
+    }
+
+    /**
+     * A value rendered short enough to sit inside a log line, abbreviated
+     * with a trailing ellipsis when it would otherwise run long.
+     */
+    private static String describe(Object value) {
+        if (value == null) {
+            return "null";
+        }
+        var rendered = value instanceof String s ? "'" + s + "'" : value.toString();
+        if (rendered.length() <= MAX_DESCRIBED_LENGTH) {
+            return rendered;
+        }
+        return rendered.substring(0, MAX_DESCRIBED_LENGTH) + "...";
     }
 
     /**

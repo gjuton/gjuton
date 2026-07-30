@@ -61,16 +61,29 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
             return switch (phase) {
                 case MIN_LENGTH -> hasLowerLengthBound() ? generateFromPatternWithLength(minLength) : skip();
                 case MAX_LENGTH -> hasUpperLengthBound() ? generateFromPatternWithLength(maxLength) : skip();
-                case EMPTY -> minLength == 0 ? generateFromPatternWithLength(0) : skip();
+                case EMPTY -> minLength == 0 ? generateFromPatternWithLength(0) : skipEmptyPhase(minLength);
                 case RANDOM -> result(generateFromPattern());
             };
         }
         return switch (phase) {
-            case MIN_LENGTH -> hasLowerLengthBound() ? result(RandomUtil.randomStringOfLength(alphabet(), minLength, context.random())) : skip();
-            case MAX_LENGTH -> hasUpperLengthBound() ? result(RandomUtil.randomStringOfLength(alphabet(), maxLength, context.random())) : skip();
-            case EMPTY -> minLength == 0 ? result("") : skip();
+            case MIN_LENGTH -> hasLowerLengthBound()
+                    ? result(RandomUtil.randomStringOfLength(alphabet(), minLength, context.random()))
+                    : skip();
+            case MAX_LENGTH -> hasUpperLengthBound()
+                    ? result(RandomUtil.randomStringOfLength(alphabet(), maxLength, context.random()))
+                    : skip();
+            case EMPTY -> minLength == 0 ? result("") : skipEmptyPhase(minLength);
             case RANDOM -> result(randomString());
         };
+    }
+
+    /**
+     * Declines the EMPTY phase, naming the effective minimum that rules the
+     * empty string out.
+     */
+    private GenerationResult<String> skipEmptyPhase(int minLength) {
+        log.trace("skipping the EMPTY phase: the effective minimum length is {}", minLength);
+        return skip();
     }
 
     private int effectiveMinLength() {
@@ -103,6 +116,8 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
                 return result(candidate);
             }
         }
+        log.trace("giving up on length {}: {} attempts at pattern '{}' produced no match of that length",
+                targetLength, PATTERN_RETRY_BUDGET, schema.getPattern());
         return skip();
     }
 

@@ -31,11 +31,11 @@ final class RefGenerator implements Generator<Object> {
         }
         var schema = context.resolveRef(ref);
         var target = context.generatorFor(schema);
-        context.incrementGlobalRefDepth();
+        context.enterRef(ref);
         try {
             return target.generate();
         } finally {
-            context.decrementGlobalRefDepth();
+            context.exitRef();
         }
     }
 }

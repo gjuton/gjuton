@@ -69,7 +69,11 @@ final class NumericGenerator extends PhaseGenerator<NumericGenerator.GenerationP
     }
 
     private GenerationResult<Number> resultIfValid(BigDecimal value) {
-        return isValid(value) ? result(toOutput(value)) : skip();
+        if (!isValid(value)) {
+            log.trace("boundary value {} is unusable: it falls outside the effective range or violates multipleOf", value);
+            return skip();
+        }
+        return result(toOutput(value));
     }
 
     private Number toOutput(BigDecimal value) {

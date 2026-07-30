@@ -8,6 +8,8 @@ import io.github.gjuton.internal.generator.GenerationResult;
 import io.github.gjuton.internal.generator.GeneratorContext;
 import io.github.gjuton.internal.generator.PhaseGenerator;
 import io.github.gjuton.internal.model.StringSchema;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.regex.Pattern;
 
 /**
@@ -33,29 +35,79 @@ abstract class StringFormatGenerator<E extends Enum<E>> extends PhaseGenerator<E
     }
 
     protected final GenerationResult<String> tryCandidate(String candidate) {
-        return acceptable(candidate) ? result(candidate) : skip();
+        if (!acceptable(candidate)) {
+            log.trace("rejecting the {} candidate '{}': it violates the schema's pattern or length bounds",
+                    schema.getFormat(), candidate);
+            return skip();
+        }
+        return result(candidate);
     }
 
     protected final String randomWithRetry() {
+        var rejections = new LinkedHashMap<String, Integer>();
+        String lastCandidate = null;
         for (int attempt = 0; attempt < RETRY_BUDGET; attempt++) {
             var candidate = generateCandidate();
-            if (acceptable(candidate)) {
+            var rejection = rejection(candidate);
+            if (rejection == null) {
                 return candidate;
             }
+            lastCandidate = candidate;
+            rejections.merge(rejection, 1, Integer::sum);
         }
+        // Logged as one summary rather than per candidate: the budget is large,
+        // and which constraint did the rejecting is what identifies the one the
+        // candidates are blind to.
+        log.trace("no {} candidate accepted in {} attempts against {}: rejected on {}; last candidate '{}'",
+                schema.getFormat(), RETRY_BUDGET, constraintSummary(), rejections, lastCandidate);
         throw new UnsatisfiableSchemaException(
-                "Not able to generate a value satisfying the schema's pattern and length constraints",
+                "Not able to generate a value satisfying the schema's " + constraintSummary(),
                 context.currentJsonPointer());
     }
 
+    /**
+     * Names the constraints a candidate has to clear, as they appear in the
+     * schema. Only the constraints actually declared are named, so a schema
+     * carrying just one of them is not reported as failing both.
+     */
+    private String constraintSummary() {
+        var parts = new ArrayList<String>();
+        if (schema.getPattern() != null) {
+            parts.add("pattern " + schema.getPattern());
+        }
+        if (schema.getMinLength() != null) {
+            parts.add("minLength " + schema.getMinLength());
+        }
+        if (schema.getMaxLength() != null) {
+            parts.add("maxLength " + schema.getMaxLength());
+        }
+        return String.join(", ", parts);
+    }
+
     private boolean acceptable(String candidate) {
+        return rejection(candidate) == null;
+    }
+
+    /**
+     * Names the constraint {@code candidate} fails, or {@code null} if it
+     * meets them all. The sole account of what a candidate has to clear, so
+     * a constraint added here is counted and reported without further work.
+     */
+    private String rejection(String candidate) {
+        if (!withinLengthBounds(candidate)) {
+            return "length";
+        }
+        if (compiledPattern != null && !compiledPattern.matcher(candidate).find()) {
+            return "pattern";
+        }
+        return null;
+    }
+
+    private boolean withinLengthBounds(String candidate) {
         if (schema.getMinLength() != null && candidate.length() < schema.getMinLength()) {
             return false;
         }
-        if (schema.getMaxLength() != null && candidate.length() > schema.getMaxLength()) {
-            return false;
-        }
-        return compiledPattern == null || compiledPattern.matcher(candidate).find();
+        return schema.getMaxLength() == null || candidate.length() <= schema.getMaxLength();
     }
 
     protected abstract String generateCandidate();

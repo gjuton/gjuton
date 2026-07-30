@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * Combines multiple schemas into one by taking the intersection of their
@@ -27,6 +28,7 @@ import java.util.stream.Stream;
  * {@code anyOf}/{@code oneOf} when parent-level sibling constraints need
  * to be folded into each branch.
  */
+@Slf4j
 final class SchemaMerger {
 
     private SchemaMerger() {
@@ -89,15 +91,17 @@ final class SchemaMerger {
     /**
      * Merges each schema in {@code schemas} with {@code other}, returning
      * only the compatible results. Schemas that are incompatible with
-     * {@code other} are silently omitted from the returned list.
+     * {@code other} are omitted from the returned list without failing the
+     * merge, so the returned list may be shorter than {@code schemas} and
+     * nothing else signals that to the caller.
      */
     static List<Schema> mergeEachWith(List<Schema> schemas, Schema other) {
         var result = new ArrayList<Schema>();
-        for (var schema : schemas) {
+        for (int i = 0; i < schemas.size(); i++) {
             try {
-                result.add(merge(List.of(schema, other)));
-            } catch (UnsatisfiableSchemaException ignored) {
-                // Schema incompatible with the other — drop it.
+                result.add(merge(List.of(schemas.get(i), other)));
+            } catch (UnsatisfiableSchemaException incompatible) {
+                log.trace("dropping branch {}: incompatible with the parent schema: {}", i, incompatible.getMessage());
             }
         }
         return result;
@@ -183,6 +187,13 @@ final class SchemaMerger {
             throw new UnsatisfiableSchemaException(
                     "String length range is empty: minLength " + minLength
                             + " exceeds maxLength " + maxLength + locations.get());
+        }
+        if (a.getPattern() != null && b.getPattern() != null && !a.getPattern().equals(b.getPattern())) {
+            // Not a warning: the merge may belong to an anyOf branch that is
+            // discarded anyway, so the dropped pattern often costs nothing.
+            log.trace("merging regex patterns is not supported, keeping '{}' and dropping '{}'{}: "
+                    + "generated values may violate the dropped pattern",
+                    a.getPattern(), b.getPattern(), locations.get());
         }
         return StringSchema.builder()
                 .minLength(minLength)
@@ -334,8 +345,10 @@ final class SchemaMerger {
                     result.set(i, combinedClause);
                     combined = true;
                     break;
-                } catch (UnsatisfiableSchemaException ignored) {
+                } catch (UnsatisfiableSchemaException incompatible) {
                     // No element can satisfy both — leave that clause alone and try the next.
+                    log.trace("keeping contains clause {} separate{}: no single element can satisfy it together "
+                            + "with the clause already there: {}", i, locations.get(), incompatible.getMessage());
                 }
             }
             if (!combined) {

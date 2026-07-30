@@ -30,23 +30,38 @@ import io.github.gjuton.internal.model.StringSchema;
 import io.github.gjuton.internal.model.UnsatisfiableSchema;
 import io.github.gjuton.internal.model.UntypedSchema;
 import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Supplier;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 /**
  * Internal entry point for value generation. Selects the appropriate
  * type-specific {@link Generator} for a schema and delegates to it.
  */
+@Slf4j
 public final class JsonGenerator {
 
     private final Generator<?> delegate;
     private final GeneratorContext context;
 
+    /**
+     * The seed generation draws from and where it came from, as
+     * {@link GjutonMdc#SEED_KEY} reports it. {@code null} for a nested
+     * schema's generator, which never starts a run of its own.
+     */
+    private final String seedLabel;
+
     public JsonGenerator(Long seed, SchemaDocument document, GeneratorConfig config) {
-        this(document.getRoot(),
-                new GeneratorContext(document, seed != null ? new Random(seed) : new Random(), config));
+        long resolvedSeed = seed != null ? seed : ThreadLocalRandom.current().nextLong();
+        this.seedLabel = (seed != null ? "supplied-" : "random-") + resolvedSeed;
+        this.context = new GeneratorContext(document, new Random(resolvedSeed), config);
+        this.delegate = buildDelegate(document.getRoot(), context);
     }
 
     JsonGenerator(Schema schema, GeneratorContext context) {
+        this.seedLabel = null;
         this.context = context;
         this.delegate = buildDelegate(schema, context);
     }
@@ -78,6 +93,10 @@ public final class JsonGenerator {
      * through and this method throws.
      */
     public Object generateRoot() {
+        if (MDC.get(GjutonMdc.RUN_ID_KEY) == null) {
+            MDC.put(GjutonMdc.RUN_ID_KEY, UUID.randomUUID().toString());
+        }
+        MDC.put(GjutonMdc.SEED_KEY, seedLabel);
         context.startRun();
         var override = context.currentOverride();
         try {
@@ -85,6 +104,7 @@ public final class JsonGenerator {
             return OverriddenValue.strip(generated);
         } finally {
             context.completeRun();
+            GjutonMdc.clear();
         }
     }
 
@@ -172,7 +192,11 @@ public final class JsonGenerator {
             case RELATIVE_JSON_POINTER -> new RelativeJsonPointerGenerator(context, schema);
             case REGEX -> new RegexGenerator(context, schema);
             case DURATION -> new DurationGenerator(context, schema);
-            default -> new StringGenerator(context, schema);
+            default -> {
+                log.trace("the schema names the format {}, which gjuton does not model: values are plain "
+                        + "strings constrained only by length and pattern", schema.getFormat());
+                yield new StringGenerator(context, schema);
+            }
         };
     }
 }

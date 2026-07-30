@@ -33,8 +33,12 @@ implementation 'io.github.gjuton:gjuton:0.0.1'
 Gjuton is pre-1.0 — breaking changes may land in any release. Pin a specific
 version and check the [changelog](CHANGELOG.md) before upgrading.
 
-Gjuton pulls in two transitive dependencies: Jackson (JSON serialization) and
-RgxGen (`pattern` generation).
+Gjuton pulls in three transitive dependencies:
+
+- Jackson — JSON serialization
+- RgxGen — `pattern` generation
+- slf4j-api — trace logging; no logging implementation is bundled, so your
+  existing setup is left alone
 
 ## Quick start
 

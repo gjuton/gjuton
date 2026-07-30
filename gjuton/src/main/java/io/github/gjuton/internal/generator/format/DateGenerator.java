@@ -44,7 +44,11 @@ public final class DateGenerator extends StringFormatGenerator<DateGenerator.Dat
             case LEAP_DAY -> {
                 var leapDay = DateUtil.leapDayInRange(
                         context.constraints().dateMin(), context.constraints().dateMax());
-                yield leapDay != null ? tryCandidate(leapDay.toString()) : skip();
+                if (leapDay == null) {
+                    log.trace("skipping the LEAP_DAY phase: the configured date range spans no 29 February");
+                    yield skip();
+                }
+                yield tryCandidate(leapDay.toString());
             }
             case RANDOM -> result(randomWithRetry());
         };

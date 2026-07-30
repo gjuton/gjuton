@@ -85,6 +85,8 @@ public final class UriReferenceGenerator extends StringFormatGenerator<UriRefere
      */
     private GenerationResult<String> randomAbsoluteUriOfLength() {
         if (coalesce(schema.getMaxLength(), DEFAULT_LONG_TARGET) < minAbsolute) {
+            log.trace("skipping the ABSOLUTE phase: the shortest absolute URI needs {} characters, more than maxLength allows",
+                    minAbsolute);
             return skip();
         }
         var alphabet = RandomUtil.randomOne(alphabets, context.random());

@@ -12,6 +12,7 @@ import com.networknt.schema.SpecVersionDetector;
 import com.networknt.schema.ValidationMessage;
 import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
+import io.github.gjuton.internal.generator.GjutonMdc;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.MDC;
 
 @Execution(ExecutionMode.CONCURRENT)
 @Slf4j
@@ -313,19 +315,29 @@ class IntegrationTest {
 
         var rows = new ArrayList<Arguments>(iterations);
         for (int i = 1; i <= iterations; i++) {
+            var runId = name + "#" + i;
             String json;
             try {
-                json = callWithTimeout(gen::generate, GENERATION_TIMEOUT_SECONDS);
+                json = callWithTimeout(() -> {
+                    // Generation happens on the executor's thread, and the run id is
+                    // read there, so putting it in place on this one would not reach it.
+                    MDC.put(GjutonMdc.RUN_ID_KEY, runId);
+                    try {
+                        return gen.generate();
+                    } finally {
+                        MDC.remove(GjutonMdc.RUN_ID_KEY);
+                    }
+                }, GENERATION_TIMEOUT_SECONDS);
             } catch (RuntimeException e) {
                 return List.of(failureRow(name, content, path, "generation at invocation " + i + " " + e.getMessage()));
             }
-            rows.add(Arguments.of(name, content, path, i, json, null));
+            rows.add(Arguments.of(name, content, path, i, json, null, runId));
         }
         return rows;
     }
 
     private static Arguments failureRow(String name, String content, Path path, String detail) {
-        return Arguments.of(name, content, path, 0, null, name + ": " + detail);
+        return Arguments.of(name, content, path, 0, null, name + ": " + detail, name + "#0");
     }
 
     static List<Arguments> schemaFiles() throws IOException, URISyntaxException {
@@ -372,7 +384,8 @@ class IntegrationTest {
 
     @ParameterizedTest(name = "{0} invocation={3}")
     @MethodSource("parameters")
-    void generatesValidJson(String schemaName, String schemaContent, Path schemaPath, int invocation, String json, String generationError) throws Exception {
+    void generatesValidJson(String schemaName, String schemaContent, Path schemaPath, int invocation, String json, String generationError, String runId)
+            throws Exception {
         // when
         if (generationError != null) {
             fail(generationError);
@@ -382,7 +395,7 @@ class IntegrationTest {
 
         // then
         assertThat(errors)
-                .as("%s invocation=%d", schemaName, invocation)
+                .as("%s invocation=%d runId=%s", schemaName, invocation, runId)
                 .isEmpty();
     }
 
@@ -400,7 +413,12 @@ class IntegrationTest {
         // when
         int invocation = 0;
         do {
-            gen.generate();
+            MDC.put(GjutonMdc.RUN_ID_KEY, schemaName + "#" + (invocation + 1));
+            try {
+                gen.generate();
+            } finally {
+                MDC.remove(GjutonMdc.RUN_ID_KEY);
+            }
             invocation++;
         } while (gen.noveltyScore() > 0.0 && invocation < noveltyIterations);
 

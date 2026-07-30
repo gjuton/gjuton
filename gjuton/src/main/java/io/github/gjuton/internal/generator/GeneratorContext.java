@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 
 /**
  * Shared mutable state for a single generation run.
@@ -22,6 +24,7 @@ import java.util.Set;
  * {@code $ref} targets, and ensures that generators reaching the same
  * schema definition share phase state rather than restarting independently.
  */
+@Slf4j
 public final class GeneratorContext {
 
     private static final int NOVELTY_WINDOW_SIZE = 5;
@@ -58,6 +61,13 @@ public final class GeneratorContext {
      * their smallest valid form so recursion terminates.
      */
     private int globalRefDepth;
+
+    /**
+     * The named {@code $ref} expansions currently on the call stack,
+     * outermost first. Tracks only part of {@link #globalRefDepth}: an
+     * {@code allOf} chain adds to the depth without naming a reference.
+     */
+    private final List<String> refChain = new ArrayList<>();
 
     /**
      * JSON path of the position currently being generated, e.g. {@code $.a[0]}.
@@ -114,6 +124,8 @@ public final class GeneratorContext {
             }
             var evictedGenerator = generatorCache.remove(eldest.getValue());
             if (evictedGenerator != null) {
+                log.trace("the merge cache is full at {} entries: discarding a merged schema and its novelty history",
+                        MERGED_SCHEMA_CACHE_CAPACITY);
                 noveltyBits.remove(evictedGenerator.delegate());
                 noveltyWindowByGenerator.remove(evictedGenerator.delegate());
             }
@@ -178,10 +190,32 @@ public final class GeneratorContext {
 
     void incrementGlobalRefDepth() {
         globalRefDepth++;
+        MDC.put(GjutonMdc.REF_DEPTH_KEY, Integer.toString(globalRefDepth));
     }
 
     void decrementGlobalRefDepth() {
         globalRefDepth--;
+        MDC.put(GjutonMdc.REF_DEPTH_KEY, Integer.toString(globalRefDepth));
+    }
+
+    /**
+     * Descends into {@code ref}, deepening the ref depth for as long as
+     * generation stays inside it. Must be paired with an {@link #exitRef}.
+     */
+    void enterRef(String ref) {
+        refChain.add(ref);
+        incrementGlobalRefDepth();
+        MDC.put(GjutonMdc.REF_CHAIN_KEY, String.join(" > ", refChain));
+    }
+
+    /**
+     * Ascends out of the reference entered with {@link #enterRef}, restoring
+     * the trace context to what it was before.
+     */
+    void exitRef() {
+        refChain.removeLast();
+        decrementGlobalRefDepth();
+        MDC.put(GjutonMdc.REF_CHAIN_KEY, String.join(" > ", refChain));
     }
 
     JsonGenerator generatorFor(Schema schema) {
@@ -196,6 +230,10 @@ public final class GeneratorContext {
     void startRun() {
         producedThisRun.clear();
         visitJournal.clear();
+        MDC.put(GjutonMdc.PATH_KEY, currentPath.toString());
+        MDC.put(GjutonMdc.REF_DEPTH_KEY, Integer.toString(globalRefDepth));
+        MDC.put(GjutonMdc.REF_CHAIN_KEY, String.join(" > ", refChain));
+        MDC.put(GjutonMdc.MODE_KEY, config.randomOnly() ? "RANDOM" : "EXHAUSTIVE");
     }
 
     /**
@@ -369,6 +407,7 @@ public final class GeneratorContext {
      */
     void enterPath(String pathSegment) {
         currentPath.append(pathSegment);
+        MDC.put(GjutonMdc.PATH_KEY, currentPath.toString());
     }
 
     /**
@@ -378,6 +417,7 @@ public final class GeneratorContext {
      */
     void exitPath(String pathSegment) {
         currentPath.setLength(currentPath.length() - pathSegment.length());
+        MDC.put(GjutonMdc.PATH_KEY, currentPath.toString());
     }
 
     /**
