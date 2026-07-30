@@ -18,6 +18,7 @@ import com.networknt.schema.oas.OpenApi30;
 import com.networknt.schema.oas.OpenApi31;
 import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
+import io.github.gjuton.internal.generator.GjutonMdc;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -42,6 +43,7 @@ import org.junit.jupiter.api.parallel.ExecutionMode;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.slf4j.MDC;
 import org.yaml.snakeyaml.LoaderOptions;
 
 /**
@@ -239,9 +241,20 @@ class OpenApiIntegrationTest {
      * within {@code timeoutSeconds}. Any failure is reported against {@code context},
      * which has to name the corpus entry: test reports identify a row only by its index,
      * so the message is all that ties a failure back to the schema that caused it.
+     * Trace output {@code task} produces is labelled with {@code context} too, so that
+     * cases running concurrently stay apart in the log.
      */
     private static <T> T callWithTimeout(String context, Callable<T> task, long timeoutSeconds) {
-        var future = EXECUTOR.submit(task);
+        // Put in place on the executor's thread, which is where the task runs and so
+        // where the label is read; setting it here would not reach it.
+        var future = EXECUTOR.submit(() -> {
+            MDC.put(GjutonMdc.RUN_ID_KEY, context);
+            try {
+                return task.call();
+            } finally {
+                MDC.remove(GjutonMdc.RUN_ID_KEY);
+            }
+        });
         try {
             return future.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (TimeoutException e) {

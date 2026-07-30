@@ -9,6 +9,7 @@ import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
 import io.github.gjuton.errors.JsonBindingException;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.generator.GjutonMdc;
 import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -19,6 +20,7 @@ import java.util.List;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 
 class GjutonTest {
 
@@ -728,6 +730,149 @@ class GjutonTest {
 
             // then
             assertThat(seen).containsExactlyInAnyOrder(ENUM_VALUES);
+        }
+    }
+
+    // Remove this test class, its not real behaviour, its just a hack for the integration tests
+    @Nested
+    class RunId {
+
+        @Test
+        void suppliesARunIdForTheDurationOfGenerationWhenTheCallerHasNone() {
+            // given
+            var observed = new ArrayList<String>();
+            var gen = Gjuton.of(OBJECT_SCHEMA)
+                    .withOverrideByName("a", () -> {
+                        observed.add(MDC.get(GjutonMdc.RUN_ID_KEY));
+                        return 1;
+                    });
+
+            // when
+            gen.generate();
+            gen.generate();
+
+            // then
+            assertThat(observed).hasSize(2).doesNotContainNull();
+            assertThat(observed.get(0)).isNotEqualTo(observed.get(1));
+            assertThat(MDC.get(GjutonMdc.RUN_ID_KEY)).isNull();
+        }
+
+        @Test
+        void keepsTheCallersRunIdForTheDurationOfGeneration() {
+            // given
+            var observed = new ArrayList<String>();
+            var gen = Gjuton.of(OBJECT_SCHEMA)
+                    .withOverrideByName("a", () -> {
+                        observed.add(MDC.get(GjutonMdc.RUN_ID_KEY));
+                        return 1;
+                    });
+            MDC.put(GjutonMdc.RUN_ID_KEY, "caller-owned");
+
+            // when
+            gen.generate();
+
+            // then
+            assertThat(observed).containsExactly("caller-owned");
+            assertThat(MDC.get(GjutonMdc.RUN_ID_KEY)).isNull();
+        }
+    }
+
+    @Nested
+    class TraceContext {
+
+        @Test
+        void labelsGenerationWithTheSeedAndModeItWasGiven() {
+            // given
+            var observed = new ArrayList<String>();
+            var gen = Gjuton.of(OBJECT_SCHEMA)
+                    .withSeed(99L)
+                    .withGenerationMode(GenerationMode.RANDOM)
+                    .withOverrideByName("a", () -> {
+                        observed.add(MDC.get(GjutonMdc.SEED_KEY) + "/" + MDC.get(GjutonMdc.MODE_KEY));
+                        return 1;
+                    });
+
+            // when
+            gen.generate();
+            gen.generate();
+
+            // then
+            assertThat(observed).containsExactly("supplied-99/RANDOM", "supplied-99/RANDOM");
+            assertThat(MDC.get(GjutonMdc.SEED_KEY)).isNull();
+            assertThat(MDC.get(GjutonMdc.MODE_KEY)).isNull();
+        }
+
+        @Test
+        void generatesASeedForARunGivenNone() {
+            // given
+            var observed = new ArrayList<String>();
+            var gen = Gjuton.of(OBJECT_SCHEMA)
+                    .withOverrideByName("a", () -> {
+                        observed.add(MDC.get(GjutonMdc.SEED_KEY));
+                        return 1;
+                    });
+
+            // when
+            gen.generate();
+
+            // then
+            assertThat(observed).singleElement().asString().matches("random--?\\d+");
+        }
+
+        @Test
+        void namesTheRefsGenerationIsCurrentlyInside() {
+            // given
+            var observed = new ArrayList<String>();
+            var schema = """
+                    {"type": "object",
+                     "properties": {"a": {"$ref": "#/$defs/Wrapper"}},
+                     "required": ["a"],
+                     "$defs": {
+                       "Wrapper": {"type": "object", "properties": {"b": {"$ref": "#/$defs/Leaf"}}, "required": ["b"]},
+                       "Leaf": {"type": "integer"}
+                     }}
+                    """;
+            var gen = Gjuton.of(schema)
+                    .withOverrideByName("b", () -> {
+                        observed.add(MDC.get(GjutonMdc.REF_CHAIN_KEY));
+                        return 1;
+                    });
+
+            // when
+            gen.generate();
+
+            // then
+            assertThat(observed).containsExactly("#/$defs/Wrapper");
+            assertThat(MDC.get(GjutonMdc.REF_CHAIN_KEY)).isNull();
+        }
+    }
+
+    @Nested
+    class UnsatisfiableReporting {
+
+        @Test
+        void namesOnlyTheConstraintsTheSchemaActuallyDeclares() {
+            // given
+            var gen = Gjuton.of("""
+                    {"type": "string", "format": "uri", "pattern": "^https://fixed\\\\.example/only$"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(gen::generate)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("pattern ^https://fixed\\.example/only$")
+                    .hasMessageNotContaining("length");
+        }
+
+        @Test
+        void locatesAFailureAtTheDocumentRoot() {
+            // given
+            var gen = Gjuton.of("""
+                    {"type": "string", "format": "uri", "pattern": "^https://fixed\\\\.example/only$"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(gen::generate).hasMessageEndingWith("(at $)");
         }
     }
 }

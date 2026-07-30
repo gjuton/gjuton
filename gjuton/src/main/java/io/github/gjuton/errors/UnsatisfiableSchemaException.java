@@ -17,15 +17,17 @@ public class UnsatisfiableSchemaException extends RuntimeException {
     }
 
     /**
-     * Appends {@code " (at <schemaPath>)"} to the message unless the path
-     * is null or empty. Callers without a path should use the single-arg
-     * constructor to avoid ambiguity with the {@code (String, Throwable)}
-     * overload.
+     * Appends {@code " (at <schemaPath>)"} to the message, naming the document
+     * root as {@code $}. A message therefore carries a location whenever one
+     * was known, so a message without one means the location could not be
+     * determined rather than that the root was at fault. Callers without a
+     * path should use the single-arg constructor to avoid ambiguity with the
+     * {@code (String, Throwable)} overload.
      */
     public UnsatisfiableSchemaException(String message, String schemaPath) {
-        super(schemaPath != null && !schemaPath.isEmpty() && !"$".equals(schemaPath)
-                ? message + " (at " + schemaPath + ")"
-                : message);
+        super(schemaPath == null
+                ? message
+                : message + " (at " + (schemaPath.isEmpty() ? "$" : schemaPath) + ")");
     }
 
     public UnsatisfiableSchemaException(String message, Throwable cause) {

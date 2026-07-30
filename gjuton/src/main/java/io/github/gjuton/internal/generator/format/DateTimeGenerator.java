@@ -55,12 +55,29 @@ public final class DateTimeGenerator extends StringFormatGenerator<DateTimeGener
                     context.currentJsonPointer());
         }
         return switch (phase) {
-            case Y2038 -> withinRange(Instant.parse(Y2038_LAST_SECOND)) ? tryCandidate(Y2038_LAST_SECOND) : skip();
+            case Y2038 -> {
+                if (!withinRange(Instant.parse(Y2038_LAST_SECOND))) {
+                    log.trace("skipping the Y2038 phase: {} lies outside the configured date range", Y2038_LAST_SECOND);
+                    yield skip();
+                }
+                yield tryCandidate(Y2038_LAST_SECOND);
+            }
             case LEAP_DAY -> {
                 var leapDay = DateUtil.leapDayInRange(rangeMin(), rangeMax());
-                yield leapDay != null ? tryCandidate(leapDay + "T12:00:00Z") : skip();
+                if (leapDay == null) {
+                    log.trace("skipping the LEAP_DAY phase: the configured date range spans no 29 February");
+                    yield skip();
+                }
+                yield tryCandidate(leapDay + "T12:00:00Z");
             }
-            case MIDNIGHT -> withinRange(Instant.parse(MIDNIGHT_START_OF_YEAR)) ? tryCandidate(MIDNIGHT_START_OF_YEAR) : skip();
+            case MIDNIGHT -> {
+                if (!withinRange(Instant.parse(MIDNIGHT_START_OF_YEAR))) {
+                    log.trace("skipping the MIDNIGHT phase: {} lies outside the configured date range",
+                            MIDNIGHT_START_OF_YEAR);
+                    yield skip();
+                }
+                yield tryCandidate(MIDNIGHT_START_OF_YEAR);
+            }
             case RANDOM -> result(randomWithRetry());
         };
     }

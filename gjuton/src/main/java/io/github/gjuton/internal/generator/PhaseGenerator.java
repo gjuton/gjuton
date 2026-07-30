@@ -2,6 +2,9 @@ package io.github.gjuton.internal.generator;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.util.EnumUtil;
+import java.util.LinkedHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Generator that walks through a sequence of named phases, producing
@@ -11,6 +14,10 @@ import io.github.gjuton.internal.util.EnumUtil;
 public abstract class PhaseGenerator<E extends Enum<E>, R> implements Generator<R> {
 
     private static final int RETRY_BUDGET = 10;
+
+    // Subclasses share this one rather than declaring their own, so a line
+    // names the generator that ran, not the class that wrote it.
+    protected final Logger log = LoggerFactory.getLogger(getClass());
 
     protected final GeneratorContext context;
     private E phase;
@@ -31,14 +38,20 @@ public abstract class PhaseGenerator<E extends Enum<E>, R> implements Generator<
         UnsatisfiableSchemaException lastException = null;
         boolean cycling = !context.isMinimal() && !context.isRandomOnly();
         var candidate = startingPhase();
+        // Counted rather than logged per attempt: one cause usually repeats
+        // for the whole budget, burying the nested explanation of it.
+        var failureCounts = new LinkedHashMap<String, Integer>();
         for (int attempt = 0; attempt < RETRY_BUDGET; attempt++) {
             var triedPhase = candidate;
             GenerationResult<R> result;
+            boolean failed = false;
             try {
                 result = attemptPhase(triedPhase);
             } catch (UnsatisfiableSchemaException e) {
                 lastException = e;
                 result = GenerationResult.skip();
+                failed = true;
+                failureCounts.merge(triedPhase + ": " + e.getMessage(), 1, Integer::sum);
             }
             candidate = advanceToNext(candidate);
             if (cycling) {
@@ -47,7 +60,11 @@ public abstract class PhaseGenerator<E extends Enum<E>, R> implements Generator<
             if (result instanceof GenerationResult.Present<R> present) {
                 return present.value();
             }
+            if (!failed) {
+                failureCounts.merge(triedPhase + ": produced no value", 1, Integer::sum);
+            }
         }
+        log.trace("giving up after {} attempts: {}", RETRY_BUDGET, failureCounts);
         throw lastException != null ? lastException
                 : new UnsatisfiableSchemaException("Unable to generate a value satisfying the schema",
                         context.currentJsonPointer());

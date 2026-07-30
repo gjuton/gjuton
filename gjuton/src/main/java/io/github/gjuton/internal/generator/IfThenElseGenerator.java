@@ -53,7 +53,7 @@ final class IfThenElseGenerator extends PhaseGenerator<IfThenElseGenerator.Gener
      * {@code then}. Returns {@code null} when the merge is unsatisfiable, in
      * which case the then branch is skipped in favour of else.
      */
-    private static Schema composeIfAndThen(Schema base, List<Schema.Conditional> conditionals) {
+    private Schema composeIfAndThen(Schema base, List<Schema.Conditional> conditionals) {
         var branches = new ArrayList<Schema>();
         branches.add(base);
         for (var conditional : conditionals) {
@@ -67,6 +67,8 @@ final class IfThenElseGenerator extends PhaseGenerator<IfThenElseGenerator.Gener
         } catch (UnsatisfiableSchemaException unsatisfiable) {
             // Branch incompatible with the parent -- drop it (null) so the
             // other branch can still generate. See generatePhase.
+            log.trace("disabling the if/then branch: incompatible with the parent, so only else generates here: {}",
+                    unsatisfiable.getMessage());
             return null;
         }
     }
@@ -78,7 +80,7 @@ final class IfThenElseGenerator extends PhaseGenerator<IfThenElseGenerator.Gener
      * fail {@code if} is not encoded here — it is enforced by validating
      * each candidate.
      */
-    private static Schema composeElse(Schema base, List<Schema.Conditional> conditionals) {
+    private Schema composeElse(Schema base, List<Schema.Conditional> conditionals) {
         var branches = new ArrayList<Schema>();
         branches.add(base);
         for (var conditional : conditionals) {
@@ -94,6 +96,8 @@ final class IfThenElseGenerator extends PhaseGenerator<IfThenElseGenerator.Gener
         } catch (UnsatisfiableSchemaException unsatisfiable) {
             // Branch incompatible with the parent -- drop it (null) so the
             // other branch can still generate. See generatePhase.
+            log.trace("disabling the else branch: incompatible with the parent, so only if/then generates here: {}",
+                    unsatisfiable.getMessage());
             return null;
         }
     }
@@ -112,12 +116,15 @@ final class IfThenElseGenerator extends PhaseGenerator<IfThenElseGenerator.Gener
             case RANDOM -> throw new IllegalStateException("randomBranch() never picks RANDOM");
         };
         if (composed == null) {
+            log.trace("no value for the {} branch: that branch is disabled", lastPickedBranch);
             return GenerationResult.skip();
         }
         var candidate = context.generatorFor(composed).generate();
-        if (validator.satisfies(candidate, validationTarget)) {
+        var violation = validator.violation(candidate, validationTarget);
+        if (violation == null) {
             return result(candidate);
         }
+        log.trace("discarding candidate for the {} branch: {}", lastPickedBranch, violation);
         return GenerationResult.skip();
     }
 

@@ -914,6 +914,124 @@ class SchemaValidatorTest {
         }
     }
 
+    @Nested
+    class ViolationReporting {
+
+        @Test
+        void satisfyingValueHasNoViolation() {
+            var document = SchemaParser.parse("""
+                    {"type": "string", "minLength": 2}
+                    """);
+
+            // when
+            var violation = createValidator(document).violation("abc", document.getRoot());
+
+            // then
+            assertThat(violation).isNull();
+        }
+
+        @Test
+        void namesTheConstraintAndTheOffendingValue() {
+            var document = SchemaParser.parse("""
+                    {"type": "string", "maxLength": 2}
+                    """);
+
+            // when
+            var violation = createValidator(document).violation("abcd", document.getRoot());
+
+            // then
+            assertThat(violation).isEqualTo("length 4 is above maxLength 2");
+        }
+
+        @Test
+        void locatesAViolationNestedInAProperty() {
+            var document = SchemaParser.parse("""
+                    {"type": "object", "properties": {"n": {"type": "integer", "minimum": 5}}}
+                    """);
+
+            // when
+            var violation = createValidator(document).violation(Map.of("n", 1), document.getRoot());
+
+            // then
+            assertThat(violation).isEqualTo("property 'n': 1 is below minimum 5");
+        }
+
+        @Test
+        void locatesAViolationNestedInAnItem() {
+            var document = SchemaParser.parse("""
+                    {"type": "array", "items": {"type": "string"}}
+                    """);
+
+            // when
+            var violation = createValidator(document).violation(List.of("a", 2), document.getRoot());
+
+            // then
+            assertThat(violation).isEqualTo("item 1: expected string, got Integer");
+        }
+
+        @Test
+        void reportsWhyEveryOneOfBranchRejectedTheValue() {
+            var document = SchemaParser.parse("""
+                    {"oneOf": [
+                        {"type": "object", "required": ["a"]},
+                        {"type": "object", "required": ["b"]}
+                    ]}
+                    """);
+
+            // when
+            var violation = createValidator(document).violation(Map.of("c", 1), document.getRoot());
+
+            // then
+            assertThat(violation).isEqualTo(
+                    "no oneOf branch matched — branch 0: missing required property 'a'; branch 1: missing required property 'b'");
+        }
+
+        @Test
+        void reportsAnAmbiguousOneOfAsACountRatherThanPerBranch() {
+            var document = SchemaParser.parse("""
+                    {"oneOf": [{"type": "object"}, {"type": "object"}]}
+                    """);
+
+            // when
+            var violation = createValidator(document).violation(Map.of("a", 1), document.getRoot());
+
+            // then
+            assertThat(violation).isEqualTo("2 of 2 oneOf branches matched, expected exactly 1");
+        }
+
+        @Test
+        void countsTheBranchesItDidNotReportOnRatherThanDroppingThem() {
+            var document = SchemaParser.parse("""
+                    {"oneOf": [
+                        {"type": "object", "required": ["a"]},
+                        {"type": "object", "required": ["b"]},
+                        {"type": "object", "required": ["c"]},
+                        {"type": "object", "required": ["d"]},
+                        {"type": "object", "required": ["e"]}
+                    ]}
+                    """);
+
+            // when
+            var violation = createValidator(document).violation(Map.of("z", 1), document.getRoot());
+
+            // then
+            assertThat(violation).endsWith("; and 2 more");
+        }
+
+        @Test
+        void abbreviatesAnOversizedValue() {
+            var document = SchemaParser.parse("""
+                    {"type": "string", "pattern": "^a$"}
+                    """);
+
+            // when
+            var violation = createValidator(document).violation("b".repeat(200), document.getRoot());
+
+            // then
+            assertThat(violation).startsWith("'bbb").contains("...").hasSizeLessThan(120);
+        }
+    }
+
     private static SchemaValidator createValidator(SchemaDocument document) {
         return new SchemaValidator(new GeneratorContext(document, new Random(42)));
     }

@@ -159,6 +159,7 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
         var optionalProperties = satisfiableOptionalProperties();
         advancePastExhaustedFocusProperties(optionalProperties);
         if (phase == GenerationPhase.FOCUS && focusCursor >= optionalProperties.size()) {
+            log.trace("skipping the FOCUS phase: every optional property is already covered");
             return GenerationResult.skip();
         }
         int requiredCount = requiredAndTransitiveRequired.size();
@@ -211,6 +212,7 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             // Forcing the focused property proved impossible; skip it so later FOCUS
             // attempts move on instead of re-targeting the same property every retry.
             if (focusProperty != null) {
+                log.trace("giving up on covering optional property '{}': {}", focusProperty, e.getMessage());
                 focusCursor++;
             }
             throw e;
@@ -234,6 +236,8 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             if (focusPropertyNoveltyScore.filter(score -> score == 0.0).isEmpty()) {
                 return;
             }
+            log.trace("optional property '{}' covered: no values left to contribute",
+                    optionalProperties.get(focusCursor));
             focusCursor++;
         }
     }
@@ -274,6 +278,9 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             Integer maxProperties = schema.getMaxProperties();
             if (maxProperties == null || tentative.size() <= maxProperties) {
                 selected = tentative;
+            } else {
+                log.trace("omitting optional property '{}': it and its {} dependencies would exceed maxProperties ({})",
+                        focusProperty, closure.size(), maxProperties);
             }
         }
 
@@ -424,6 +431,8 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             generatorIndex++;
             if (obj.containsKey(name)) {
                 collisions++;
+                log.trace("synthesized name '{}' is already taken: {} of {} allowed collisions used",
+                        name, collisions, PATTERN_NAME_RETRY_BUDGET);
             } else {
                 obj.put(name, context.generatorFor(withMatchingPatternSchemas(new UntypedSchema(), name)).generate());
             }
@@ -464,10 +473,14 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     private List<String> satisfiableOptionalProperties() {
         var result = new ArrayList<String>();
         for (var property : schema.getProperties().keySet()) {
-            if (!requiredAndTransitiveRequired.contains(property)
-                    && !(schema.getProperties().get(property) instanceof UnsatisfiableSchema)) {
-                result.add(property);
+            if (requiredAndTransitiveRequired.contains(property)) {
+                continue;
             }
+            if (schema.getProperties().get(property) instanceof UnsatisfiableSchema) {
+                log.trace("optional property '{}' can never be generated: its schema is false", property);
+                continue;
+            }
+            result.add(property);
         }
         return result;
     }

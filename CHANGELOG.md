@@ -17,12 +17,18 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 - Support for Draft 4 style boolean `exclusiveMinimum`/`exclusiveMaximum`, the
   form used by OpenAPI 3.0 and Swagger 2.0. The bound is taken from the
   accompanying `minimum`/`maximum`; previously such a schema failed to parse.
+- Trace logging to explain an unexpected value or a generation failure. Off by
+  default; enable the `io.github.gjuton` logger at `TRACE`. Adds a dependency on
+  `slf4j-api`; no logging implementation is bound.
 
 ### Changed
 
-- `UnsatisfiableSchemaException` messages from merge conflicts now identify the
-  conflicting schema locations (JSON Pointers) and name the concrete values or
-  types on both sides.
+- `UnsatisfiableSchemaException` messages now say more about what failed and
+  where: merge conflicts name the conflicting schema locations (JSON Pointers)
+  and the values or types on both sides, a string `format` failure names only
+  the constraints the schema actually declares, and a failure at the document
+  root is located as `(at $)` — a message with no location now means the
+  location could not be determined, rather than that the root was at fault.
 
 ### Fixed
 

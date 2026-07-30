@@ -124,7 +124,7 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
      *         does not bottom out within the configured hard {@code $ref}
      *         depth limit
      */
-    private static Schema mergeParentWithAllOf(GeneratorContext context, Schema parent) {
+    private Schema mergeParentWithAllOf(GeneratorContext context, Schema parent) {
         var baseTemp = parent.toBuilder()
                 .oneOf(null)
                 .anyOf(null)
@@ -146,6 +146,8 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
                     // so == detects self-referential $ref. Self-ref is tautological in
                     // allOf — the value already satisfies this schema by construction.
                     if (resolved == parent) {
+                        log.trace("skipping allOf branch {}: $ref '{}' points back at the schema being merged",
+                                locationIndex, branch.getRef());
                         locationIndex++;
                         continue;
                     }
@@ -172,7 +174,7 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
      * @throws UnsatisfiableSchemaException if the chain does not bottom out
      *         within the configured hard {@code $ref} depth limit
      */
-    private static Schema resolveAllOfChain(GeneratorContext context, Schema schema) {
+    private Schema resolveAllOfChain(GeneratorContext context, Schema schema) {
         if (schema.getAllOf() == null) {
             return schema;
         }
@@ -235,13 +237,18 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
             case RANDOM -> pickRandom();
         };
         var candidate = context.generatorFor(schema).generate();
-        if (validator.satisfies(candidate, validationTarget)) {
+        var violation = validator.violation(candidate, validationTarget);
+        if (violation == null) {
             return result(candidate);
         }
         var disambiguated = disambiguateOneOf(candidate);
         if (disambiguated != null) {
+            log.trace("candidate for branch {} of {} matched more than one oneOf branch and was repaired",
+                    lastPickedIndex, exhaustiveCycleLength);
             return result(disambiguated);
         }
+        log.trace("discarding candidate for branch {} of {} ({} oneOf, {} anyOf groups) in phase {}: {}",
+                lastPickedIndex, exhaustiveCycleLength, oneOfGroups.size(), anyOfGroups.size(), phase, violation);
         return GenerationResult.skip();
     }
 
@@ -360,8 +367,10 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
             var subset = RandomUtil.randomSubset(group, n, context.random());
             try {
                 return context.mergedSchema(subset);
-            } catch (UnsatisfiableSchemaException ignored) {
+            } catch (UnsatisfiableSchemaException incompatible) {
                 // try smaller
+                log.trace("anyOf subset of {} branches cannot be merged, retrying with {}: {}",
+                        n, n - 1, incompatible.getMessage());
             }
         }
         throw new IllegalStateException("Unreachable: N=1 must succeed");
