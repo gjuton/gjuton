@@ -1039,12 +1039,12 @@ class ObjectGeneratorTest {
 
     private static ObjectGenerator objectGenerator(String json) {
         var document = SchemaParser.parse(json);
-        return new ObjectGenerator(new GeneratorContext(document, new Random(42)), (ObjectSchema) document.getRoot());
+        return new ObjectGenerator(GeneratorContext.testContext(document, new Random(42)), (ObjectSchema) document.getRoot());
     }
 
     private static ObjectGenerator objectGeneratorWithAdditionalProperties(String json) {
         var document = SchemaParser.parse(json);
-        var config = new GeneratorConfig(false, true, 2, 4, Map.of(), Map.of(), ValueConstraints.forExhaustive());
+        var config = new GeneratorConfig(false, true, 2, 4, Map.of(), Map.of(), Map.of(), Map.of(), ValueConstraints.forExhaustive());
         var context = new GeneratorContext(document, new Random(42), config);
         return new ObjectGenerator(context, (ObjectSchema) document.getRoot());
     }
@@ -1065,7 +1065,7 @@ class ObjectGeneratorTest {
                         "required": ["a"]
                     }
                     """);
-            var context = new GeneratorContext(document, new Random(1));
+            var context = GeneratorContext.testContext(document, new Random(1));
             var generator = new ObjectGenerator(context, (ObjectSchema) document.getRoot());
 
             // when

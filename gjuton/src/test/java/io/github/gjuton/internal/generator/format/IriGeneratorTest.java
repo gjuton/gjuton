@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -14,7 +13,7 @@ class IriGeneratorTest {
 
     @Test
     void firstCallReturnsShortAbsoluteIri() {
-        var schema = StringSchema.builder().format(StringFormat.IRI).build();
+        var schema = StringSchema.builder().rawFormat("iri").build();
         var generator = new IriGenerator(withSeed(42), schema);
 
         // when
@@ -27,7 +26,7 @@ class IriGeneratorTest {
 
     @Test
     void respectsTightUpperBound() {
-        var schema = StringSchema.builder().format(StringFormat.IRI).maxLength(30).build();
+        var schema = StringSchema.builder().rawFormat("iri").maxLength(30).build();
         var generator = new IriGenerator(withSeed(42), schema);
 
         // when
@@ -41,7 +40,7 @@ class IriGeneratorTest {
 
     @Test
     void respectsTightLowerBound() {
-        var schema = StringSchema.builder().format(StringFormat.IRI).minLength(50).build();
+        var schema = StringSchema.builder().rawFormat("iri").minLength(50).build();
         var generator = new IriGenerator(withSeed(42), schema);
 
         // when
@@ -55,7 +54,7 @@ class IriGeneratorTest {
 
     @Test
     void unsatisfiableMaxLengthThrows() {
-        var schema = StringSchema.builder().format(StringFormat.IRI).maxLength(10).build();
+        var schema = StringSchema.builder().rawFormat("iri").maxLength(10).build();
 
         // when / then
         assertThatThrownBy(() -> new IriGenerator(withSeed(42), schema))
@@ -64,7 +63,7 @@ class IriGeneratorTest {
 
     @Test
     void unsatisfiableMinLengthThrows() {
-        var schema = StringSchema.builder().format(StringFormat.IRI).minLength(5000).build();
+        var schema = StringSchema.builder().rawFormat("iri").minLength(5000).build();
 
         // when / then
         assertThatThrownBy(() -> new IriGenerator(withSeed(42), schema))
@@ -73,7 +72,7 @@ class IriGeneratorTest {
 
     @Test
     void emitsAtLeastOneValueWithUnicodeCharacters() {
-        var schema = StringSchema.builder().format(StringFormat.IRI).build();
+        var schema = StringSchema.builder().rawFormat("iri").build();
         var generator = new IriGenerator(withSeed(42), schema);
 
         // when

@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 
@@ -72,19 +73,19 @@ public final class GeneratorContext {
     /**
      * JSON path of the position currently being generated, e.g. {@code $.a[0]}.
      * Object and array generators extend it as they descend into a child and
-     * restore it on the way back up, so {@link #currentOverride} can look up
-     * a producer registered for exactly this position.
+     * restore it on the way back up, so {@link #currentPathOverride} can look up
+     * an override registered for exactly this position.
      */
     private final StringBuilder currentPath = new StringBuilder("$");
 
     /**
      * Override values already produced during the current generation run, keyed
      * by path. A validate-and-retry parent may regenerate the same subtree
-     * several times within one run; memoizing here keeps each producer to a
+     * several times within one run; memoizing here keeps each override to a
      * single invocation per run and pins its value across those retries. Reset
      * by {@link #startRun}.
      */
-    private final Map<String, Object> producedThisRun = new HashMap<>();
+    private final Map<String, Object> overridesThisRun = new HashMap<>();
 
     /**
      * Whether each of the most recent completed generation runs produced at
@@ -142,8 +143,13 @@ public final class GeneratorContext {
     private record VisitJournalEntry(Generator<?> generator, int index) {
     }
 
-    GeneratorContext(SchemaDocument document, Random random) {
-        this(document, random, GeneratorConfig.defaults());
+    /**
+     * A context for tests that only care about generated values, configured
+     * for exhaustive generation with no overrides. Production code builds a
+     * context from the caller's own {@link GeneratorConfig}.
+     */
+    static GeneratorContext testContext(SchemaDocument document, Random random) {
+        return new GeneratorContext(document, random, GeneratorConfig.defaultExhaustive());
     }
 
     GeneratorContext(SchemaDocument document, Random random, GeneratorConfig config) {
@@ -224,11 +230,11 @@ public final class GeneratorContext {
 
     /**
      * Resets per-run generation state. Must be called once at the start of a
-     * full generation run so that each registered producer is consulted afresh
+     * full generation run so that each registered override is consulted afresh
      * for that run.
      */
     void startRun() {
-        producedThisRun.clear();
+        overridesThisRun.clear();
         visitJournal.clear();
         MDC.put(GjutonMdc.PATH_KEY, currentPath.toString());
         MDC.put(GjutonMdc.REF_DEPTH_KEY, Integer.toString(globalRefDepth));
@@ -345,42 +351,60 @@ public final class GeneratorContext {
 
     /**
      * Returns the caller's override for the position at the current path, or
-     * {@code null} if no producer is registered there.
+     * {@code null} if no override is registered there.
      *
-     * <p>Path-based producers are checked first; if none matches and the current
+     * <p>Path-based overrides are checked first; if none matches and the current
      * position is an object property (not an array element or the root),
-     * name-based producers are checked against the property name.
+     * name-based overrides are checked against the property name.
      *
-     * <p>Within one run (see {@link #startRun}) a producer is consulted at most
-     * once per memoization key. Path-based producers are keyed by path, so
-     * retries at the same position see the same value. Name-based producers are
+     * <p>Within one run (see {@link #startRun}) an override is consulted at most
+     * once per memoization key. Path-based overrides are keyed by path, so
+     * retries at the same position see the same value. Name-based overrides are
      * keyed by property name, so every position with the same name shares one
      * value per run — the property means the same thing wherever it appears.
      */
-    Object currentOverride() {
+    Object currentPathOverride() {
         var path = currentPath.toString();
-        var producer = config.producers().get(path);
-        if (producer != null) {
-            return producedThisRun.computeIfAbsent(path, ignored -> new OverriddenValue(producer.get()));
+        var override = config.pathOverrides().get(path);
+        if (override != null) {
+            return overridesThisRun.computeIfAbsent(path, ignored -> new OverriddenValue(override.get()));
         }
 
         // The path string doesn't distinguish position kinds (object property vs
         // array element vs root), so recover that from its shape: paths ending
         // with ']' are array elements, paths with no '.' are the root — only the
         // rest are object properties where name-based matching applies.
-        if (!config.nameProducers().isEmpty() && path.charAt(path.length() - 1) != ']') {
+        if (!config.nameOverrides().isEmpty() && path.charAt(path.length() - 1) != ']') {
             int lastDot = path.lastIndexOf('.');
             if (lastDot >= 0) {
                 var propertyName = path.substring(lastDot + 1);
-                var nameProducer = config.nameProducers().get(propertyName);
-                if (nameProducer != null) {
-                    return producedThisRun.computeIfAbsent(
-                            propertyName, ignored -> new OverriddenValue(nameProducer.get()));
+                var nameOverride = config.nameOverrides().get(propertyName);
+                if (nameOverride != null) {
+                    return overridesThisRun.computeIfAbsent(
+                            propertyName, ignored -> new OverriddenValue(nameOverride.get()));
                 }
             }
         }
 
         return null;
+    }
+
+    /**
+     * The caller's override for positions reaching a schema through
+     * {@code ref}, or {@code null} when none is registered. Matches the
+     * reference as written, so an inlined copy of the definition is missed.
+     */
+    Supplier<Object> refOverride(String ref) {
+        return config.refOverrides().get(ref);
+    }
+
+    /**
+     * The caller's override for strings carrying {@code format}, or
+     * {@code null} when none is registered. Matches the format as written,
+     * including ones gjuton does not model.
+     */
+    Supplier<Object> formatOverride(String format) {
+        return format == null ? null : config.formatOverrides().get(format);
     }
 
     /**

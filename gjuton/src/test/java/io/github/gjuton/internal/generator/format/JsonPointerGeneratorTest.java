@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -14,7 +13,7 @@ class JsonPointerGeneratorTest {
 
     @Test
     void producesValidJsonPointer() {
-        var schema = StringSchema.builder().format(StringFormat.JSON_POINTER).build();
+        var schema = StringSchema.builder().rawFormat("json-pointer").build();
         var generator = new JsonPointerGenerator(withSeed(42), schema);
 
         // when — skip the EMPTY phase
@@ -29,7 +28,7 @@ class JsonPointerGeneratorTest {
 
     @Test
     void emitsEmptyPointerFirst() {
-        var schema = StringSchema.builder().format(StringFormat.JSON_POINTER).build();
+        var schema = StringSchema.builder().rawFormat("json-pointer").build();
         var generator = new JsonPointerGenerator(withSeed(42), schema);
 
         // when
@@ -41,7 +40,7 @@ class JsonPointerGeneratorTest {
 
     @Test
     void producesVariedValues() {
-        var schema = StringSchema.builder().format(StringFormat.JSON_POINTER).build();
+        var schema = StringSchema.builder().rawFormat("json-pointer").build();
         var generator = new JsonPointerGenerator(withSeed(42), schema);
 
         // when
@@ -58,7 +57,7 @@ class JsonPointerGeneratorTest {
     void filtersCandidatesByPattern() {
         // Pattern requiring at least two segments — ~half of random pointers have 1 segment,
         // so without the retry loop many generations would violate the pattern.
-        var schema = StringSchema.builder().format(StringFormat.JSON_POINTER).pattern("/.+/.+").build();
+        var schema = StringSchema.builder().rawFormat("json-pointer").pattern("/.+/.+").build();
         var generator = new JsonPointerGenerator(withSeed(42), schema);
 
         // when
@@ -72,7 +71,7 @@ class JsonPointerGeneratorTest {
 
     @Test
     void respectsMinLength() {
-        var schema = StringSchema.builder().format(StringFormat.JSON_POINTER).minLength(5).build();
+        var schema = StringSchema.builder().rawFormat("json-pointer").minLength(5).build();
         var generator = new JsonPointerGenerator(withSeed(42), schema);
 
         // when
@@ -86,7 +85,7 @@ class JsonPointerGeneratorTest {
 
     @Test
     void respectsMaxLength() {
-        var schema = StringSchema.builder().format(StringFormat.JSON_POINTER).maxLength(5).build();
+        var schema = StringSchema.builder().rawFormat("json-pointer").maxLength(5).build();
         var generator = new JsonPointerGenerator(withSeed(42), schema);
 
         // when
@@ -100,7 +99,7 @@ class JsonPointerGeneratorTest {
 
     @Test
     void occasionallyEmitsEscapeSequences() {
-        var schema = StringSchema.builder().format(StringFormat.JSON_POINTER).build();
+        var schema = StringSchema.builder().rawFormat("json-pointer").build();
         var generator = new JsonPointerGenerator(withSeed(42), schema);
 
         // when
@@ -115,7 +114,7 @@ class JsonPointerGeneratorTest {
 
     @Test
     void minLengthGreaterThanMaxLengthThrows() {
-        var schema = StringSchema.builder().format(StringFormat.JSON_POINTER).minLength(10).maxLength(5).build();
+        var schema = StringSchema.builder().rawFormat("json-pointer").minLength(10).maxLength(5).build();
 
         // when / then
         assertThatThrownBy(() -> new JsonPointerGenerator(withSeed(42), schema))

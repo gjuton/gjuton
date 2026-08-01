@@ -19,7 +19,7 @@ class NotGeneratorTest {
     @Test
     void firstCallRegistersAsNovel() {
         var document = SchemaParser.parse(NOT_NULL);
-        var context = new GeneratorContext(document, new Random(42));
+        var context = GeneratorContext.testContext(document, new Random(42));
         var generator = new NotGenerator(context, document.getRoot());
 
         // when
@@ -34,7 +34,7 @@ class NotGeneratorTest {
     @Test
     void secondCallIsNotNovel() {
         var document = SchemaParser.parse(NOT_NULL);
-        var context = new GeneratorContext(document, new Random(42));
+        var context = GeneratorContext.testContext(document, new Random(42));
         var generator = new NotGenerator(context, document.getRoot());
 
         // when

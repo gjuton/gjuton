@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -14,7 +13,7 @@ class RelativeJsonPointerGeneratorTest {
 
     @Test
     void producesValidRelativeJsonPointer() {
-        var schema = StringSchema.builder().format(StringFormat.RELATIVE_JSON_POINTER).build();
+        var schema = StringSchema.builder().rawFormat("relative-json-pointer").build();
         var generator = new RelativeJsonPointerGenerator(withSeed(42), schema);
 
         // when — skip the SELF phase
@@ -27,7 +26,7 @@ class RelativeJsonPointerGeneratorTest {
 
     @Test
     void emitsSelfReferenceFirst() {
-        var schema = StringSchema.builder().format(StringFormat.RELATIVE_JSON_POINTER).build();
+        var schema = StringSchema.builder().rawFormat("relative-json-pointer").build();
         var generator = new RelativeJsonPointerGenerator(withSeed(42), schema);
 
         // when
@@ -39,7 +38,7 @@ class RelativeJsonPointerGeneratorTest {
 
     @Test
     void producesVariedValues() {
-        var schema = StringSchema.builder().format(StringFormat.RELATIVE_JSON_POINTER).build();
+        var schema = StringSchema.builder().rawFormat("relative-json-pointer").build();
         var generator = new RelativeJsonPointerGenerator(withSeed(42), schema);
 
         // when
@@ -56,7 +55,7 @@ class RelativeJsonPointerGeneratorTest {
     void filtersCandidatesByPattern() {
         // Pattern requiring the '#' suffix — ~half of random values use '#', so without the
         // retry loop many generations would violate it.
-        var schema = StringSchema.builder().format(StringFormat.RELATIVE_JSON_POINTER).pattern("#$").build();
+        var schema = StringSchema.builder().rawFormat("relative-json-pointer").pattern("#$").build();
         var generator = new RelativeJsonPointerGenerator(withSeed(42), schema);
 
         // when
@@ -70,7 +69,7 @@ class RelativeJsonPointerGeneratorTest {
 
     @Test
     void unsatisfiableMaxLengthThrows() {
-        var schema = StringSchema.builder().format(StringFormat.RELATIVE_JSON_POINTER).maxLength(0).build();
+        var schema = StringSchema.builder().rawFormat("relative-json-pointer").maxLength(0).build();
 
         // when / then
         assertThatThrownBy(() -> new RelativeJsonPointerGenerator(withSeed(42), schema))

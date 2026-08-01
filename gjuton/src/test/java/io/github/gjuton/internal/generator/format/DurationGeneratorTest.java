@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.time.Duration;
 import java.util.regex.Pattern;
@@ -25,7 +24,7 @@ class DurationGeneratorTest {
 
     @Test
     void firstResultIsZeroDuration() {
-        var schema = StringSchema.builder().format(StringFormat.DURATION).build();
+        var schema = StringSchema.builder().rawFormat("duration").build();
         var generator = new DurationGenerator(withSeed(42), schema);
 
         // when
@@ -37,7 +36,7 @@ class DurationGeneratorTest {
 
     @Test
     void randomPhaseProducesValidIsoDurations() {
-        var schema = StringSchema.builder().format(StringFormat.DURATION).build();
+        var schema = StringSchema.builder().rawFormat("duration").build();
         var generator = new DurationGenerator(withSeed(42), schema);
 
         // when
@@ -52,7 +51,7 @@ class DurationGeneratorTest {
 
     @Test
     void producesVariedValues() {
-        var schema = StringSchema.builder().format(StringFormat.DURATION).build();
+        var schema = StringSchema.builder().rawFormat("duration").build();
         var generator = new DurationGenerator(withSeed(42), schema);
 
         // when
@@ -68,7 +67,7 @@ class DurationGeneratorTest {
     @Test
     void unsatisfiableMaxLengthThrowsWithClearMessage() {
         // Shortest valid duration is "P0D" (3 chars); maxLength=2 cannot be satisfied.
-        var schema = StringSchema.builder().format(StringFormat.DURATION).maxLength(2).build();
+        var schema = StringSchema.builder().rawFormat("duration").maxLength(2).build();
         var generator = new DurationGenerator(withSeed(42), schema);
 
         // when / then
@@ -80,7 +79,7 @@ class DurationGeneratorTest {
     @Test
     void composesWithMaxLength() {
         // maxLength=4 admits durations like "P0D", "P3D", "P9Y" — all 3-4 chars.
-        var schema = StringSchema.builder().format(StringFormat.DURATION).maxLength(4).build();
+        var schema = StringSchema.builder().rawFormat("duration").maxLength(4).build();
         var generator = new DurationGenerator(withSeed(42), schema);
 
         // when
@@ -98,7 +97,7 @@ class DurationGeneratorTest {
     @Test
     void composesWithMinLength() {
         // minLength=6 excludes short forms like "P0D" (3 chars) — forces multi-component durations.
-        var schema = StringSchema.builder().format(StringFormat.DURATION).minLength(6).build();
+        var schema = StringSchema.builder().rawFormat("duration").minLength(6).build();
         var generator = new DurationGenerator(withSeed(42), schema);
 
         // when
@@ -116,7 +115,7 @@ class DurationGeneratorTest {
     @Test
     void composesWithPattern() {
         // Pattern restricts to durations containing a time part.
-        var schema = StringSchema.builder().format(StringFormat.DURATION).pattern("T").build();
+        var schema = StringSchema.builder().rawFormat("duration").pattern("T").build();
         var generator = new DurationGenerator(withSeed(42), schema);
 
         // when

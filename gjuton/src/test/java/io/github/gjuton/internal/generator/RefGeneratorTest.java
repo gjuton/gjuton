@@ -182,7 +182,7 @@ class RefGeneratorTest {
                 }
                 """.formatted(props);
         var document = SchemaParser.parse(schema);
-        var gen = new JsonGenerator(42L, document, GeneratorConfig.defaults());
+        var gen = new JsonGenerator(42L, document, GeneratorConfig.defaultExhaustive());
 
         // when
         // second call hits MAX_PROPERTIES phase, expanding all 50 refs
@@ -195,6 +195,6 @@ class RefGeneratorTest {
 
     private static RefGenerator refGenerator(String json, String ref) {
         var document = SchemaParser.parse(json);
-        return new RefGenerator(new GeneratorContext(document, new Random(42)), ref);
+        return new RefGenerator(GeneratorContext.testContext(document, new Random(42)), ref);
     }
 }

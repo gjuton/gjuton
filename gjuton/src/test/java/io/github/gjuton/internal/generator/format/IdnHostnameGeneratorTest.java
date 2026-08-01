@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -14,7 +13,7 @@ class IdnHostnameGeneratorTest {
 
     @Test
     void producesHostnamesContainingADot() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_HOSTNAME).build();
+        var schema = StringSchema.builder().rawFormat("idn-hostname").build();
         var generator = new IdnHostnameGenerator(withSeed(42), schema);
 
         // when
@@ -28,7 +27,7 @@ class IdnHostnameGeneratorTest {
 
     @Test
     void respectsLengthBounds() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_HOSTNAME).minLength(5).maxLength(15).build();
+        var schema = StringSchema.builder().rawFormat("idn-hostname").minLength(5).maxLength(15).build();
         var generator = new IdnHostnameGenerator(withSeed(42), schema);
 
         // when
@@ -42,7 +41,7 @@ class IdnHostnameGeneratorTest {
 
     @Test
     void unsatisfiableMinLengthThrows() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_HOSTNAME).minLength(200).build();
+        var schema = StringSchema.builder().rawFormat("idn-hostname").minLength(200).build();
 
         // when / then
         assertThatThrownBy(() -> new IdnHostnameGenerator(withSeed(42), schema))
@@ -51,7 +50,7 @@ class IdnHostnameGeneratorTest {
 
     @Test
     void unsatisfiableMaxLengthThrows() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_HOSTNAME).maxLength(2).build();
+        var schema = StringSchema.builder().rawFormat("idn-hostname").maxLength(2).build();
 
         // when / then
         assertThatThrownBy(() -> new IdnHostnameGenerator(withSeed(42), schema))
@@ -60,7 +59,7 @@ class IdnHostnameGeneratorTest {
 
     @Test
     void producesAtLeastOneHostnameWithUnicodeCharacters() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_HOSTNAME).build();
+        var schema = StringSchema.builder().rawFormat("idn-hostname").build();
         var generator = new IdnHostnameGenerator(withSeed(42), schema);
 
         // when
@@ -74,7 +73,7 @@ class IdnHostnameGeneratorTest {
 
     @Test
     void producesExpectedHostnamesForFixedSeed() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_HOSTNAME).build();
+        var schema = StringSchema.builder().rawFormat("idn-hostname").build();
         var generator = new IdnHostnameGenerator(withSeed(42), schema);
 
         // when

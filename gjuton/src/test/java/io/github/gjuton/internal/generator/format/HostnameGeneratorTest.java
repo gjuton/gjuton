@@ -4,7 +4,6 @@ import static io.github.gjuton.internal.generator.TestContexts.withSeed;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.Random;
 import java.util.stream.IntStream;
@@ -14,7 +13,7 @@ class HostnameGeneratorTest {
 
     @Test
     void respectsLengthBounds() {
-        var schema = StringSchema.builder().format(StringFormat.HOSTNAME).minLength(5).maxLength(15).build();
+        var schema = StringSchema.builder().rawFormat("hostname").minLength(5).maxLength(15).build();
         var generator = new HostnameGenerator(withSeed(42), schema);
 
         // when
@@ -71,7 +70,7 @@ class HostnameGeneratorTest {
 
     @Test
     void producesExpectedHostnamesForFixedSeed() {
-        var schema = StringSchema.builder().format(StringFormat.HOSTNAME).build();
+        var schema = StringSchema.builder().rawFormat("hostname").build();
         var generator = new HostnameGenerator(withSeed(42), schema);
 
         // when

@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.time.LocalDate;
 import java.util.stream.IntStream;
@@ -16,7 +15,7 @@ class DateGeneratorTest {
 
     @Test
     void firstResultIsLeapDay() {
-        var schema = StringSchema.builder().format(StringFormat.DATE).build();
+        var schema = StringSchema.builder().rawFormat("date").build();
         var generator = new DateGenerator(withSeed(42), schema);
 
         // when
@@ -30,7 +29,7 @@ class DateGeneratorTest {
 
     @Test
     void randomPhaseProducesParseableDate() {
-        var schema = StringSchema.builder().format(StringFormat.DATE).build();
+        var schema = StringSchema.builder().rawFormat("date").build();
         var generator = new DateGenerator(withSeed(42), schema);
 
         // when
@@ -45,7 +44,7 @@ class DateGeneratorTest {
 
     @Test
     void producesVariedValues() {
-        var schema = StringSchema.builder().format(StringFormat.DATE).build();
+        var schema = StringSchema.builder().rawFormat("date").build();
         var generator = new DateGenerator(withSeed(42), schema);
 
         // when
@@ -61,7 +60,7 @@ class DateGeneratorTest {
     @Test
     void unsatisfiableMinLengthThrows() {
         // RFC 3339 dates are fixed at 10 characters; a minLength of 11 cannot be satisfied.
-        var schema = StringSchema.builder().format(StringFormat.DATE).minLength(11).build();
+        var schema = StringSchema.builder().rawFormat("date").minLength(11).build();
         var generator = new DateGenerator(withSeed(42), schema);
 
         // when / then
@@ -70,7 +69,7 @@ class DateGeneratorTest {
 
     @Test
     void unsatisfiableMaxLengthThrows() {
-        var schema = StringSchema.builder().format(StringFormat.DATE).maxLength(9).build();
+        var schema = StringSchema.builder().rawFormat("date").maxLength(9).build();
         var generator = new DateGenerator(withSeed(42), schema);
 
         // when / then
@@ -80,7 +79,7 @@ class DateGeneratorTest {
     @Test
     void exactBoundaryLengthIsAccepted() {
         // minLength == maxLength == 10 matches every valid RFC 3339 date.
-        var schema = StringSchema.builder().format(StringFormat.DATE).minLength(10).maxLength(10).build();
+        var schema = StringSchema.builder().rawFormat("date").minLength(10).maxLength(10).build();
         var generator = new DateGenerator(withSeed(42), schema);
 
         // when
@@ -96,7 +95,7 @@ class DateGeneratorTest {
     void composesWithPattern() {
         // Pattern restricts to 20xx — exercises the retry loop because most
         // randomly drawn dates from the [1900, 2099] span fall outside the 21st century.
-        var schema = StringSchema.builder().format(StringFormat.DATE).pattern("^20").build();
+        var schema = StringSchema.builder().rawFormat("date").pattern("^20").build();
         var generator = new DateGenerator(withSeed(42), schema);
 
         // when

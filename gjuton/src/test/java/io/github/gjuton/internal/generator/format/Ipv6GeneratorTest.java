@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -14,7 +13,7 @@ class Ipv6GeneratorTest {
 
     @Test
     void producesExpectedAddressesForFixedSeed() {
-        var schema = StringSchema.builder().format(StringFormat.IPV6).build();
+        var schema = StringSchema.builder().rawFormat("ipv6").build();
         var generator = new Ipv6Generator(withSeed(42), schema);
 
         // when
@@ -34,7 +33,7 @@ class Ipv6GeneratorTest {
     @Test
     void unsatisfiableMaxLengthThrows() {
         // Shortest uncompressed form is "0:0:0:0:0:0:0:0" (15 chars).
-        var schema = StringSchema.builder().format(StringFormat.IPV6).maxLength(14).build();
+        var schema = StringSchema.builder().rawFormat("ipv6").maxLength(14).build();
         var generator = new Ipv6Generator(withSeed(42), schema);
 
         // when / then
@@ -44,7 +43,7 @@ class Ipv6GeneratorTest {
     @Test
     void unsatisfiableMinLengthThrows() {
         // Longest uncompressed form is "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff" (39 chars).
-        var schema = StringSchema.builder().format(StringFormat.IPV6).minLength(40).build();
+        var schema = StringSchema.builder().rawFormat("ipv6").minLength(40).build();
         var generator = new Ipv6Generator(withSeed(42), schema);
 
         // when / then

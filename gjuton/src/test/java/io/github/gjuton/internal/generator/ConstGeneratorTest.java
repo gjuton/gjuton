@@ -85,6 +85,6 @@ class ConstGeneratorTest {
 
     private static GeneratorContext contextFor(Schema root) {
         var document = new SchemaDocument(root, Map.of());
-        return new GeneratorContext(document, new Random(42));
+        return GeneratorContext.testContext(document, new Random(42));
     }
 }

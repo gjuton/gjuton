@@ -12,6 +12,6 @@ public final class TestContexts {
 
     public static GeneratorContext withSeed(long seed) {
         // TODO come up with a better strategy for reading schemas and contexts in unit tests
-        return new GeneratorContext(new SchemaDocument(new NullSchema(), Map.of()), new Random(seed));
+        return GeneratorContext.testContext(new SchemaDocument(new NullSchema(), Map.of()), new Random(seed));
     }
 }

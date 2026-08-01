@@ -9,7 +9,6 @@ import io.github.gjuton.internal.model.ArraySchema;
 import io.github.gjuton.internal.model.NullSchema;
 import io.github.gjuton.internal.model.NumericSchema;
 import io.github.gjuton.internal.model.ObjectSchema;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import io.github.gjuton.internal.model.UnsatisfiableSchema;
 import io.github.gjuton.internal.model.UntypedSchema;
@@ -767,7 +766,7 @@ class SchemaParserTest {
     class TypeParsing {
 
         @Test
-        void unknownFormatResolvesToUnknownSentinel() {
+        void aFormatGjutonDoesNotModelHasNoModelledConstant() {
             var document = SchemaParser.parse("""
                     {
                         "type": "string",
@@ -779,7 +778,30 @@ class SchemaParserTest {
             var schema = (StringSchema) document.getRoot();
 
             // then
-            assertThat(schema.getFormat()).isEqualTo(StringFormat.UNKNOWN);
+            assertThat(schema.getFormat()).isNull();
+            assertThat(schema.getRawFormat()).isEqualTo("made-up");
+        }
+
+        @Test
+        void formatIsRetainedAsWrittenEvenWhenNotModelled() {
+            var document = SchemaParser.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "iban": {"type": "string", "format": "iban"},
+                            "when": {"type": "string", "format": "date-time"},
+                            "plain": {"type": "string"}
+                        }
+                    }
+                    """);
+
+            // when
+            var properties = ((ObjectSchema) document.getRoot()).getProperties();
+
+            // then
+            assertThat(((StringSchema) properties.get("iban")).getRawFormat()).isEqualTo("iban");
+            assertThat(((StringSchema) properties.get("when")).getRawFormat()).isEqualTo("date-time");
+            assertThat(((StringSchema) properties.get("plain")).getRawFormat()).isNull();
         }
 
         @Test

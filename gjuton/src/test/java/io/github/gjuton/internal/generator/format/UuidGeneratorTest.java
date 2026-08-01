@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.UUID;
 import java.util.stream.IntStream;
@@ -16,7 +15,7 @@ class UuidGeneratorTest {
 
     @Test
     void producesCanonicalUuid() {
-        var schema = StringSchema.builder().format(StringFormat.UUID).build();
+        var schema = StringSchema.builder().rawFormat("uuid").build();
         var generator = new UuidGenerator(withSeed(42), schema);
 
         // when
@@ -29,7 +28,7 @@ class UuidGeneratorTest {
 
     @Test
     void producesVariedValues() {
-        var schema = StringSchema.builder().format(StringFormat.UUID).build();
+        var schema = StringSchema.builder().rawFormat("uuid").build();
         var generator = new UuidGenerator(withSeed(42), schema);
 
         // when
@@ -47,7 +46,7 @@ class UuidGeneratorTest {
         // Synthetic pattern chosen for selectivity, not realism: ~1/16 random UUIDs start with 'a',
         // so without the retry loop most generations would violate it. Realistic UUID-with-pattern
         // schemas (e.g. v4 enforcement) are covered end-to-end in IntegrationTest.
-        var schema = StringSchema.builder().format(StringFormat.UUID).pattern("^a").build();
+        var schema = StringSchema.builder().rawFormat("uuid").pattern("^a").build();
         var generator = new UuidGenerator(withSeed(42), schema);
 
         // when
@@ -65,7 +64,7 @@ class UuidGeneratorTest {
     @Test
     void unsatisfiableLengthThrows() {
         // Canonical UUIDs are always 36 chars; a minLength of 40 cannot be satisfied.
-        var schema = StringSchema.builder().format(StringFormat.UUID).minLength(40).build();
+        var schema = StringSchema.builder().rawFormat("uuid").minLength(40).build();
         var generator = new UuidGenerator(withSeed(42), schema);
 
         // when / then
@@ -75,7 +74,7 @@ class UuidGeneratorTest {
     @Test
     void unsatisfiableMaxLengthThrows() {
         // Canonical UUIDs are always 36 chars; a maxLength of 20 cannot be satisfied.
-        var schema = StringSchema.builder().format(StringFormat.UUID).maxLength(20).build();
+        var schema = StringSchema.builder().rawFormat("uuid").maxLength(20).build();
         var generator = new UuidGenerator(withSeed(42), schema);
 
         // when / then
@@ -85,7 +84,7 @@ class UuidGeneratorTest {
     @Test
     void respectsExactBoundaryLength() {
         // minLength == maxLength == 36 is satisfiable (the canonical UUID length).
-        var schema = StringSchema.builder().format(StringFormat.UUID).minLength(36).maxLength(36).build();
+        var schema = StringSchema.builder().rawFormat("uuid").minLength(36).maxLength(36).build();
         var generator = new UuidGenerator(withSeed(42), schema);
 
         // when

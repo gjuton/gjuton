@@ -120,7 +120,7 @@ final class SchemaMerger {
             merged = new UnsatisfiableSchema();
         } else if (a instanceof UntypedSchema && b instanceof UntypedSchema) {
             // Two untyped schemas have no type constraint to merge, so keeping the
-            // left side alone would drop the right side's $ref. Prefer whichever
+            // left side alone would drop the right side's $ref. Peefer whichever
             // side actually carries one.
             merged = (a.getRef() == null && b.getRef() != null)
                     ? b.toBuilder().build()
@@ -177,9 +177,9 @@ final class SchemaMerger {
      * conflicting formats throw {@link UnsatisfiableSchemaException}.
      */
     private static StringSchema mergeStringSchemas(StringSchema a, StringSchema b, Supplier<String> locations) {
-        if (a.getFormat() != null && b.getFormat() != null && a.getFormat() != b.getFormat()) {
+        if (a.getRawFormat() != null && b.getRawFormat() != null && !a.getRawFormat().equals(b.getRawFormat())) {
             throw new UnsatisfiableSchemaException(
-                    "Conflicting format constraints: " + a.getFormat() + " vs " + b.getFormat() + locations.get());
+                    "Conflicting format constraints: " + a.getRawFormat() + " vs " + b.getRawFormat() + locations.get());
         }
         var minLength = maxNullable(a.getMinLength(), b.getMinLength());
         var maxLength = minNullable(a.getMaxLength(), b.getMaxLength());
@@ -199,7 +199,7 @@ final class SchemaMerger {
                 .minLength(minLength)
                 .maxLength(maxLength)
                 .pattern(coalesce(a.getPattern(), b.getPattern()))
-                .format(coalesce(a.getFormat(), b.getFormat()))
+                .rawFormat(coalesce(a.getRawFormat(), b.getRawFormat()))
                 .build();
     }
 
