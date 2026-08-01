@@ -346,6 +346,13 @@ class IntegrationTest {
                 .toList();
     }
 
+    static List<Arguments> schemaFilesAndModes() throws IOException, URISyntaxException {
+        return schemaEntries().stream()
+                .flatMap(entry -> Stream.of(GenerationMode.values())
+                        .map(mode -> Arguments.of(entry.path().getFileName() + " [" + mode + "]", entry.path(), mode)))
+                .toList();
+    }
+
     /**
      * The {@code .json} schema files under every {@link #SCHEMA_LOCATIONS} resource
      * directory, the fixtures every parameterized integration test runs against,
@@ -426,6 +433,21 @@ class IntegrationTest {
         assertThat(gen.noveltyScore())
                 .as("%s's novelty score dropped to zero within %d iterations", schemaName, noveltyIterations)
                 .isEqualTo(0.0);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("schemaFilesAndModes")
+    void sameSeedProducesIdenticalValues(String schemaName, Path schemaPath, GenerationMode mode) throws IOException {
+        // given
+        var first = Gjuton.of(schemaPath.toFile()).withSeed(DEFAULT_SEED).withGenerationMode(mode);
+        var second = Gjuton.of(schemaPath.toFile()).withSeed(DEFAULT_SEED).withGenerationMode(mode);
+
+        // then
+        for (int i = 1; i <= 10; i++) {
+            assertThat(first.generate())
+                    .as("%s invocation=%d", schemaName, i)
+                    .isEqualTo(second.generate());
+        }
     }
 
     private static Set<ValidationMessage> validateOrFail(
