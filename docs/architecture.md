@@ -59,7 +59,8 @@ io.github.gjuton
 └── internal     implementation detail, not part of the public contract
     ├── parser   JSON → schema model
     ├── model    schema model classes
-    ├── generator model → JSON value string
+    ├── generator model → generated value tree
+    ├── output   generated value tree → JSON string or bound instance
     └── util     general-purpose utilities (math, random, string, functional)
 ```
 
@@ -70,21 +71,24 @@ Allowed dependencies between packages (enforced by ArchUnit — violations fail
 api          — entry point; may access all layers
 parser       — may only access model and errors
 generator    — may only access model, errors, and util
+output       — may only access errors
 model        — leaf; no dependencies on other internal packages
 util         — leaf; no dependencies on other internal packages
 errors       — leaf; no dependencies on other packages
 ```
 
-Jackson (`com.fasterxml.jackson`) is allowed only in `parser` and `model`.
-Consumers must only import from `api`, never from `internal` directly.
+Jackson (`com.fasterxml.jackson`) is allowed only in `parser`, `model` and
+`output`. Consumers must only import from `api`, never from `internal`
+directly.
 
-The `api`, `parser`, and `generator` packages and the leaf packages they build
-on:
+The `api`, `parser`, `generator`, and `output` packages and the leaf
+packages they build on:
 
 ```mermaid
 graph TD
     api --> parser
     api --> generator
+    api --> output
     api --> model
     api --> errors
     parser --> model
@@ -92,6 +96,7 @@ graph TD
     generator --> model
     generator --> util
     generator --> errors
+    output --> errors
 ```
 
 `model`, `util`, and `errors` are leaves — they have no outgoing dependencies on

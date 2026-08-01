@@ -1,4 +1,4 @@
-package io.github.gjuton.internal.parser;
+package io.github.gjuton.internal.output;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
