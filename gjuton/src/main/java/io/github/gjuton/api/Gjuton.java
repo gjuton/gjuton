@@ -654,6 +654,13 @@ public final class Gjuton {
      *     gen.generate();
      * }
      * }</pre>
+     *
+     * <p>Only a bounded window of recent calls counts, so the score reflects
+     * current behaviour rather than the whole history: it rises again when a
+     * call turns up something new after a stretch that didn't. And {@code 0.0}
+     * means a run of consecutive calls found nothing new, not that nothing new
+     * remains — a rarely taken branch may still be unexplored. It is a stopping
+     * heuristic, not a coverage guarantee.
      */
     public double noveltyScore() {
         return generator.noveltyScore();

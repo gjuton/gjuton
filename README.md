@@ -225,8 +225,10 @@ Gjuton gen = Gjuton.of(schema).withRecursionLimitsShallow();
 
 `noveltyScore()` reports the fraction of recent `generate()` calls that produced
 at least one value not already seen, in `[0, 1]`. It starts at `1.0` before any
-call and trends toward `0.0` as the generator exhausts its repertoire. Works in
-both `RANDOM` and `EXHAUSTIVE` mode.
+call and reaches `0.0` once a stretch of consecutive calls has turned up nothing
+new. Only recent calls count, so it can rise again as well as fall, and `0.0`
+means generation has plateaued — not that every reachable value has been
+produced. Works in both `RANDOM` and `EXHAUSTIVE` mode.
 
 ```java
 Gjuton gen = Gjuton.of(schema).withGenerationMode(GenerationMode.EXHAUSTIVE);
