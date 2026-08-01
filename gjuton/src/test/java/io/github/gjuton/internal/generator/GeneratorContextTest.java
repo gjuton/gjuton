@@ -400,26 +400,26 @@ class GeneratorContextTest {
     }
 
     @Test
-    void producerInvokedOncePerRunAndReusedOnRevisit() {
-        // given a counting producer registered at $.x
+    void overrideInvokedOncePerRunAndReusedOnRevisit() {
+        // given a counting override registered at $.x
         var invocations = new AtomicInteger();
-        var context = contextWithProducer("$.x", invocations::incrementAndGet);
+        var context = contextWithOverride("$.x", invocations::incrementAndGet);
         context.startRun();
 
         // when the same path is queried twice within one run, as a retry would
         var first = overrideAt(context, ".x");
         var second = overrideAt(context, ".x");
 
-        // then the producer ran once and both visits share its value
+        // then the override ran once and both visits share its value
         assertThat(invocations.get()).isEqualTo(1);
         assertThat(first).isEqualTo(second);
     }
 
     @Test
     void startRunProducesFreshValueForNextRun() {
-        // given a counting producer registered at $.x
+        // given a counting override registered at $.x
         var invocations = new AtomicInteger();
-        var context = contextWithProducer("$.x", invocations::incrementAndGet);
+        var context = contextWithOverride("$.x", invocations::incrementAndGet);
 
         // when each run queries the overridden path once
         context.startRun();
@@ -427,21 +427,21 @@ class GeneratorContextTest {
         context.startRun();
         overrideAt(context, ".x");
 
-        // then the producer is consulted once per run
+        // then the override is consulted once per run
         assertThat(invocations.get()).isEqualTo(2);
     }
 
     private static Object overrideAt(GeneratorContext context, String pathSegment) {
         context.enterPath(pathSegment);
         try {
-            return context.currentOverride();
+            return context.currentPathOverride();
         } finally {
             context.exitPath(pathSegment);
         }
     }
 
-    private static GeneratorContext contextWithProducer(String path, Supplier<Object> producer) {
-        var config = new GeneratorConfig(false, false, 2, 4, Map.of(path, producer), Map.of(), ValueConstraints.forExhaustive());
+    private static GeneratorContext contextWithOverride(String path, Supplier<Object> override) {
+        var config = new GeneratorConfig(false, false, 2, 4, Map.of(path, override), Map.of(), Map.of(), Map.of(), ValueConstraints.forExhaustive());
         return new GeneratorContext(new SchemaDocument(new NullSchema(), Map.of()), new Random(1), config);
     }
 }

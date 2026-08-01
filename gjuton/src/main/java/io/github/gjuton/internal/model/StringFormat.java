@@ -4,9 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * The recognised values of the JSON Schema {@code format} keyword for strings.
- * Unrecognised format values deserialize to {@link #UNKNOWN} and are treated
- * as plain strings by the generator.
+ * The values of the JSON Schema {@code format} keyword gjuton models. A schema
+ * may name any other format; the generator treats those as plain strings.
  */
 public enum StringFormat {
     DATE("date"),
@@ -26,8 +25,7 @@ public enum StringFormat {
     REGEX("regex"),
     JSON_POINTER("json-pointer"),
     RELATIVE_JSON_POINTER("relative-json-pointer"),
-    DURATION("duration"),
-    UNKNOWN(null);
+    DURATION("duration");
 
     private final String value;
 
@@ -40,13 +38,17 @@ public enum StringFormat {
         return value;
     }
 
+    /**
+     * The constant for {@code value}, or {@code null} when it names a format
+     * gjuton does not model or no format at all.
+     */
     @JsonCreator
     public static StringFormat fromValue(String value) {
         for (var format : values()) {
-            if (format.value != null && format.value.equals(value)) {
+            if (format.value.equals(value)) {
                 return format;
             }
         }
-        return UNKNOWN;
+        return null;
     }
 }

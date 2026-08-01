@@ -3,7 +3,6 @@ package io.github.gjuton.internal.generator;
 import static io.github.gjuton.internal.generator.TestContexts.withSeed;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -170,7 +169,7 @@ class StringGeneratorTest {
 
     @Test
     void unknownFormatIsNoOp() {
-        var schema = StringSchema.builder().format(StringFormat.UNKNOWN).maxLength(5).build();
+        var schema = StringSchema.builder().rawFormat("unmodelled").maxLength(5).build();
         var generator = new StringGenerator(withSeed(42), schema);
 
         // when

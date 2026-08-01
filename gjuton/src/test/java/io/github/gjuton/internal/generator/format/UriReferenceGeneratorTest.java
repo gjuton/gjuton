@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.Random;
 import java.util.stream.IntStream;
@@ -26,7 +25,7 @@ class UriReferenceGeneratorTest {
 
     @Test
     void randomLongUriHonorsMinLengthWhenMaxLengthIsUnset() {
-        var schema = StringSchema.builder().format(StringFormat.URI).minLength(200).build();
+        var schema = StringSchema.builder().rawFormat("uri").minLength(200).build();
         var random = new Random(42);
 
         // when
@@ -60,7 +59,7 @@ class UriReferenceGeneratorTest {
 
     @Test
     void firstCallReturnsEmptyString() {
-        var schema = StringSchema.builder().format(StringFormat.URI_REFERENCE).build();
+        var schema = StringSchema.builder().rawFormat("uri-reference").build();
         var generator = new UriReferenceGenerator(withSeed(42), schema);
 
         // when
@@ -72,7 +71,7 @@ class UriReferenceGeneratorTest {
 
     @Test
     void emitsBothRelativeAndAbsoluteFormsAcrossManyCalls() {
-        var schema = StringSchema.builder().format(StringFormat.URI_REFERENCE).build();
+        var schema = StringSchema.builder().rawFormat("uri-reference").build();
         var generator = new UriReferenceGenerator(withSeed(42), schema);
 
         // when
@@ -89,7 +88,7 @@ class UriReferenceGeneratorTest {
 
     @Test
     void emptyIsSkippedWhenMinLengthIsPositive() {
-        var schema = StringSchema.builder().format(StringFormat.URI_REFERENCE).minLength(5).build();
+        var schema = StringSchema.builder().rawFormat("uri-reference").minLength(5).build();
         var generator = new UriReferenceGenerator(withSeed(42), schema);
 
         // when
@@ -104,7 +103,7 @@ class UriReferenceGeneratorTest {
 
     @Test
     void respectsTightUpperBound() {
-        var schema = StringSchema.builder().format(StringFormat.URI_REFERENCE).maxLength(20).build();
+        var schema = StringSchema.builder().rawFormat("uri-reference").maxLength(20).build();
         var generator = new UriReferenceGenerator(withSeed(42), schema);
 
         // when
@@ -118,7 +117,7 @@ class UriReferenceGeneratorTest {
 
     @Test
     void unsatisfiableMinLengthThrows() {
-        var schema = StringSchema.builder().format(StringFormat.URI_REFERENCE).minLength(5000).build();
+        var schema = StringSchema.builder().rawFormat("uri-reference").minLength(5000).build();
 
         // when / then
         assertThatThrownBy(() -> new UriReferenceGenerator(withSeed(42), schema))
@@ -128,7 +127,7 @@ class UriReferenceGeneratorTest {
     @Test
     void worksWithMaxLengthBelowMinimumRandomAbsoluteUriOfLength() {
         // shortest absolute URI is 11 chars; with maxLength 5 only relative refs and empty fit.
-        var schema = StringSchema.builder().format(StringFormat.URI_REFERENCE).maxLength(5).build();
+        var schema = StringSchema.builder().rawFormat("uri-reference").maxLength(5).build();
         var generator = new UriReferenceGenerator(withSeed(42), schema);
 
         // when

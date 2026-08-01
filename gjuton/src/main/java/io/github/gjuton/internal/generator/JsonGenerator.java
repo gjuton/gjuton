@@ -98,7 +98,7 @@ public final class JsonGenerator {
         }
         MDC.put(GjutonMdc.SEED_KEY, seedLabel);
         context.startRun();
-        var override = context.currentOverride();
+        var override = context.currentPathOverride();
         try {
             var generated = override != null ? override : delegate.generate();
             return OverriddenValue.strip(generated);
@@ -124,7 +124,7 @@ public final class JsonGenerator {
     static Object generateForPath(GeneratorContext context, String path, Supplier<Schema> schema) {
         context.enterPath(path);
         try {
-            var override = context.currentOverride();
+            var override = context.currentPathOverride();
             if (override != null) {
                 return override;
             }
@@ -136,6 +136,10 @@ public final class JsonGenerator {
 
     private static Generator<?> buildDelegate(Schema schema, GeneratorContext context) {
         if (schema.getRef() != null) {
+            var refOverride = context.refOverride(schema.getRef());
+            if (refOverride != null) {
+                return new OverrideGenerator(refOverride);
+            }
             return new RefGenerator(context, schema.getRef());
         }
         if (schema.getConstValue() != null) {
@@ -169,8 +173,16 @@ public final class JsonGenerator {
     }
 
     private static Generator<?> buildStringDelegate(StringSchema schema, GeneratorContext context) {
+        var formatOverride = context.formatOverride(schema.getRawFormat());
+        if (formatOverride != null) {
+            return new OverrideGenerator(formatOverride);
+        }
         var format = schema.getFormat();
         if (format == null) {
+            if (schema.getRawFormat() != null) {
+                log.trace("the schema names the format {}, which gjuton does not model: values are plain "
+                        + "strings constrained only by length and pattern", schema.getRawFormat());
+            }
             return new StringGenerator(context, schema);
         }
         return switch (format) {
@@ -192,11 +204,6 @@ public final class JsonGenerator {
             case RELATIVE_JSON_POINTER -> new RelativeJsonPointerGenerator(context, schema);
             case REGEX -> new RegexGenerator(context, schema);
             case DURATION -> new DurationGenerator(context, schema);
-            default -> {
-                log.trace("the schema names the format {}, which gjuton does not model: values are plain "
-                        + "strings constrained only by length and pattern", schema.getFormat());
-                yield new StringGenerator(context, schema);
-            }
         };
     }
 }

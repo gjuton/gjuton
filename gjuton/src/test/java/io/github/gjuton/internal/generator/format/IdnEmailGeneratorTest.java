@@ -3,7 +3,6 @@ package io.github.gjuton.internal.generator.format;
 import static io.github.gjuton.internal.generator.TestContexts.withSeed;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -12,7 +11,7 @@ class IdnEmailGeneratorTest {
 
     @Test
     void producesValueContainingAt() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_EMAIL).build();
+        var schema = StringSchema.builder().rawFormat("idn-email").build();
         var generator = new IdnEmailGenerator(withSeed(42), schema);
 
         // when
@@ -26,7 +25,7 @@ class IdnEmailGeneratorTest {
 
     @Test
     void producesAtLeastOneEmailWithUnicodeCharacters() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_EMAIL).build();
+        var schema = StringSchema.builder().rawFormat("idn-email").build();
         var generator = new IdnEmailGenerator(withSeed(42), schema);
 
         // when
@@ -40,7 +39,7 @@ class IdnEmailGeneratorTest {
 
     @Test
     void composesWithLengthBounds() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_EMAIL).minLength(15).maxLength(25).build();
+        var schema = StringSchema.builder().rawFormat("idn-email").minLength(15).maxLength(25).build();
         var generator = new IdnEmailGenerator(withSeed(42), schema);
 
         // when
@@ -57,7 +56,7 @@ class IdnEmailGeneratorTest {
 
     @Test
     void shortPhaseHonoursMinLength() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_EMAIL).minLength(18).build();
+        var schema = StringSchema.builder().rawFormat("idn-email").minLength(18).build();
         var generator = new IdnEmailGenerator(withSeed(42), schema);
 
         // when
@@ -70,7 +69,7 @@ class IdnEmailGeneratorTest {
 
     @Test
     void producesExpectedEmailsForFixedSeed() {
-        var schema = StringSchema.builder().format(StringFormat.IDN_EMAIL).build();
+        var schema = StringSchema.builder().rawFormat("idn-email").build();
         var generator = new IdnEmailGenerator(withSeed(42), schema);
 
         // when

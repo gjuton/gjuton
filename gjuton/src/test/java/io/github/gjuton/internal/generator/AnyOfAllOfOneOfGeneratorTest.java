@@ -694,7 +694,7 @@ class AnyOfAllOfOneOfGeneratorTest {
                         ]
                     }
                     """);
-            var context = new GeneratorContext(document, new Random(42));
+            var context = GeneratorContext.testContext(document, new Random(42));
             var generator = new AnyOfAllOfOneOfGenerator(context, document.getRoot());
             var validator = new SchemaValidator(context);
 
@@ -724,7 +724,7 @@ class AnyOfAllOfOneOfGeneratorTest {
                         ]
                     }
                     """);
-            var context = new GeneratorContext(document, new Random(42));
+            var context = GeneratorContext.testContext(document, new Random(42));
             var generator = new AnyOfAllOfOneOfGenerator(context, document.getRoot());
             var validator = new SchemaValidator(context);
 
@@ -1154,7 +1154,7 @@ class AnyOfAllOfOneOfGeneratorTest {
                         ]
                     }
                     """);
-            var context = new GeneratorContext(document, new Random(42));
+            var context = GeneratorContext.testContext(document, new Random(42));
             context.incrementGlobalRefDepth();
             context.incrementGlobalRefDepth();
             var validator = new SchemaValidator(context);
@@ -1173,7 +1173,7 @@ class AnyOfAllOfOneOfGeneratorTest {
     private static AnyOfAllOfOneOfGenerator generatorFor(String json) {
         var document = SchemaParser.parse(json);
         return new AnyOfAllOfOneOfGenerator(
-                new GeneratorContext(document, new Random(42)),
+                GeneratorContext.testContext(document, new Random(42)),
                 document.getRoot());
     }
 
@@ -1190,7 +1190,7 @@ class AnyOfAllOfOneOfGeneratorTest {
                         ]
                     }
                     """);
-            var context = new GeneratorContext(document, new Random(42));
+            var context = GeneratorContext.testContext(document, new Random(42));
             var generator = new AnyOfAllOfOneOfGenerator(context, document.getRoot());
 
             // when

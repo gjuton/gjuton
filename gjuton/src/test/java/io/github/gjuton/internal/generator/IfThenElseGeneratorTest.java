@@ -28,7 +28,7 @@ class IfThenElseGeneratorTest {
     @Test
     void everyGeneratedValueSatisfiesTheSchema() {
         var document = SchemaParser.parse(STATUS_CONDITIONAL);
-        var validator = new SchemaValidator(new GeneratorContext(document, new Random(42)));
+        var validator = new SchemaValidator(GeneratorContext.testContext(document, new Random(42)));
         var generator = generatorFor(document);
 
         // when
@@ -81,7 +81,7 @@ class IfThenElseGeneratorTest {
                     "then": {"properties": {"data": {"type": "string"}}, "required": ["data"]}
                 }
                 """);
-        var validator = new SchemaValidator(new GeneratorContext(document, new Random(7)));
+        var validator = new SchemaValidator(GeneratorContext.testContext(document, new Random(7)));
         var generator = generatorFor(document);
 
         // when
@@ -103,7 +103,7 @@ class IfThenElseGeneratorTest {
                     "else": {"properties": {"message": {"type": "string"}}, "required": ["message"]}
                 }
                 """);
-        var validator = new SchemaValidator(new GeneratorContext(document, new Random(7)));
+        var validator = new SchemaValidator(GeneratorContext.testContext(document, new Random(7)));
         var generator = generatorFor(document);
 
         // when
@@ -131,7 +131,7 @@ class IfThenElseGeneratorTest {
                     ]
                 }
                 """);
-        var context = new GeneratorContext(document, new Random(42));
+        var context = GeneratorContext.testContext(document, new Random(42));
         var validator = new SchemaValidator(context);
         var generator = new JsonGenerator(document.getRoot(), context);
 
@@ -146,7 +146,7 @@ class IfThenElseGeneratorTest {
     void dispatchedViaJsonGenerator() {
         // Proves buildDelegate routes an if/then/else schema to this generator.
         var document = SchemaParser.parse(STATUS_CONDITIONAL);
-        var context = new GeneratorContext(document, new Random(42));
+        var context = GeneratorContext.testContext(document, new Random(42));
         var validator = new SchemaValidator(context);
         var generator = new JsonGenerator(document.getRoot(), context);
 
@@ -170,7 +170,7 @@ class IfThenElseGeneratorTest {
                     "else": {"properties": {"x": {"const": 3}}}
                 }
                 """);
-        var context = new GeneratorContext(document, new Random(42));
+        var context = GeneratorContext.testContext(document, new Random(42));
         context.incrementGlobalRefDepth();
         context.incrementGlobalRefDepth();
         var generator = new IfThenElseGenerator(context, document.getRoot());
@@ -181,7 +181,7 @@ class IfThenElseGeneratorTest {
 
     private static IfThenElseGenerator generatorFor(SchemaDocument document) {
         return new IfThenElseGenerator(
-                new GeneratorContext(document, new Random(42)),
+                GeneratorContext.testContext(document, new Random(42)),
                 document.getRoot());
     }
 
@@ -191,7 +191,7 @@ class IfThenElseGeneratorTest {
         @Test
         void noveltyIndexTracksTheBranchActuallyPickedNotThePhase() {
             var document = SchemaParser.parse(STATUS_CONDITIONAL);
-            var context = new GeneratorContext(document, new Random(42));
+            var context = GeneratorContext.testContext(document, new Random(42));
             var generator = new IfThenElseGenerator(context, document.getRoot());
 
             // when

@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.time.OffsetDateTime;
 import java.util.stream.IntStream;
@@ -19,7 +18,7 @@ class DateTimeGeneratorTest {
         // 2038-01-19T03:14:07Z is the last second representable in a signed 32-bit
         // time_t. SUTs that still propagate values through 32-bit time arithmetic
         // overflow one second later; emitting it first guarantees that boundary is hit.
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).build();
+        var schema = StringSchema.builder().rawFormat("date-time").build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when
@@ -32,7 +31,7 @@ class DateTimeGeneratorTest {
     @Test
     void secondResultIsLeapDayNoon() {
         // Noon avoids stacking the leap-day boundary with the midnight boundary.
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).build();
+        var schema = StringSchema.builder().rawFormat("date-time").build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when
@@ -47,7 +46,7 @@ class DateTimeGeneratorTest {
     void thirdResultIsMidnightStartOfYear() {
         // Start-of-year midnight is a routine real-world emission (date upgraded to date-time,
         // start-of-window comparisons) and exposes both year-rollover and start-of-day bugs.
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).build();
+        var schema = StringSchema.builder().rawFormat("date-time").build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when
@@ -61,7 +60,7 @@ class DateTimeGeneratorTest {
 
     @Test
     void randomPhaseProducesParseableOffsetDateTime() {
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).build();
+        var schema = StringSchema.builder().rawFormat("date-time").build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when
@@ -78,7 +77,7 @@ class DateTimeGeneratorTest {
 
     @Test
     void producesVariedValues() {
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).build();
+        var schema = StringSchema.builder().rawFormat("date-time").build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when
@@ -94,7 +93,7 @@ class DateTimeGeneratorTest {
     @Test
     void composesWithPattern() {
         // Pattern restricts to UTC offset — random non-Z candidates must be rejected via retry.
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).pattern("Z$").build();
+        var schema = StringSchema.builder().rawFormat("date-time").pattern("Z$").build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when
@@ -113,7 +112,7 @@ class DateTimeGeneratorTest {
     void unsatisfiableMaxLengthThrowsWithClearMessage() {
         // Minimum RFC 3339 date-time length is 20 chars ("YYYY-MM-DDTHH:MM:SSZ"); maxLength=19 cannot be satisfied.
         // The error must surface the length problem directly, not as a retry-exhaustion side-effect.
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).maxLength(19).build();
+        var schema = StringSchema.builder().rawFormat("date-time").maxLength(19).build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when / then
@@ -125,7 +124,7 @@ class DateTimeGeneratorTest {
     @Test
     void unsatisfiableMinLengthThrowsWithClearMessage() {
         // Maximum RFC 3339 date-time length is 25 chars ("YYYY-MM-DDTHH:MM:SS±HH:MM"); minLength=26 cannot be satisfied.
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).minLength(26).build();
+        var schema = StringSchema.builder().rawFormat("date-time").minLength(26).build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when / then
@@ -137,7 +136,7 @@ class DateTimeGeneratorTest {
     @Test
     void composesWithMaxLength() {
         // maxLength=20 admits only the Z-offset form ("YYYY-MM-DDTHH:MM:SSZ") — non-Z offsets are 25 chars.
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).maxLength(20).build();
+        var schema = StringSchema.builder().rawFormat("date-time").maxLength(20).build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when
@@ -156,7 +155,7 @@ class DateTimeGeneratorTest {
     void minLengthEqualToMaxBoundIsAccepted() {
         // minLength=MAX_DATE_TIME_LENGTH(=25) sits exactly on the upper edge — pre-flight must accept it.
         // The 25-char "YYYY-MM-DDTHH:MM:SS±HH:MM" form is reachable through the RANDOM retry loop.
-        var schema = StringSchema.builder().format(StringFormat.DATE_TIME).minLength(25).build();
+        var schema = StringSchema.builder().rawFormat("date-time").minLength(25).build();
         var generator = new DateTimeGenerator(withSeed(42), schema);
 
         // when

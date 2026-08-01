@@ -106,6 +106,38 @@ class SchemaMergerTest {
         }
 
         @Test
+        void conflictingFormatsGjutonDoesNotModelThrows() {
+            var a = readSchema("""
+                    {"type": "string", "format": "iban"}
+                    """);
+            var b = readSchema("""
+                    {"type": "string", "format": "isin"}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b)))
+                    .isInstanceOf(UnsatisfiableSchemaException.class);
+        }
+
+        @Test
+        void anAbsentFormatNeverConflicts() {
+            var a = readSchema("""
+                    {"type": "string", "format": null}
+                    """);
+            var b = readSchema("""
+                    {"type": "string", "format": "date-time"}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged).isEqualTo(readSchema("""
+                    {"type": "string", "format": "date-time"}
+                    """));
+        }
+
+        @Test
         void conflictingPatternsKeepsLeftPattern() {
             // Regex intersection isn't implementable in general, so the
             // merger can't detect whether the two patterns are truly
@@ -1207,8 +1239,8 @@ class SchemaMergerTest {
             // when / then
             assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b), List.of("/allOf/0", "/allOf/1"), null))
                     .isInstanceOf(UnsatisfiableSchemaException.class)
-                    .hasMessageContaining("EMAIL")
-                    .hasMessageContaining("UUID")
+                    .hasMessageContaining("email")
+                    .hasMessageContaining("uuid")
                     .hasMessageContaining("merging /allOf/0, /allOf/1");
         }
 

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
@@ -15,7 +14,7 @@ class RegexGeneratorTest {
 
     @Test
     void producesValidRegex() {
-        var schema = StringSchema.builder().format(StringFormat.REGEX).build();
+        var schema = StringSchema.builder().rawFormat("regex").build();
         var generator = new RegexGenerator(withSeed(42), schema);
 
         // when
@@ -30,7 +29,7 @@ class RegexGeneratorTest {
 
     @Test
     void emitsShortRegexFirst() {
-        var schema = StringSchema.builder().format(StringFormat.REGEX).build();
+        var schema = StringSchema.builder().rawFormat("regex").build();
         var generator = new RegexGenerator(withSeed(42), schema);
 
         // when
@@ -42,7 +41,7 @@ class RegexGeneratorTest {
 
     @Test
     void shortPhaseRespectsMinLength() {
-        var schema = StringSchema.builder().format(StringFormat.REGEX).minLength(5).build();
+        var schema = StringSchema.builder().rawFormat("regex").minLength(5).build();
         var generator = new RegexGenerator(withSeed(42), schema);
 
         // when
@@ -54,7 +53,7 @@ class RegexGeneratorTest {
 
     @Test
     void shortPhaseEmitsEmptyStringWhenMinLengthIsZero() {
-        var schema = StringSchema.builder().format(StringFormat.REGEX).minLength(0).build();
+        var schema = StringSchema.builder().rawFormat("regex").minLength(0).build();
         var generator = new RegexGenerator(withSeed(42), schema);
 
         // when
@@ -66,7 +65,7 @@ class RegexGeneratorTest {
 
     @Test
     void emitsLongRegexSecond() {
-        var schema = StringSchema.builder().format(StringFormat.REGEX).build();
+        var schema = StringSchema.builder().rawFormat("regex").build();
         var generator = new RegexGenerator(withSeed(42), schema);
 
         // when
@@ -79,7 +78,7 @@ class RegexGeneratorTest {
 
     @Test
     void producesVariedValues() {
-        var schema = StringSchema.builder().format(StringFormat.REGEX).build();
+        var schema = StringSchema.builder().rawFormat("regex").build();
         var generator = new RegexGenerator(withSeed(42), schema);
 
         // when
@@ -94,7 +93,7 @@ class RegexGeneratorTest {
 
     @Test
     void respectsMaxLength() {
-        var schema = StringSchema.builder().format(StringFormat.REGEX).maxLength(5).build();
+        var schema = StringSchema.builder().rawFormat("regex").maxLength(5).build();
         var generator = new RegexGenerator(withSeed(42), schema);
 
         // when
@@ -108,7 +107,7 @@ class RegexGeneratorTest {
 
     @Test
     void respectsMinLength() {
-        var schema = StringSchema.builder().format(StringFormat.REGEX).minLength(10).build();
+        var schema = StringSchema.builder().rawFormat("regex").minLength(10).build();
         var generator = new RegexGenerator(withSeed(42), schema);
 
         // when
@@ -122,7 +121,7 @@ class RegexGeneratorTest {
 
     @Test
     void minLengthGreaterThanMaxLengthThrows() {
-        var schema = StringSchema.builder().format(StringFormat.REGEX).minLength(10).maxLength(5).build();
+        var schema = StringSchema.builder().rawFormat("regex").minLength(10).maxLength(5).build();
 
         // when / then
         assertThatThrownBy(() -> new RegexGenerator(withSeed(42), schema))

@@ -6,7 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.model.StringFormat;
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
@@ -15,7 +14,7 @@ class UriGeneratorTest {
 
     @Test
     void producesExpectedUrisForFixedSeed() {
-        var schema = StringSchema.builder().format(StringFormat.URI).build();
+        var schema = StringSchema.builder().rawFormat("uri").build();
         var generator = new UriGenerator(withSeed(42), schema);
 
         // when
@@ -34,7 +33,7 @@ class UriGeneratorTest {
 
     @Test
     void respectsTightUpperBound() {
-        var schema = StringSchema.builder().format(StringFormat.URI).maxLength(30).build();
+        var schema = StringSchema.builder().rawFormat("uri").maxLength(30).build();
         var generator = new UriGenerator(withSeed(42), schema);
 
         // when
@@ -48,7 +47,7 @@ class UriGeneratorTest {
 
     @Test
     void respectsTightLowerBound() {
-        var schema = StringSchema.builder().format(StringFormat.URI).minLength(20).build();
+        var schema = StringSchema.builder().rawFormat("uri").minLength(20).build();
         var generator = new UriGenerator(withSeed(42), schema);
 
         // when
@@ -63,7 +62,7 @@ class UriGeneratorTest {
     @Test
     void unsatisfiableMaxLengthThrows() {
         // Shortest URI we produce is "http://a.co" = 11 chars; max 10 cannot fit.
-        var schema = StringSchema.builder().format(StringFormat.URI).maxLength(10).build();
+        var schema = StringSchema.builder().rawFormat("uri").maxLength(10).build();
 
         // when / then
         assertThatThrownBy(() -> new UriGenerator(withSeed(42), schema))
@@ -73,7 +72,7 @@ class UriGeneratorTest {
     @Test
     void boundaryMaxLengthDoesNotThrow() {
         // maxLength == minReachable (11) is exactly satisfiable.
-        var schema = StringSchema.builder().format(StringFormat.URI).maxLength(11).build();
+        var schema = StringSchema.builder().rawFormat("uri").maxLength(11).build();
 
         // when / then
         assertThatNoException().isThrownBy(() -> new UriGenerator(withSeed(42), schema));
@@ -82,7 +81,7 @@ class UriGeneratorTest {
     @Test
     void unsatisfiableMinLengthThrows() {
         // We cap URI length at 4096 chars; anything beyond is unreachable.
-        var schema = StringSchema.builder().format(StringFormat.URI).minLength(5000).build();
+        var schema = StringSchema.builder().rawFormat("uri").minLength(5000).build();
 
         // when / then
         assertThatThrownBy(() -> new UriGenerator(withSeed(42), schema))
@@ -92,7 +91,7 @@ class UriGeneratorTest {
     @Test
     void boundaryMinLengthDoesNotThrow() {
         // minLength == maxReachable (4096) is exactly satisfiable.
-        var schema = StringSchema.builder().format(StringFormat.URI).minLength(4096).build();
+        var schema = StringSchema.builder().rawFormat("uri").minLength(4096).build();
 
         // when / then
         assertThatNoException().isThrownBy(() -> new UriGenerator(withSeed(42), schema));
@@ -100,7 +99,7 @@ class UriGeneratorTest {
 
     @Test
     void emitsMultipleSchemes() {
-        var schema = StringSchema.builder().format(StringFormat.URI).build();
+        var schema = StringSchema.builder().rawFormat("uri").build();
         var generator = new UriGenerator(withSeed(42), schema);
 
         // when

@@ -19,14 +19,19 @@ import java.util.function.Supplier;
  *                                      collapses to minimal form
  * @param refHardDepth                  {@code $ref} depth beyond which the
  *                                      schema is treated as unsatisfiable
- * @param producers                     value overrides keyed by JSON path; the
+ * @param pathOverrides                 value overrides keyed by JSON path; the
  *                                      supplier at a path yields a ready
  *                                      value-tree node to place there instead
  *                                      of generating one
- * @param nameProducers                 value overrides keyed by property name;
+ * @param nameOverrides                 value overrides keyed by property name;
  *                                      applied at every position whose property
  *                                      name matches, unless a path-based
- *                                      producer already covers that position
+ *                                      override already covers that position
+ * @param refOverrides                  value overrides keyed by {@code $ref};
+ *                                      applied at every referencing position
+ * @param formatOverrides               value overrides keyed by {@code format}
+ *                                      as written; applied at every string
+ *                                      carrying it
  * @param constraints                   caller-imposed bounds that narrow
  *                                      generated values beyond the schema
  */
@@ -35,8 +40,10 @@ public record GeneratorConfig(
         boolean generateAdditionalProperties,
         int refSoftDepth,
         int refHardDepth,
-        Map<String, Supplier<Object>> producers,
-        Map<String, Supplier<Object>> nameProducers,
+        Map<String, Supplier<Object>> pathOverrides,
+        Map<String, Supplier<Object>> nameOverrides,
+        Map<String, Supplier<Object>> refOverrides,
+        Map<String, Supplier<Object>> formatOverrides,
         ValueConstraints constraints) {
 
     /**
@@ -54,17 +61,28 @@ public record GeneratorConfig(
     public static final int DEEP_REF_HARD_DEPTH = 8;
 
     public GeneratorConfig {
-        producers = Map.copyOf(producers);
-        nameProducers = Map.copyOf(nameProducers);
+        pathOverrides = Map.copyOf(pathOverrides);
+        nameOverrides = Map.copyOf(nameOverrides);
+        refOverrides = Map.copyOf(refOverrides);
+        formatOverrides = Map.copyOf(formatOverrides);
     }
 
     /**
-     * The configuration used when the caller sets no options — exhaustive
-     * boundary-value generation, no synthesized extra properties, no value
-     * overrides, and the default {@code $ref} depth limits.
+     * A test fixture: exhaustive boundary-value generation, no synthesized
+     * extra properties, no value overrides, and the default {@code $ref} depth
+     * limits. Not the configuration a caller who sets no options gets — that
+     * one is built from {@code GenerationMode.RANDOM}.
      */
-    static GeneratorConfig defaults() {
+    static GeneratorConfig defaultExhaustive() {
         return new GeneratorConfig(
-                false, false, DEFAULT_REF_SOFT_DEPTH, DEFAULT_REF_HARD_DEPTH, Map.of(), Map.of(), ValueConstraints.forExhaustive());
+                false,
+                false,
+                DEFAULT_REF_SOFT_DEPTH,
+                DEFAULT_REF_HARD_DEPTH,
+                Map.of(),
+                Map.of(),
+                Map.of(),
+                Map.of(),
+                ValueConstraints.forExhaustive());
     }
 }

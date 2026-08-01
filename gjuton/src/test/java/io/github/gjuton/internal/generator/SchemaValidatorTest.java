@@ -1033,6 +1033,6 @@ class SchemaValidatorTest {
     }
 
     private static SchemaValidator createValidator(SchemaDocument document) {
-        return new SchemaValidator(new GeneratorContext(document, new Random(42)));
+        return new SchemaValidator(GeneratorContext.testContext(document, new Random(42)));
     }
 }

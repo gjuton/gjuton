@@ -550,7 +550,7 @@ class ArrayGeneratorTest {
 
     private static ArrayGenerator arrayGenerator(String json) {
         var document = SchemaParser.parse(json);
-        return new ArrayGenerator(new GeneratorContext(document, new Random(42)), (ArraySchema) document.getRoot());
+        return new ArrayGenerator(GeneratorContext.testContext(document, new Random(42)), (ArraySchema) document.getRoot());
     }
 
     /**
@@ -562,6 +562,6 @@ class ArrayGeneratorTest {
         var document = SchemaParser.parse(json);
         var branches = document.getRoot().getAllOf();
         var merged = (ArraySchema) SchemaMerger.merge(branches);
-        return new ArrayGenerator(new GeneratorContext(document, new Random(42)), merged);
+        return new ArrayGenerator(GeneratorContext.testContext(document, new Random(42)), merged);
     }
 }
