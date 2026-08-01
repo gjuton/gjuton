@@ -8,7 +8,7 @@ import io.github.gjuton.internal.generator.GeneratorConfig;
 import io.github.gjuton.internal.generator.JsonGenerator;
 import io.github.gjuton.internal.generator.ValueConstraints;
 import io.github.gjuton.internal.model.SchemaDocument;
-import io.github.gjuton.internal.parser.JsonSerializer;
+import io.github.gjuton.internal.output.JsonSerializer;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.io.File;
 import java.io.IOException;

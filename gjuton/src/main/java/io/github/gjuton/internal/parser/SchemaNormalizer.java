@@ -3,6 +3,7 @@ package io.github.gjuton.internal.parser;
 import static java.util.Map.entry;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.gjuton.internal.model.UntypedSchema;
 import java.util.ArrayList;
@@ -10,10 +11,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Fills in the {@code type} keyword for schemas that omit it but whose
- * present keywords imply exactly one type, so those keywords survive
- * deserialisation instead of being silently dropped by
- * {@link UntypedSchema}.
+ * Rewrites a JSON Schema tree into the subset of shapes the schema model
+ * can be deserialised from, so that no information is lost to
+ * {@link UntypedSchema} or to Jackson's type dispatch.
+ *
+ * <p>Normalisation is idempotent: a subtree may safely be normalised again
+ * after the document containing it already has been.
  *
  * <p>Only recurses into positions that hold sub-schemas ({@code properties}
  * values, {@code items}, {@code oneOf}/{@code anyOf}/{@code allOf}
@@ -21,7 +24,7 @@ import java.util.Map;
  * object keys, which may coincidentally share a name with a schema
  * keyword (e.g. a property named {@code "pattern"}).
  */
-final class TypeInferrer {
+final class SchemaNormalizer {
 
     /**
      * Describes how a JSON Schema keyword's value relates to sub-schemas,
@@ -86,7 +89,21 @@ final class TypeInferrer {
             entry("propertyNames", SchemaShape.SCHEMA)
     );
 
-    private TypeInferrer() {
+    private SchemaNormalizer() {
+    }
+
+    /**
+     * Normalises {@code node} and every sub-schema beneath it in place.
+     *
+     * <p>Afterwards no schema declares an array of types, and every schema
+     * whose keywords imply exactly one type declares that type explicitly.
+     * A node that is already normalised is left unchanged.
+     */
+    static void normalize(JsonNode node) {
+        // Type arrays first: inference reads the type keyword, and the branches
+        // this produces are themselves schemas that still need inferring.
+        rewriteTypeArrays(node);
+        inferMissingTypes(node);
     }
 
     /**
@@ -94,7 +111,7 @@ final class TypeInferrer {
      * object node that (a) lacks one and (b) contains keywords implying
      * exactly one JSON Schema type.
      */
-    static void inferMissingTypes(JsonNode node) {
+    private static void inferMissingTypes(JsonNode node) {
         if (!node.isObject()) {
             return;
         }
@@ -164,5 +181,64 @@ final class TypeInferrer {
 
     private static boolean hasAny(ObjectNode node, List<String> keywords) {
         return keywords.stream().anyMatch(node::has);
+    }
+
+    /**
+     * Normalises the Draft 7 {@code "type": ["string", "null"]} shorthand
+     * into an explicit {@code oneOf} before deserialisation. Jackson uses
+     * the scalar {@code type} field for subclass dispatch, so the array
+     * form must be rewritten before {@code treeToValue} can succeed.
+     *
+     * <p>For example,
+     * <pre>{@code
+     * {
+     *     "type": ["string", "null"],
+     *     "minLength": 3
+     * }
+     * }</pre>
+     * becomes
+     * <pre>{@code
+     * {
+     *     "oneOf": [
+     *         {"type": "string", "minLength": 3},
+     *         {"type": "null", "minLength": 3}
+     *     ]
+     * }
+     * }</pre>
+     *
+     * <p>All properties from the original node are copied into each branch;
+     * constraints irrelevant to a given type are silently ignored during
+     * deserialisation.
+     */
+    private static void rewriteTypeArrays(JsonNode node) {
+        if (node.isObject()) {
+            var objectNode = (ObjectNode) node;
+            var typeNode = objectNode.get("type");
+            if (typeNode != null && typeNode.isArray()) {
+                var oneOfArray = JsonNodeFactory.instance.arrayNode();
+                for (var typeElement : typeNode) {
+                    var branch = objectNode.deepCopy();
+                    branch.set("type", typeElement);
+                    oneOfArray.add(branch);
+                }
+                var definitions = objectNode.get("definitions");
+                var defs = objectNode.get("$defs");
+                objectNode.removeAll();
+                if (definitions != null) {
+                    objectNode.set("definitions", definitions);
+                }
+                if (defs != null) {
+                    objectNode.set("$defs", defs);
+                }
+                objectNode.set("oneOf", oneOfArray);
+            }
+            for (var entry : objectNode.properties()) {
+                rewriteTypeArrays(entry.getValue());
+            }
+        } else if (node.isArray()) {
+            for (var element : node) {
+                rewriteTypeArrays(element);
+            }
+        }
     }
 }
