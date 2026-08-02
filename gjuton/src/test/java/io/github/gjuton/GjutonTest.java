@@ -14,8 +14,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -23,7 +21,6 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 import org.slf4j.MDC;
 
 class GjutonTest {
@@ -523,260 +520,6 @@ class GjutonTest {
     }
 
     @Nested
-    class OverridesByRef {
-
-        private static final String TWO_REFERENCES_SCHEMA = """
-                {
-                  "type": "object",
-                  "properties": {
-                    "owner": { "$ref": "#/$defs/UserId" },
-                    "deputy": { "$ref": "#/$defs/UserId" },
-                    "label": { "type": "string" }
-                  },
-                  "required": ["owner", "deputy", "label"],
-                  "$defs": { "UserId": { "type": "integer", "minimum": 1000 } }
-                }""";
-
-        @Test
-        void overrideByRefAppliesAtEveryReferencingPosition() {
-            // when
-            var gen = Gjuton.of(TWO_REFERENCES_SCHEMA).withSeed(1L)
-                    .withOverrideByRef("#/$defs/UserId", () -> 42);
-
-            // then
-            var root = parse(gen.generate());
-            assertThat(root.get("owner").asInt()).isEqualTo(42);
-            assertThat(root.get("deputy").asInt()).isEqualTo(42);
-        }
-
-        @Test
-        void overrideByRefProducesAnIndependentValuePerPosition() {
-            // when — a counter proves the override fires once per matching position
-            var counter = new int[] {0};
-            var gen = Gjuton.of(TWO_REFERENCES_SCHEMA).withSeed(1L)
-                    .withOverrideByRef("#/$defs/UserId", () -> counter[0]++);
-
-            // then
-            var root = parse(gen.generate());
-            assertThat(List.of(root.get("owner").asInt(), root.get("deputy").asInt()))
-                    .containsExactlyInAnyOrder(0, 1);
-
-            // and a second generate() call continues producing fresh values
-            var root2 = parse(gen.generate());
-            assertThat(List.of(root2.get("owner").asInt(), root2.get("deputy").asInt()))
-                    .containsExactlyInAnyOrder(2, 3);
-        }
-
-        @Test
-        void overriddenRefIsNotValidatedAgainstTheReferencedSchema() {
-            // when — the definition requires an integer of at least 1000
-            var gen = Gjuton.of(TWO_REFERENCES_SCHEMA).withSeed(1L)
-                    .withOverrideByRef("#/$defs/UserId", () -> "not-an-integer");
-
-            // then
-            assertThat(parse(gen.generate()).get("owner").asText()).isEqualTo("not-an-integer");
-        }
-
-        @Test
-        void overrideByRefDoesNotMatchAnInlinedCopyOfTheDefinition() {
-            // given a schema where one position references the definition and
-            // another inlines the same shape
-            var schema = """
-                    {
-                      "type": "object",
-                      "properties": {
-                        "referenced": { "$ref": "#/$defs/UserId" },
-                        "inlined": { "type": "integer", "minimum": 1000 }
-                      },
-                      "required": ["referenced", "inlined"],
-                      "$defs": { "UserId": { "type": "integer", "minimum": 1000 } }
-                    }""";
-
-            // when
-            var gen = Gjuton.of(schema).withSeed(1L)
-                    .withOverrideByRef("#/$defs/UserId", () -> 42);
-
-            // then
-            var root = parse(gen.generate());
-            assertThat(root.get("referenced").asInt()).isEqualTo(42);
-            assertThat(root.get("inlined").asInt()).isNotEqualTo(42);
-        }
-
-        @Test
-        void overrideByRefCutsOffARecursiveDefinition() {
-            var schema = """
-                    {
-                      "$ref": "#/$defs/Node",
-                      "$defs": {
-                        "Node": {
-                          "type": "object",
-                          "properties": { "child": { "$ref": "#/$defs/Node" } },
-                          "required": ["child"]
-                        }
-                      }
-                    }""";
-
-            // when
-            var gen = Gjuton.of(schema).withSeed(1L)
-                    .withOverrideByRef("#/$defs/Node", () -> "leaf");
-
-            // then — the root itself is a reference, so the whole document is the override
-            assertThat(parse(gen.generate()).asText()).isEqualTo("leaf");
-        }
-
-        @Test
-        void overrideByRefDoesNotReachARefInsideAllOf() {
-            // given a position that reaches the definition through allOf,
-            // where merging the branches loses the reference
-            var schema = """
-                    {
-                      "type": "object",
-                      "properties": {
-                        "user": {
-                          "allOf": [
-                            { "$ref": "#/$defs/Address" },
-                            { "type": "object", "properties": { "note": { "type": "string" } } }
-                          ]
-                        }
-                      },
-                      "required": ["user"],
-                      "$defs": {
-                        "Address": {
-                          "type": "object",
-                          "properties": { "street": { "type": "string" } },
-                          "required": ["street"]
-                        }
-                      }
-                    }""";
-
-            // when
-            var gen = Gjuton.of(schema).withSeed(1L)
-                    .withOverrideByRef("#/$defs/Address", () -> "overridden");
-
-            // then the position is generated from the merged schema instead
-            var user = parse(gen.generate()).get("user");
-            assertThat(user.isObject()).isTrue();
-            assertThat(user.has("street")).isTrue();
-        }
-
-        @Test
-        void nameOverrideTakesPrecedenceOverRefOverride() {
-            // when
-            var gen = Gjuton.of(TWO_REFERENCES_SCHEMA).withSeed(1L)
-                    .withOverrideByRef("#/$defs/UserId", () -> 42)
-                    .withOverrideByName("owner", () -> 7);
-
-            // then
-            var root = parse(gen.generate());
-            assertThat(root.get("owner").asInt()).isEqualTo(7);
-            assertThat(root.get("deputy").asInt()).isEqualTo(42);
-        }
-
-        @Test
-        void withOverrideByRefLastCallWinsForSameRef() {
-            // when
-            var gen = Gjuton.of(TWO_REFERENCES_SCHEMA).withSeed(1L)
-                    .withOverrideByRef("#/$defs/UserId", () -> 1)
-                    .withOverrideByRef("#/$defs/UserId", () -> 2);
-
-            // then
-            assertThat(parse(gen.generate()).get("owner").asInt()).isEqualTo(2);
-        }
-
-        @Test
-        void withOverrideByRefRejectsNullArguments() {
-            // then
-            assertThatThrownBy(() -> Gjuton.of(TWO_REFERENCES_SCHEMA).withOverrideByRef(null, () -> "x"))
-                    .isInstanceOf(IllegalArgumentException.class);
-            assertThatThrownBy(() -> Gjuton.of(TWO_REFERENCES_SCHEMA).withOverrideByRef("#/$defs/UserId", null))
-                    .isInstanceOf(IllegalArgumentException.class);
-        }
-
-        @Test
-        void anExternalDefinitionIsMatchedByTheSpellingTheEntryDocumentUses(@TempDir Path tempDir) throws Exception {
-            // given a definition in an external file, referenced both from the
-            // entry document and from within the external file itself
-            Files.writeString(tempDir.resolve("defs.json"), """
-                    {
-                        "definitions": {
-                            "Address": {
-                                "type": "object",
-                                "properties": {"street": {"type": "string"}},
-                                "required": ["street"]
-                            },
-                            "Envelope": {
-                                "type": "object",
-                                "properties": {"addr": {"$ref": "#/definitions/Address"}},
-                                "required": ["addr"]
-                            }
-                        }
-                    }
-                    """);
-            var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
-                    {
-                        "type": "object",
-                        "properties": {
-                            "billing": {"$ref": "defs.json#/definitions/Address"},
-                            "wrapped": {"$ref": "defs.json#/definitions/Envelope"}
-                        },
-                        "required": ["billing", "wrapped"]
-                    }
-                    """);
-
-            // when the ref is registered as the entry document spells it
-            var gen = Gjuton.of(schemaFile.toFile()).withSeed(1L)
-                    .withOverrideByRef("defs.json#/definitions/Address", () -> "overridden");
-
-            // then both positions are covered, including the one the external
-            // file reaches through its own document-local reference
-            var root = parse(gen.generate());
-            assertThat(root.get("billing").asText()).isEqualTo("overridden");
-            assertThat(root.get("wrapped").get("addr").asText()).isEqualTo("overridden");
-        }
-
-        @Test
-        void theSpellingUsedInsideAnExternalFileDoesNotMatch(@TempDir Path tempDir) throws Exception {
-            Files.writeString(tempDir.resolve("defs.json"), """
-                    {
-                        "definitions": {
-                            "Address": {
-                                "type": "object",
-                                "properties": {"street": {"type": "string"}},
-                                "required": ["street"]
-                            }
-                        }
-                    }
-                    """);
-            var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
-                    {
-                        "type": "object",
-                        "properties": {"billing": {"$ref": "defs.json#/definitions/Address"}},
-                        "required": ["billing"]
-                    }
-                    """);
-
-            // when the document-local spelling from inside defs.json is used
-            var gen = Gjuton.of(schemaFile.toFile()).withSeed(1L)
-                    .withOverrideByRef("#/definitions/Address", () -> "overridden");
-
-            // then nothing matches and the value is generated normally
-            assertThat(parse(gen.generate()).get("billing").has("street")).isTrue();
-        }
-
-        @Test
-        void aRefTheSchemaNeverReferencesIsANoOp() {
-            // when
-            var gen = Gjuton.of(TWO_REFERENCES_SCHEMA).withSeed(1L)
-                    .withOverrideByRef("#/$defs/Typo", () -> 42);
-
-            // then
-            var root = parse(gen.generate());
-            assertThat(root.get("owner").asInt()).isNotEqualTo(42);
-            assertThat(root.get("deputy").asInt()).isNotEqualTo(42);
-        }
-    }
-
-    @Nested
     class OverridesByFormat {
 
         private static final String TWO_FORMATS_SCHEMA = """
@@ -828,30 +571,6 @@ class GjutonTest {
         }
 
         @Test
-        void refOverrideTakesPrecedenceOverFormatOverride() {
-            var schema = """
-                    {
-                      "type": "object",
-                      "properties": {
-                        "referenced": { "$ref": "#/$defs/Timestamp" },
-                        "direct": { "type": "string", "format": "date-time" }
-                      },
-                      "required": ["referenced", "direct"],
-                      "$defs": { "Timestamp": { "type": "string", "format": "date-time" } }
-                    }""";
-
-            // when
-            var gen = Gjuton.of(schema).withSeed(1L)
-                    .withOverrideByFormat("date-time", () -> "by-format")
-                    .withOverrideByRef("#/$defs/Timestamp", () -> "by-ref");
-
-            // then
-            var root = parse(gen.generate());
-            assertThat(root.get("referenced").asText()).isEqualTo("by-ref");
-            assertThat(root.get("direct").asText()).isEqualTo("by-format");
-        }
-
-        @Test
         void overrideByFormatMatchesWhenTheStringTypeIsOnlyImplied() {
             // given a schema that names a format without declaring "type": "string"
             var schema = """
@@ -886,32 +605,28 @@ class GjutonTest {
         }
 
         @Test
-        void mostSpecificOverrideWinsAcrossAllFourKinds() {
+        void mostSpecificOverrideWinsAcrossAllThreeKinds() {
             var schema = """
                     {
                       "type": "object",
                       "properties": {
-                        "byPath": { "$ref": "#/$defs/Timestamp" },
-                        "byName": { "$ref": "#/$defs/Timestamp" },
-                        "byRef": { "$ref": "#/$defs/Timestamp" },
+                        "byPath": { "type": "string", "format": "date-time" },
+                        "byName": { "type": "string", "format": "date-time" },
                         "byFormat": { "type": "string", "format": "date-time" }
                       },
-                      "required": ["byPath", "byName", "byRef", "byFormat"],
-                      "$defs": { "Timestamp": { "type": "string", "format": "date-time" } }
+                      "required": ["byPath", "byName", "byFormat"]
                     }""";
 
             // when — every position is matched by its own kind and all less specific ones
             var gen = Gjuton.of(schema).withSeed(1L)
                     .withOverrideByPath("$.byPath", () -> "path")
                     .withOverrideByName("byName", () -> "name")
-                    .withOverrideByRef("#/$defs/Timestamp", () -> "ref")
                     .withOverrideByFormat("date-time", () -> "format");
 
             // then
             var root = parse(gen.generate());
             assertThat(root.get("byPath").asText()).isEqualTo("path");
             assertThat(root.get("byName").asText()).isEqualTo("name");
-            assertThat(root.get("byRef").asText()).isEqualTo("ref");
             assertThat(root.get("byFormat").asText()).isEqualTo("format");
         }
 

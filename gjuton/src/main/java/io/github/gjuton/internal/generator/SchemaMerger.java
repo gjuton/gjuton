@@ -120,7 +120,7 @@ final class SchemaMerger {
             merged = new UnsatisfiableSchema();
         } else if (a instanceof UntypedSchema && b instanceof UntypedSchema) {
             // Two untyped schemas have no type constraint to merge, so keeping the
-            // left side alone would drop the right side's $ref. Peefer whichever
+            // left side alone would drop the right side's $ref. Prefer whichever
             // side actually carries one.
             merged = (a.getRef() == null && b.getRef() != null)
                     ? b.toBuilder().build()

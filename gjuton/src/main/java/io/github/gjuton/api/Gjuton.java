@@ -44,7 +44,6 @@ public final class Gjuton {
     private final Long seed;
     private final Map<String, ValueOverride> overrides;
     private final Map<String, ValueOverride> nameOverrides;
-    private final Map<String, ValueOverride> refOverrides;
     private final Map<String, ValueOverride> formatOverrides;
     private final GenerationMode mode;
     private final boolean generateAdditionalProperties;
@@ -60,7 +59,6 @@ public final class Gjuton {
             Long seed,
             Map<String, ValueOverride> overrides,
             Map<String, ValueOverride> nameOverrides,
-            Map<String, ValueOverride> refOverrides,
             Map<String, ValueOverride> formatOverrides,
             GenerationMode mode,
             boolean generateAdditionalProperties,
@@ -72,7 +70,6 @@ public final class Gjuton {
         this.seed = seed;
         this.overrides = overrides;
         this.nameOverrides = nameOverrides;
-        this.refOverrides = refOverrides;
         this.formatOverrides = formatOverrides;
         this.mode = mode;
         this.generateAdditionalProperties = generateAdditionalProperties;
@@ -86,7 +83,6 @@ public final class Gjuton {
                 refHardDepth,
                 toValueSuppliers(overrides),
                 toValueSuppliers(nameOverrides),
-                toValueSuppliers(refOverrides),
                 toValueSuppliers(formatOverrides),
                 toValueConstraints(mode, constraints));
         this.generator = new JsonGenerator(seed, document, config);
@@ -142,7 +138,6 @@ public final class Gjuton {
                 Collections.emptyMap(),
                 Collections.emptyMap(),
                 Collections.emptyMap(),
-                Collections.emptyMap(),
                 GenerationMode.RANDOM,
                 false,
                 GeneratorConfig.DEFAULT_REF_SOFT_DEPTH,
@@ -168,7 +163,6 @@ public final class Gjuton {
                 schemaString,
                 document,
                 null,
-                Collections.emptyMap(),
                 Collections.emptyMap(),
                 Collections.emptyMap(),
                 Collections.emptyMap(),
@@ -206,7 +200,6 @@ public final class Gjuton {
                 seed,
                 overrides,
                 nameOverrides,
-                refOverrides,
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
@@ -258,7 +251,6 @@ public final class Gjuton {
                 seed,
                 Collections.unmodifiableMap(merged),
                 nameOverrides,
-                refOverrides,
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
@@ -275,7 +267,7 @@ public final class Gjuton {
      *
      * <p>Name-based overrides apply wherever a matching property name appears.
      * A path-based override ({@link #withOverrideByPath}) wins over this one;
-     * it wins over {@code $ref}- and format-based overrides.
+     * it wins over a format-based override.
      *
      * <p>The override fires once per {@link #generate()} call, and every
      * position with the same name in that call shares the returned value — the
@@ -311,63 +303,6 @@ public final class Gjuton {
                 seed,
                 overrides,
                 Collections.unmodifiableMap(merged),
-                refOverrides,
-                formatOverrides,
-                mode,
-                generateAdditionalProperties,
-                refSoftDepth,
-                refHardDepth,
-                constraints);
-    }
-
-    /**
-     * Returns a new generator that overrides every position referencing the
-     * definition at {@code ref}, so a reused type is covered by one
-     * registration. A later call with the same reference replaces an earlier
-     * one.
-     *
-     * <p>{@code ref} must be spelled as the document passed to {@code of}
-     * spells it: {@code "#/$defs/UserId"} for a local definition,
-     * {@code "defs.json#/definitions/Address"} for one in another file. The
-     * qualified form covers that definition everywhere, including where the
-     * external file refers to it with its own document-local {@code $ref}.
-     *
-     * <p>A position inlining a copy of the definition is not matched, nor is a
-     * ref appearing as an {@code allOf} branch — such a position is a composite
-     * of its branches rather than the referenced type. A ref no position
-     * references is not an error; the override simply never applies. A
-     * recursive definition stops at the overridden position.
-     *
-     * <p>The override is consulted at each matching position, so reused types
-     * get independent values, and each value is inserted as-is, without schema
-     * validation. Path- and name-based overrides win over this one; it wins
-     * over a format-based one.
-     *
-     * <pre>{@code
-     * Gjuton gen = Gjuton.of(schema)
-     *         .withOverrideByRef("#/$defs/UserId", () -> 42);
-     * }</pre>
-     *
-     * @param ref the {@code $ref} string to match
-     * @param override supplies the value placed at each referencing position
-     * @see #withOverrideByPath(String, ValueOverride)
-     */
-    public Gjuton withOverrideByRef(String ref, ValueOverride override) {
-        if (ref == null) {
-            throw new IllegalArgumentException("ref must not be null");
-        }
-        if (override == null) {
-            throw new IllegalArgumentException("override must not be null");
-        }
-        var merged = new LinkedHashMap<>(refOverrides);
-        merged.put(ref, override);
-        return new Gjuton(
-                schema,
-                document,
-                seed,
-                overrides,
-                nameOverrides,
-                Collections.unmodifiableMap(merged),
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
@@ -388,8 +323,8 @@ public final class Gjuton {
      * <p>The override is consulted at each matching position, so every string
      * gets its own value, and each is inserted as-is, without schema
      * validation — it does not adapt to a {@code minLength} at one particular
-     * use site. This is the least specific override: path, name and
-     * {@code $ref} all win over it.
+     * use site. This is the least specific override: path and name both win
+     * over it.
      *
      * <pre>{@code
      * Gjuton gen = Gjuton.of(schema)
@@ -416,7 +351,6 @@ public final class Gjuton {
                 seed,
                 overrides,
                 nameOverrides,
-                refOverrides,
                 Collections.unmodifiableMap(merged),
                 mode,
                 generateAdditionalProperties,
@@ -442,7 +376,6 @@ public final class Gjuton {
                 seed,
                 overrides,
                 nameOverrides,
-                refOverrides,
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
@@ -464,7 +397,6 @@ public final class Gjuton {
                 seed,
                 overrides,
                 nameOverrides,
-                refOverrides,
                 formatOverrides,
                 mode,
                 true,
@@ -520,7 +452,6 @@ public final class Gjuton {
                 seed,
                 overrides,
                 nameOverrides,
-                refOverrides,
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
@@ -562,7 +493,6 @@ public final class Gjuton {
                 seed,
                 overrides,
                 nameOverrides,
-                refOverrides,
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
