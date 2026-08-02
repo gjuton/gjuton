@@ -148,8 +148,11 @@ public final class Gjuton {
     /**
      * Creates a generator by reading a JSON Schema from a file.
      *
-     * <p>External {@code $ref} values (relative file paths or HTTP URLs) are
-     * resolved relative to the file's parent directory.
+     * <p>A relative {@code $ref} is resolved against the {@code $id} the
+     * schema declares, and against the file's own location when it declares
+     * none. The same holds within each external schema reached this way, so a
+     * schema referenced from another directory resolves its own refs from
+     * where it sits rather than from here.
      *
      * @param schema file containing a JSON Schema document in UTF-8 encoding
      */

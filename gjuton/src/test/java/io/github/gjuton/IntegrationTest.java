@@ -119,13 +119,9 @@ class IntegrationTest {
             "cargo-lints-clippy.json" // 80ms (8ms/29ms/41ms)
     );
 
-    // These schemas declare a remote $id and reference a sibling schema by relative $ref.
-    // Per the JSON Schema spec, that $ref must resolve against the declared $id (or, for
-    // Draft 4 schemas, the bare "id" keyword), so the validator tries to fetch the sibling
-    // over the network instead of finding it on disk.
-    // Excluded here because this sandbox has no network access; run manually outside it.
-    // See ticket #156
-    private static final Set<String> REMOTE_ID_REF_SCHEMAS = Set.of(
+    // Schemas that cannot be built without reaching the network. Ignored because
+    // they would cause a hassle in CI or when running in a sandbox
+    private static final Set<String> SCHEMAS_THAT_NEED_NETWORK = Set.of(
             "anywork-ac-1.0.json", "azure-deviceupdate-import-manifest-4.0.json",
             "azure-deviceupdate-import-manifest-5.0.json", "azure-deviceupdate-manifest-definitions-4.0.json",
             "azure-deviceupdate-manifest-definitions-5.0.json", "azure-deviceupdate-update-manifest-4.json",
@@ -148,7 +144,7 @@ class IntegrationTest {
             "sarif-external-property-file.json", "schema-org-action.json", "schema-org-contact-point.json",
             "schema-org-place.json", "schema-org-thing.json", "scikit-build.json", "setuptools.json",
             "ti8m-cdk-concrete-environment-config.json", "ti8m-cdk-concrete-environments.json",
-            "vs-2017.3.host.json", "web-manifest-combined.json"
+            "vs-2017.3.host.json", "web-manifest-app-info.json", "web-manifest-combined.json"
     );
 
     // Bugs/gaps in gjuton itself: parser limitations, generation crashes, or generated
@@ -367,7 +363,7 @@ class IntegrationTest {
                 files.filter(p -> !Files.isDirectory(p))
                         .filter(p -> p.toString().endsWith(".json"))
                         .filter(p -> !SLOW_SCHEMAS.contains(p.getFileName().toString()))
-                        .filter(p -> !REMOTE_ID_REF_SCHEMAS.contains(p.getFileName().toString()))
+                        .filter(p -> !SCHEMAS_THAT_NEED_NETWORK.contains(p.getFileName().toString()))
                         .filter(p -> !NON_WORKING_SCHEMAS.contains(p.getFileName().toString()))
                         .filter(p -> !FAILS_IN_VALIDATION_LIBRARY.contains(p.getFileName().toString()))
                         .filter(p -> !UNSUPPORTED_REGEX_GENERATION.contains(p.getFileName().toString()))

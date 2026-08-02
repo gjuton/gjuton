@@ -34,13 +34,17 @@ section is promoted to a version at release time (see `docs/releasing.md`).
   root is located as `(at $)` — a message with no location now means the
   location could not be determined, rather than that the root was at fault.
 - Jackson dependency updated from 2.22.0 to 2.22.1.
+- An external schema named by several `$ref`s is retrieved once per parse
+  rather than once per ref, so a shared definitions file over HTTP costs one
+  request no matter how many definitions are referenced from it.
 
 ### Fixed
 
 - A `$ref` appearing inside data rather than in a schema position — in an
   `example`, an `enum` payload, or under a property that happens to be named
   after a keyword — is no longer resolved as a schema, which could fail the
-  parse of the whole document.
+  parse of the whole document. This now holds inside an external schema too,
+  where such a value could previously be rewritten before being emitted.
 - `$ref` targets that sit outside any schema position, such as an OpenAPI
   `components/schemas` entry, are now type-inferred like any other schema.
   Previously a target that omitted `type` produced output violating its own
@@ -49,6 +53,13 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 - `allOf` branches that each declare a `contains` clause no longer report a
   conflict when no single element can satisfy both; such clauses are now kept
   apart and each given an element of its own.
+- A relative `$ref` now resolves against the nearest enclosing `$id` (or Draft
+  4's `id`) as the spec requires, rather than against the file it was loaded
+  from — inside external schemas too, so schemas split across subdirectories
+  resolve correctly. A schema whose `$id` names a remote location fetches its
+  siblings from there instead of picking up a same-named file on disk, and a
+  `$ref` naming a schema's own `$id` is found within it rather than fetched.
+  Schemas declaring no `$id` are unaffected.
 
 ## [0.0.1] — 2026-07-23
 
