@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.gjuton.internal.model.Schema;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
@@ -25,68 +26,96 @@ final class RefCollector {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private final Path baseDir;
-
-    private RefCollector(Path baseDir) {
-        this.baseDir = baseDir;
+    private RefCollector() {
     }
 
     /**
-     * Resolves every {@code $ref} reachable from {@code rootNode}, keyed by
-     * the ref string exactly as it appears in the document. Refs naming the
-     * document itself map to {@code rootSchema}, which must be the schema
-     * {@code rootNode} was deserialised into.
+     * Resolves every {@code $ref} reachable from {@code rootNode} into the
+     * schema it names. A ref written in {@code rootNode} is keyed as written;
+     * one inside an external document is keyed by its absolute URI. Either
+     * way the key matches the ref string the deserialised schemas carry.
+     * Refs naming the document itself map to {@code rootSchema}, which must
+     * be the schema {@code rootNode} was deserialised into.
      *
-     * <p>Relative refs to external documents resolve against {@code baseDir};
-     * when it is {@code null} the document has no location and such a ref
-     * cannot be resolved.
+     * <p>{@code retrievalUri} is where {@code rootNode} was loaded from, or
+     * {@code null} when it came from nowhere on disk or the network. A
+     * document that states no identity of its own needs it to resolve a
+     * relative {@code $ref}.
      *
      * @throws IllegalArgumentException if a {@code $ref} names something that
      *     is not a schema, or cannot be resolved at all
      */
-    static Map<String, Schema> collect(JsonNode rootNode, Schema rootSchema, Path baseDir) throws JsonProcessingException {
+    static Map<String, Schema> collect(JsonNode rootNode, Schema rootSchema, URI retrievalUri) throws JsonProcessingException {
         var refs = new HashMap<String, Schema>();
         // Self-reference always resolves to the same root Schema instance so phase state
         // is shared between the root and any "#" ref.
         refs.put("#", rootSchema);
-        var collector = new RefCollector(baseDir);
-        collector.walk(rootNode, rootNode, null, refs);
+        // The root's own $id is applied by the walk, so the retrieval URI is what
+        // encloses it. Naming that identity is a second way to refer to the document
+        // itself, besides "#".
+        var entryIdentity = baseUriOf(rootNode, retrievalUri);
+        var entryDocUri = entryIdentity != null ? entryIdentity.toString() : null;
+        walk(rootNode, rootNode, entryDocUri, retrievalUri, refs, new HashMap<>());
         return refs;
     }
 
     /**
      * Resolves every {@code $ref} at or beneath {@code node} into
      * {@code refs}, treating {@code currentDoc} as the document those refs
-     * are relative to. {@code currentDocUri} is the URI {@code currentDoc}
-     * was loaded from, or {@code null} for the document parsing started at.
+     * are relative to. {@code currentDocUri} is how a {@code $ref} may name
+     * {@code currentDoc} — the identity it states, or where it was retrieved
+     * from — and is {@code null} when it has neither.
+     * {@code enclosingBase} is the identity of the scope {@code node} sits in.
      *
      * <p>Refs already present in {@code refs} are left as they are, which is
      * what stops a cycle from recursing forever.
      */
-    private void walk(JsonNode node, JsonNode currentDoc, String currentDocUri, Map<String, Schema> refs) throws JsonProcessingException {
+    private static void walk(JsonNode node, JsonNode currentDoc, String currentDocUri, URI enclosingBase, Map<String, Schema> refs,
+            Map<URI, JsonNode> loadedDocuments) throws JsonProcessingException {
         if (node.isObject()) {
+            var baseUri = baseUriOf(node, enclosingBase);
             var refNode = node.get("$ref");
             if (refNode != null && refNode.isTextual()) {
                 var ref = refNode.asText();
                 if (!refs.containsKey(ref)) {
                     // Split the ref into the document it names and the fragment within it:
                     // "defs.json#/definitions/Address" sets targetDoc to the loaded defs.json,
-                    // targetDocUri to "defs.json" and fragment to "/definitions/Address", while
-                    // "#/definitions/Address" leaves targetDoc and targetDocUri as the current
-                    // document and sets fragment to "/definitions/Address".
+                    // targetDocUri to what that document is called and fragment to
+                    // "/definitions/Address", while "#/definitions/Address" leaves targetDoc
+                    // and targetDocUri as the current document and sets the same fragment.
                     var targetDoc = currentDoc;
                     var targetDocUri = currentDocUri;
+                    var targetBase = baseUri;
                     String fragment;
                     if (ref.startsWith("#")) {
                         fragment = ref.substring(1);
-                    } else if (currentDocUri != null && ref.startsWith(currentDocUri + "#")) {
-                        fragment = ref.substring(ref.indexOf('#') + 1);
-                    } else {
+                    } else if (currentDocUri != null && (ref.equals(currentDocUri) || ref.startsWith(currentDocUri + "#"))) {
+                        // Spelled out in full, but naming the document already in hand.
                         int fragIdx = ref.indexOf('#');
-                        var baseUri = fragIdx >= 0 ? ref.substring(0, fragIdx) : ref;
                         fragment = fragIdx >= 0 ? ref.substring(fragIdx + 1) : "";
-                        targetDoc = loadExternalDocument(baseUri);
-                        targetDocUri = baseUri;
+                    } else {
+                        // A ref naming a separate document: what precedes the "#" says which
+                        // document, what follows says where within it. Either part may be
+                        // absent — "defs.json" names a whole document and leaves the fragment
+                        // empty. Which document that spelling names depends on where the ref
+                        // was written, so it is read against the base URI in force here.
+                        int fragIdx = ref.indexOf('#');
+                        var documentPart = fragIdx >= 0 ? ref.substring(0, fragIdx) : ref;
+                        fragment = fragIdx >= 0 ? ref.substring(fragIdx + 1) : "";
+                        var location = baseUri != null ? baseUri.resolve(documentPart) : URI.create(documentPart);
+                        if (!location.isAbsolute()) {
+                            // No base URI: the document came from a string or stream and
+                            // declares no $id, so a relative ref names nothing reachable.
+                            throw new IllegalArgumentException(
+                                    "Cannot resolve relative $ref '" + documentPart
+                                            + "': no base URI. Use SchemaParser.parse(Path) to parse from a file.");
+                        }
+                        targetDoc = loadExternalDocument(location, loadedDocuments);
+                        // A document is known by the identity it states, or by where it was
+                        // retrieved from when it states none — the one name it has however it
+                        // was reached, and the base its own refs are read against.
+                        targetBase = baseUriOf(targetDoc, location);
+                        targetDocUri = targetBase.toString();
                     }
                     // The target may sit outside any sub-schema position and so be
                     // reachable only by following the ref that points at it. An empty
@@ -99,7 +128,7 @@ final class RefCollector {
                     // Recording the ref before walking on is what terminates a cycle.
                     var targetSchema = resolveFragment(fragment, targetDoc);
                     refs.put(ref, targetSchema);
-                    walk(target, targetDoc, targetDocUri, refs);
+                    walk(target, targetDoc, targetDocUri, targetBase, refs, loadedDocuments);
                 }
             }
             for (var property : node.properties()) {
@@ -112,17 +141,17 @@ final class RefCollector {
                     // The keys of a schema map are user-chosen property or definition
                     // names, so its schemas sit one level below the keyword.
                     for (var entry : value.properties()) {
-                        walk(entry.getValue(), currentDoc, currentDocUri, refs);
+                        walk(entry.getValue(), currentDoc, currentDocUri, baseUri, refs, loadedDocuments);
                     }
                 } else {
-                    walk(value, currentDoc, currentDocUri, refs);
+                    walk(value, currentDoc, currentDocUri, baseUri, refs, loadedDocuments);
                 }
             }
         } else if (node.isArray()) {
             // Only reachable from a whitelisted keyword above, so an array of
             // schemas is walked while an enum payload is never entered.
             for (var element : node) {
-                walk(element, currentDoc, currentDocUri, refs);
+                walk(element, currentDoc, currentDocUri, enclosingBase, refs, loadedDocuments);
             }
         }
     }
@@ -150,30 +179,61 @@ final class RefCollector {
     }
 
     /**
-     * Loads and normalises the external JSON Schema document at
-     * {@code uri}, which is either an HTTP(S) URL or a path relative to the
-     * document that referenced it. Refs within the returned document are
-     * qualified with {@code uri}, so they stay distinct from same-named refs
-     * in other documents.
+     * Returns the identity {@code node} carries: the one it states with
+     * {@code $id}, or with {@code id} as Draft 4 spells the same keyword,
+     * understood relative to the scope it sits in. A node stating none
+     * shares the identity of that scope, which may be unknown.
      *
-     * @throws IllegalArgumentException if {@code uri} is relative and the
-     *     referencing document has no location to resolve it against
+     * <p>A node stating {@code "$id": "external/billing.json"} within a scope
+     * identified as {@code file:/schemas/root.json} is identified as
+     * {@code file:/schemas/external/billing.json} — the last segment is
+     * replaced, not appended to. An absolute {@code $id} stands on its own,
+     * whatever scope it sits in.
+     */
+    private static URI baseUriOf(JsonNode node, URI enclosingBase) {
+        if (!node.isObject()) {
+            return enclosingBase;
+        }
+        var idNode = node.get("$id");
+        if (idNode == null) {
+            idNode = node.get("id");
+        }
+        if (idNode == null || !idNode.isTextual()) {
+            return enclosingBase;
+        }
+        var declaredId = URI.create(idNode.asText());
+        return enclosingBase != null ? enclosingBase.resolve(declaredId) : declaredId;
+    }
+
+    /**
+     * Returns the JSON Schema document that {@code location} identifies, with
+     * every ref it contains restated as the absolute URI that ref names.
+     *
+     * <p>A document is retrieved once per parse: {@code loadedDocuments} holds
+     * those already reached, and gains any this call retrieves.
+     *
      * @throws java.io.UncheckedIOException if the document cannot be read
      */
-    private JsonNode loadExternalDocument(String uri) {
+    private static JsonNode loadExternalDocument(URI location, Map<URI, JsonNode> loadedDocuments) {
+        var alreadyLoaded = loadedDocuments.get(location);
+        if (alreadyLoaded != null) {
+            return alreadyLoaded;
+        }
         try {
-            JsonNode document;
-            if (uri.startsWith("http://") || uri.startsWith("https://")) {
-                document = MAPPER.readTree(SchemaFetcher.fetch(uri));
-            } else if (baseDir != null) {
-                document = MAPPER.readTree(Files.readString(baseDir.resolve(uri)));
+            String content;
+            var scheme = location.getScheme();
+            if ("http".equals(scheme) || "https".equals(scheme)) {
+                var url = location.toString();
+                content = SchemaFetcher.fetch(url);
             } else {
-                throw new IllegalArgumentException(
-                        "Cannot resolve relative $ref '" + uri
-                                + "': no base URI. Use SchemaParser.parse(Path) to parse from a file.");
+                var path = Path.of(location);
+                content = Files.readString(path);
             }
+            var document = MAPPER.readTree(content);
             SchemaNormalizer.normalize(document);
-            qualifyRefs(document, uri);
+            var identity = baseUriOf(document, location);
+            qualifyRefs(document, identity.toString());
+            loadedDocuments.put(location, document);
             return document;
         } catch (IOException e) {
             throw new UncheckedIOException(e);
@@ -181,28 +241,57 @@ final class RefCollector {
     }
 
     /**
-     * Rewrites document-local {@code $ref} values ({@code "#/definitions/Foo"})
-     * within {@code document} to name {@code baseUri} explicitly
-     * ({@code "baseUri#/definitions/Foo"}). Must run before {@code document}
-     * is deserialised, so the resulting schemas carry ref strings that match
-     * the keys they are collected under.
+     * Restates every relative {@code $ref} within {@code document} as the
+     * absolute URI it names, resolved against {@code docUri} — what
+     * {@code document} itself is called. Absolute refs are left alone.
+     *
+     * <p>Same-named refs in different documents therefore stay distinct, and
+     * a document reached by more than one route is named once however it was
+     * reached. Must run before {@code document} is deserialised,
+     * so the resulting schemas carry ref strings matching the keys they are
+     * collected under.
+     *
+     * <p>Only refs in schema positions are restated. A {@code $ref}-shaped
+     * value sitting in data — an {@code enum} member, a {@code const}, an
+     * {@code example} — means nothing as a reference and is left as the data
+     * it is.
      */
-    private static void qualifyRefs(JsonNode node, String baseUri) {
+    private static void qualifyRefs(JsonNode node, String docUri) {
         if (node.isObject()) {
             var objectNode = (ObjectNode) node;
             var refNode = objectNode.get("$ref");
             if (refNode != null && refNode.isTextual()) {
                 var ref = refNode.asText();
                 if (ref.startsWith("#")) {
-                    objectNode.put("$ref", baseUri + ref);
+                    objectNode.put("$ref", docUri + ref);
+                } else {
+                    var refUri = URI.create(ref);
+                    if (!refUri.isAbsolute()) {
+                        var documentUri = URI.create(docUri);
+                        var restated = documentUri.resolve(refUri);
+                        objectNode.put("$ref", restated.toString());
+                    }
                 }
             }
-            for (var entry : objectNode.properties()) {
-                qualifyRefs(entry.getValue(), baseUri);
+            for (var property : objectNode.properties()) {
+                var shape = SchemaNormalizer.SCHEMA_FIELDS.get(property.getKey());
+                if (shape == null) {
+                    continue;
+                }
+                var value = property.getValue();
+                if (shape == SchemaNormalizer.SchemaShape.SCHEMA_MAP) {
+                    // The keys of a schema map are user-chosen property or definition
+                    // names, so its schemas sit one level below the keyword.
+                    for (var entry : value.properties()) {
+                        qualifyRefs(entry.getValue(), docUri);
+                    }
+                } else {
+                    qualifyRefs(value, docUri);
+                }
             }
         } else if (node.isArray()) {
             for (var element : node) {
-                qualifyRefs(element, baseUri);
+                qualifyRefs(element, docUri);
             }
         }
     }

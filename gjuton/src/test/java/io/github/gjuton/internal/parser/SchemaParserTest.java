@@ -20,6 +20,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -535,7 +537,9 @@ class SchemaParserTest {
             // then
             var order = document.resolveRef("defs.json#/definitions/Order");
             assertThat(order).isNotNull().isInstanceOf(ObjectSchema.class);
-            var addressRef = document.resolveRef("defs.json#/definitions/Address");
+            // The ref inside defs.json is named by the document it belongs to.
+            var defsUri = tempDir.toUri().resolve("defs.json");
+            var addressRef = document.resolveRef(defsUri + "#/definitions/Address");
             assertThat(addressRef).isNotNull().isInstanceOf(ObjectSchema.class);
         }
 
@@ -722,6 +726,441 @@ class SchemaParserTest {
             assertThat(tree.get("address").get("street").isTextual()).isTrue();
             var zip = tree.get("address").get("zip").asText();
             assertThat(zip.length()).isBetween(5, 10);
+        }
+
+        @Test
+        void relativeRefResolvesAgainstDeclaredIdRatherThanFileLocation(@TempDir Path tempDir) throws IOException {
+            var server = startSchemaServer("/sub/other.json", """
+                    {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                    """);
+            try {
+                int port = server.getAddress().getPort();
+                // A decoy next to the entry file: resolving against the file's own
+                // directory would find this instead of the $id-implied target.
+                Files.writeString(tempDir.resolve("other.json"), """
+                        {
+                            "type": "integer"
+                        }
+                        """);
+                var schemaFile = Files.writeString(tempDir.resolve("root.json"), """
+                        {
+                            "$id": "http://localhost:%d/sub/root.json",
+                            "properties": {
+                                "thing": {
+                                    "$ref": "other.json"
+                                }
+                            }
+                        }
+                        """.formatted(port));
+
+                // when
+                var document = SchemaParser.parse(schemaFile);
+
+                // then
+                assertThat(document.resolveRef("other.json")).isInstanceOf(StringSchema.class);
+            } finally {
+                server.stop(0);
+            }
+        }
+
+        @Test
+        void draft4BareIdActsAsBaseUriForRelativeRefs(@TempDir Path tempDir) throws IOException {
+            var server = startSchemaServer("/sub/other.json", """
+                    {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                    """);
+            try {
+                int port = server.getAddress().getPort();
+                Files.writeString(tempDir.resolve("other.json"), """
+                        {
+                            "type": "integer"
+                        }
+                        """);
+                var schemaFile = Files.writeString(tempDir.resolve("root.json"), """
+                        {
+                            "id": "http://localhost:%d/sub/root.json",
+                            "properties": {
+                                "thing": {
+                                    "$ref": "other.json"
+                                }
+                            }
+                        }
+                        """.formatted(port));
+
+                // when
+                var document = SchemaParser.parse(schemaFile);
+
+                // then
+                assertThat(document.resolveRef("other.json")).isInstanceOf(StringSchema.class);
+            } finally {
+                server.stop(0);
+            }
+        }
+
+        @Test
+        void refInsideExternalDocumentResolvesAgainstThatDocumentsDirectory(@TempDir Path tempDir) throws IOException {
+            var subDir = Files.createDirectory(tempDir.resolve("sub"));
+            Files.writeString(subDir.resolve("address.json"), """
+                    {
+                        "properties": {
+                            "zip": {
+                                "$ref": "zipcode.json"
+                            }
+                        }
+                    }
+                    """);
+            Files.writeString(subDir.resolve("zipcode.json"), """
+                    {
+                        "type": "string",
+                        "minLength": 5
+                    }
+                    """);
+            // A decoy in the entry document's directory: resolving the nested ref
+            // against the entry file rather than address.json would find this.
+            Files.writeString(tempDir.resolve("zipcode.json"), """
+                    {
+                        "type": "integer"
+                    }
+                    """);
+            var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
+                    {
+                        "properties": {
+                            "address": {
+                                "$ref": "sub/address.json"
+                            }
+                        }
+                    }
+                    """);
+
+            // when
+            var document = SchemaParser.parse(schemaFile);
+
+            // then
+            var zipcodeUri = tempDir.toUri().resolve("sub/zipcode.json");
+            assertThat(document.resolveRef(zipcodeUri.toString())).isInstanceOf(StringSchema.class);
+        }
+
+        @Test
+        void theSameRefSpellingInTwoDocumentsResolvesToEachDocumentsOwnTarget(@TempDir Path tempDir) throws IOException {
+            var subDir = Files.createDirectory(tempDir.resolve("sub"));
+            Files.writeString(subDir.resolve("a.json"), """
+                    {
+                        "properties": {
+                            "inner": {
+                                "$ref": "target.json"
+                            }
+                        }
+                    }
+                    """);
+            Files.writeString(subDir.resolve("target.json"), """
+                    {
+                        "type": "string",
+                        "minLength": 5
+                    }
+                    """);
+            // Named by the same spelling as the ref inside sub/a.json, but a different file.
+            Files.writeString(tempDir.resolve("target.json"), """
+                    {
+                        "type": "integer"
+                    }
+                    """);
+            var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
+                    {
+                        "properties": {
+                            "own": {
+                                "$ref": "target.json"
+                            },
+                            "nested": {
+                                "$ref": "sub/a.json"
+                            }
+                        }
+                    }
+                    """);
+
+            // when
+            var document = SchemaParser.parse(schemaFile);
+
+            // then
+            assertThat(document.resolveRef("target.json")).isInstanceOf(NumericSchema.class);
+            var nestedTargetUri = tempDir.toUri().resolve("sub/target.json");
+            assertThat(document.resolveRef(nestedTargetUri.toString())).isInstanceOf(StringSchema.class);
+        }
+
+        @Test
+        void refInsideExternalDocumentResolvesAgainstThatDocumentsOwnId(@TempDir Path tempDir) throws IOException {
+            var server = startSchemaServer("/deep/target.json", """
+                    {
+                        "type": "string",
+                        "minLength": 5
+                    }
+                    """);
+            try {
+                int port = server.getAddress().getPort();
+                var subDir = Files.createDirectory(tempDir.resolve("sub"));
+                Files.writeString(subDir.resolve("a.json"), """
+                        {
+                            "$id": "http://localhost:%d/deep/a.json",
+                            "properties": {
+                                "inner": {
+                                    "$ref": "target.json"
+                                }
+                            }
+                        }
+                        """.formatted(port));
+                // A decoy beside a.json: the ref belongs to the $id's directory, not this one.
+                Files.writeString(subDir.resolve("target.json"), """
+                        {
+                            "type": "integer"
+                        }
+                        """);
+                var schemaFile = Files.writeString(tempDir.resolve("main.json"), """
+                        {
+                            "properties": {
+                                "nested": {
+                                    "$ref": "sub/a.json"
+                                }
+                            }
+                        }
+                        """);
+
+                // when
+                var document = SchemaParser.parse(schemaFile);
+
+                // then
+                assertThat(document.resolveRef("http://localhost:%d/deep/target.json".formatted(port)))
+                        .isInstanceOf(StringSchema.class);
+            } finally {
+                server.stop(0);
+            }
+        }
+
+        @Test
+        void aRefNamingTheDocumentsOwnIdIsResolvedWithinIt() {
+            // The host does not resolve, so any attempt to retrieve the document
+            // named by the ref fails rather than finding it in the parse.
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "$id": "https://example.invalid/root.json",
+                        "definitions": {
+                            "Name": {
+                                "type": "string",
+                                "minLength": 3
+                            }
+                        },
+                        "properties": {
+                            "name": {
+                                "$ref": "https://example.invalid/root.json#/definitions/Name"
+                            }
+                        }
+                    }
+                    """);
+
+            // then
+            assertThat(document.resolveRef("https://example.invalid/root.json#/definitions/Name"))
+                    .isInstanceOf(StringSchema.class);
+        }
+
+        @Test
+        void aRefNamingTheDocumentsOwnIdWithoutAFragmentNamesTheDocumentItself() {
+            // The host does not resolve, so any attempt to retrieve the document
+            // named by the ref fails rather than finding it in the parse.
+            // when
+            var document = SchemaParser.parse("""
+                    {
+                        "$id": "https://example.invalid/root.json",
+                        "type": "object",
+                        "properties": {
+                            "child": {
+                                "$ref": "https://example.invalid/root.json"
+                            }
+                        }
+                    }
+                    """);
+
+            // then
+            assertThat(document.resolveRef("https://example.invalid/root.json"))
+                    .isInstanceOf(ObjectSchema.class);
+        }
+
+        @Test
+        void aDocumentNamedBySeveralRefsIsRetrievedOnce() throws IOException {
+            var fetches = new AtomicInteger();
+            var defs = """
+                    {
+                        "definitions": {
+                            "Address": {
+                                "type": "object"
+                            },
+                            "ZipCode": {
+                                "type": "string",
+                                "minLength": 5
+                            }
+                        }
+                    }
+                    """;
+            var server = HttpServer.create(new InetSocketAddress(0), 0);
+            server.createContext("/defs.json", exchange -> {
+                fetches.incrementAndGet();
+                var bytes = defs.getBytes();
+                exchange.sendResponseHeaders(200, bytes.length);
+                exchange.getResponseBody().write(bytes);
+                exchange.getResponseBody().close();
+            });
+            server.start();
+            try {
+                int port = server.getAddress().getPort();
+
+                // when
+                var document = SchemaParser.parse("""
+                        {
+                            "properties": {
+                                "address": {
+                                    "$ref": "http://localhost:%d/defs.json#/definitions/Address"
+                                },
+                                "zip": {
+                                    "$ref": "http://localhost:%d/defs.json#/definitions/ZipCode"
+                                }
+                            }
+                        }
+                        """.formatted(port, port));
+
+                // then
+                assertThat(fetches).hasValue(1);
+                assertThat(document.resolveRef("http://localhost:%d/defs.json#/definitions/ZipCode".formatted(port)))
+                        .isInstanceOf(StringSchema.class);
+            } finally {
+                server.stop(0);
+            }
+        }
+
+        @Test
+        void nearestEnclosingIdRebasesRefsInItsOwnSubtree(@TempDir Path tempDir) throws IOException {
+            var server = startSchemaServer("/nested/other.json", """
+                    {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                    """);
+            try {
+                int port = server.getAddress().getPort();
+                Files.writeString(tempDir.resolve("other.json"), """
+                        {
+                            "type": "integer"
+                        }
+                        """);
+                // Only the subschema declares an $id; the document itself has none,
+                // so the ref inside that subtree resolves against the subschema.
+                var schemaFile = Files.writeString(tempDir.resolve("root.json"), """
+                        {
+                            "properties": {
+                                "wrapper": {
+                                    "$id": "http://localhost:%d/nested/wrapper.json",
+                                    "properties": {
+                                        "thing": {
+                                            "$ref": "other.json"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        """.formatted(port));
+
+                // when
+                var document = SchemaParser.parse(schemaFile);
+
+                // then
+                assertThat(document.resolveRef("other.json")).isInstanceOf(StringSchema.class);
+            } finally {
+                server.stop(0);
+            }
+        }
+
+        @Test
+        void aRefShapedValueInsideAnExternalDocumentsDataIsLeftAlone(@TempDir Path tempDir) throws IOException {
+            Files.writeString(tempDir.resolve("defs.json"), """
+                    {
+                        "definitions": {
+                            "Kind": {
+                                "enum": [
+                                    {
+                                        "$ref": "local.json"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                    """);
+            var schemaFile = Files.writeString(tempDir.resolve("root.json"), """
+                    {
+                        "properties": {
+                            "kind": {
+                                "$ref": "defs.json#/definitions/Kind"
+                            }
+                        }
+                    }
+                    """);
+
+            // when
+            var document = SchemaParser.parse(schemaFile);
+
+            // then
+            var kind = document.resolveRef("defs.json#/definitions/Kind");
+            assertThat(kind.getEnumValues()).containsExactly(Map.of("$ref", "local.json"));
+        }
+
+        @Test
+        void nestedIdsComposeSoARefResolvesAgainstAllOfThemInTurn(@TempDir Path tempDir) throws IOException {
+            var oneDir = Files.createDirectory(tempDir.resolve("one"));
+            var twoDir = Files.createDirectory(oneDir.resolve("two"));
+            Files.writeString(twoDir.resolve("target.json"), """
+                    {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                    """);
+            // Decoys at each level the chain passes through: reachable only by
+            // stopping short of the innermost $id.
+            Files.writeString(tempDir.resolve("target.json"), """
+                    {
+                        "type": "integer"
+                    }
+                    """);
+            Files.writeString(oneDir.resolve("target.json"), """
+                    {
+                        "type": "boolean"
+                    }
+                    """);
+            var schemaFile = Files.writeString(tempDir.resolve("root.json"), """
+                    {
+                        "properties": {
+                            "outer": {
+                                "$id": "one/mid.json",
+                                "properties": {
+                                    "inner": {
+                                        "$id": "two/leaf.json",
+                                        "properties": {
+                                            "thing": {
+                                                "$ref": "target.json"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    """);
+
+            // when
+            var document = SchemaParser.parse(schemaFile);
+
+            // then
+            assertThat(document.resolveRef("target.json")).isInstanceOf(StringSchema.class);
         }
     }
 

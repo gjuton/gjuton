@@ -6,6 +6,7 @@ import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.SchemaDocument;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -35,7 +36,8 @@ public final class SchemaParser {
     /**
      * Parses a JSON Schema file into a {@link SchemaDocument} containing
      * the root schema and all resolved {@code $ref} targets. External
-     * {@code $ref} values are resolved relative to the file's parent directory.
+     * {@code $ref} values are resolved relative to the {@code $id} the schema
+     * declares, or to the file's own location when it declares none.
      *
      * @throws IllegalArgumentException if the schema is not valid JSON or
      *     contains an unresolvable {@code $ref}
@@ -44,18 +46,19 @@ public final class SchemaParser {
     public static SchemaDocument parse(Path schemaFile) {
         try {
             var jsonSchema = Files.readString(schemaFile);
-            return doParse(jsonSchema, schemaFile.toAbsolutePath().getParent());
+            var absolutePath = schemaFile.toAbsolutePath();
+            return doParse(jsonSchema, absolutePath.toUri());
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
     }
 
-    private static SchemaDocument doParse(String jsonSchema, Path baseDir) {
+    private static SchemaDocument doParse(String jsonSchema, URI retrievalUri) {
         try {
             var rootNode = MAPPER.readTree(jsonSchema);
             SchemaNormalizer.normalize(rootNode);
             var rootSchema = MAPPER.treeToValue(rootNode, Schema.class);
-            var refs = RefCollector.collect(rootNode, rootSchema, baseDir);
+            var refs = RefCollector.collect(rootNode, rootSchema, retrievalUri);
             return new SchemaDocument(rootSchema, refs);
         } catch (JsonProcessingException e) {
             throw new IllegalArgumentException("Failed to parse JSON Schema", e);

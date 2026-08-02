@@ -1,0 +1,10 @@
+{
+    "$id": "external/billing.json",
+    "type": "object",
+    "properties": {
+        "billing": {
+            "$ref": "defs.json#/definitions/Address"
+        }
+    },
+    "required": ["billing"]
+}
