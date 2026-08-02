@@ -441,7 +441,7 @@ class GeneratorContextTest {
     }
 
     private static GeneratorContext contextWithOverride(String path, Supplier<Object> override) {
-        var config = new GeneratorConfig(false, false, 2, 4, Map.of(path, override), Map.of(), Map.of(), Map.of(), ValueConstraints.forExhaustive());
+        var config = new GeneratorConfig(false, false, 2, 4, Map.of(path, override), Map.of(), Map.of(), ValueConstraints.forExhaustive());
         return new GeneratorContext(new SchemaDocument(new NullSchema(), Map.of()), new Random(1), config);
     }
 }

@@ -390,15 +390,6 @@ public final class GeneratorContext {
     }
 
     /**
-     * The caller's override for positions reaching a schema through
-     * {@code ref}, or {@code null} when none is registered. Matches the
-     * reference as written, so an inlined copy of the definition is missed.
-     */
-    Supplier<Object> refOverride(String ref) {
-        return config.refOverrides().get(ref);
-    }
-
-    /**
      * The caller's override for strings carrying {@code format}, or
      * {@code null} when none is registered. Matches the format as written,
      * including ones gjuton does not model.

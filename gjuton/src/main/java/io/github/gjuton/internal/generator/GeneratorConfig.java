@@ -27,8 +27,6 @@ import java.util.function.Supplier;
  *                                      applied at every position whose property
  *                                      name matches, unless a path-based
  *                                      override already covers that position
- * @param refOverrides                  value overrides keyed by {@code $ref};
- *                                      applied at every referencing position
  * @param formatOverrides               value overrides keyed by {@code format}
  *                                      as written; applied at every string
  *                                      carrying it
@@ -42,7 +40,6 @@ public record GeneratorConfig(
         int refHardDepth,
         Map<String, Supplier<Object>> pathOverrides,
         Map<String, Supplier<Object>> nameOverrides,
-        Map<String, Supplier<Object>> refOverrides,
         Map<String, Supplier<Object>> formatOverrides,
         ValueConstraints constraints) {
 
@@ -63,7 +60,6 @@ public record GeneratorConfig(
     public GeneratorConfig {
         pathOverrides = Map.copyOf(pathOverrides);
         nameOverrides = Map.copyOf(nameOverrides);
-        refOverrides = Map.copyOf(refOverrides);
         formatOverrides = Map.copyOf(formatOverrides);
     }
 
@@ -79,7 +75,6 @@ public record GeneratorConfig(
                 false,
                 DEFAULT_REF_SOFT_DEPTH,
                 DEFAULT_REF_HARD_DEPTH,
-                Map.of(),
                 Map.of(),
                 Map.of(),
                 Map.of(),

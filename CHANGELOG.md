@@ -13,11 +13,10 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ### Added
 
-- `withOverrideByRef` and `withOverrideByFormat`, which override a value by what
-  a position *is* rather than where it sits: positions referencing a given
-  definition, or strings carrying a given `format`. Custom formats count,
-  so a schema naming a domain type gjuton has no generator for can still be
-  filled with realistic values.
+- `withOverrideByFormat`, which overrides a value by what a position *is*
+  rather than where it sits: every string carrying a given `format`. Custom
+  formats count, so a schema naming a domain type gjuton has no generator for
+  can still be filled with realistic values.
 - Support for `format: "duration"` (ISO 8601 durations, e.g. `P3D`, `PT1H30M`).
 - Support for Draft 4 style boolean `exclusiveMinimum`/`exclusiveMaximum`, the
   form used by OpenAPI 3.0 and Swagger 2.0. The bound is taken from the

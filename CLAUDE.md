@@ -53,7 +53,7 @@ The shape a ticket takes and the rules for writing one are documented in:
 Conventional commits without a scope: `<type>: <description>`. The project
 is focused enough that a scope adds noise without signal. Keep the subject
 short, around 50 characters. Types in use: feat, fix, refactor, test, docs,
-chore, build, ci, perf, style. A ticket reference goes at the end of the
+chore, build, ci, perf, style, revert. A ticket reference goes at the end of the
 subject in parentheses: `fix: refs in example fails parse (#163)`.
 
 ## Changelog

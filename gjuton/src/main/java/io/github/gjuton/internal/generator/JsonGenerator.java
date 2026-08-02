@@ -136,10 +136,6 @@ public final class JsonGenerator {
 
     private static Generator<?> buildDelegate(Schema schema, GeneratorContext context) {
         if (schema.getRef() != null) {
-            var refOverride = context.refOverride(schema.getRef());
-            if (refOverride != null) {
-                return new OverrideGenerator(refOverride);
-            }
             return new RefGenerator(context, schema.getRef());
         }
         if (schema.getConstValue() != null) {

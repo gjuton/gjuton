@@ -133,24 +133,6 @@ Gjuton gen = Gjuton.of(schema)
         .withOverrideByName("customerId", () -> "cust-42");
 ```
 
-`withOverrideByRef(String ref, ValueOverride)` matches by the definition a
-position references, so a type reused throughout a schema is overridden with one
-registration instead of one per use site. Write the reference exactly as the
-schema writes it — `#/$defs/UserId` for a local definition,
-`defs.json#/definitions/Address` for one in another file, spelled as the
-document you passed to `of` spells it. The qualified form covers that
-definition everywhere, including where the external file refers to it with its
-own document-local `$ref`.
-
-A position that inlines a copy of the definition rather than referencing it is
-not matched, and neither is a reference that appears as an `allOf` branch —
-such a position is a composite of its branches, not the referenced type.
-
-```java
-Gjuton gen = Gjuton.of(schema)
-        .withOverrideByRef("#/$defs/UserId", () -> 42);
-```
-
 `withOverrideByFormat(String format, ValueOverride)` matches every string
 carrying a given `format`. Any format works, including ones gjuton has no
 generator for — so it is also the way to produce a domain type the schema only
@@ -163,8 +145,8 @@ Gjuton gen = Gjuton.of(schema)
 ```
 
 Where several overrides match one position the most specific wins: path, then
-name, then `$ref`, then `format`. A name-based override shares one value across
-every position it matches; the others produce a value per position, so ten
+name, then `format`. A name-based override shares one value across every
+position it matches; a format-based one produces a value per position, so ten
 strings of the same format get ten independently produced values. No override is
 validated against the schema — the caller owns the value's correctness.
 
