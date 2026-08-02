@@ -34,6 +34,7 @@ section is promoted to a version at release time (see `docs/releasing.md`).
   the constraints the schema actually declares, and a failure at the document
   root is located as `(at $)` — a message with no location now means the
   location could not be determined, rather than that the root was at fault.
+- Jackson dependency updated from 2.22.0 to 2.22.1.
 
 ### Fixed
 
