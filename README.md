@@ -43,7 +43,8 @@ Gjuton pulls in three transitive dependencies:
 ## Quick start
 
 Create a generator from a schema and call `generate()`. The schema goes in as a
-`String`, `File`, or `InputStream`; a JSON value comes out as a `String`.
+`String`, `File`, or `InputStream`; a JSON value comes out as a `String` or
+bound to a type of your choosing.
 
 ```java
 import io.github.gjuton.api.Gjuton;
@@ -67,6 +68,14 @@ Each call to `generate()` returns another valid value for the same schema. By
 default the values are random; switch to `EXHAUSTIVE` mode (see below) to emit
 trouble-prone boundary values (empty strings, minimums, maximums, zero) first,
 to expose bugs in the system under test.
+
+To skip the JSON entirely, pass the type you want back:
+
+```java
+record User(int id, String name, String email) {}
+
+User user = Gjuton.of(schema).generate(User.class);
+```
 
 ## Configuration
 
