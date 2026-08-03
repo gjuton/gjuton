@@ -1,10 +1,10 @@
 # Gjuton
 
 Gjuton is a test-data generator for Java. Point it at a JSON Schema and it
-produces JSON that is valid against that schema. It offers two modes of
-operation: *random* (the default), which emits arbitrary valid values, and
-*exhaustive*, which deliberately exercises the schema's boundary conditions to
-surface bugs.
+produces data that is valid against that schema, as JSON or bound to your own
+types. It offers two modes of operation: *random* (the default), which emits
+arbitrary valid values, and *exhaustive*, which deliberately exercises the
+schema's boundary conditions to surface bugs.
 
 Gjuton is pre-1.0 — the API is unstable and breaking changes may land in any release.
 
