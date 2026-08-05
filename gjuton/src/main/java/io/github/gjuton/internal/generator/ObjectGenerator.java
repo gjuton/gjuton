@@ -321,7 +321,8 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             while (obj.size() < targetCount) {
                 var name = "prop" + i++;
                 if (!obj.containsKey(name)) {
-                    obj.put(name, context.generatorFor(withMatchingPatternSchemas(synthesizeSchema, name)).generate());
+                    var value = JsonGenerator.generateForPath(context, "." + name, () -> withMatchingPatternSchemas(synthesizeSchema, name));
+                    obj.put(name, value);
                 }
             }
         } else if (obj.size() < targetCount && !effectiveSchema.getPatternProperties().isEmpty()) {
@@ -434,7 +435,8 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
                 log.trace("synthesized name '{}' is already taken: {} of {} allowed collisions used",
                         name, collisions, PATTERN_NAME_RETRY_BUDGET);
             } else {
-                obj.put(name, context.generatorFor(withMatchingPatternSchemas(new UntypedSchema(), name)).generate());
+                var value = JsonGenerator.generateForPath(context, "." + name, () -> withMatchingPatternSchemas(new UntypedSchema(), name));
+                obj.put(name, value);
             }
         }
     }

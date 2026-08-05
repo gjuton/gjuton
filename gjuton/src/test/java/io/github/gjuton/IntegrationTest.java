@@ -49,7 +49,7 @@ class IntegrationTest {
     // hand-written fixtures, so they run far fewer iterations.
     private static final List<SchemaLocation> SCHEMA_LOCATIONS = List.of(
             new SchemaLocation("schemas", 100, 1000),
-            new SchemaLocation("schemas/schemastore", 10, 100)
+            new SchemaLocation("schemas/schemastore", 10, 1000)
     );
 
     // Timings indicate a test run of instantiating Gjuton, generating 10 values and
@@ -120,31 +120,39 @@ class IntegrationTest {
     );
 
     // Schemas that cannot be built without reaching the network. Ignored because
-    // they would cause a hassle in CI or when running in a sandbox
-    private static final Set<String> SCHEMAS_THAT_NEED_NETWORK = Set.of(
+    // they would cause a hassle in CI or when running in a sandbox. When tested
+    // these schemas fail the test.
+    private static final Set<String> SCHEMAS_THAT_NEED_NETWORK_NON_WORKING = Set.of(
+            "catalog-info.json", "foundryvtt-module-manifest.json", "foundryvtt-system-manifest.json",
+            "foundryvtt-world-manifest.json", "lsdlschema.json", "web-manifest-combined.json"
+    );
+
+    // Schemas that cannot be built without reaching the network but generate valid JSON
+    // once it is reachable. Kept out of the run so CI and sandboxes stay offline-clean.
+    // When tested these schemas pass the test.
+    private static final Set<String> SCHEMAS_THAT_NEED_NETWORK_WORKING = Set.of(
             "anywork-ac-1.0.json", "azure-deviceupdate-import-manifest-4.0.json",
             "azure-deviceupdate-import-manifest-5.0.json", "azure-deviceupdate-manifest-definitions-4.0.json",
             "azure-deviceupdate-manifest-definitions-5.0.json", "azure-deviceupdate-update-manifest-4.json",
             "azure-deviceupdate-update-manifest-5.json", "azure-iot-edge-deployment-template-1.0.json",
             "azure-iot-edge-deployment-template-2.0.json", "azure-iot-edge-deployment-template-3.0.json",
-            "azure-iot-edge-deployment-template-4.0.json",
-            "bitrise.json", "catalog-info.json", "cheatsheets.json", "cibuildwheel.json",
-            "cinnamon-spice.info.json", "clang-format.json", "clangd.json", "drone.json", "eslintrc.json",
-            "foundryvtt-module-manifest.json", "foundryvtt-system-manifest.json", "foundryvtt-world-manifest.json",
-            "gematik-test-hcpis.json", "gematik-test-hcps.json", "github-pages-jekyll.json",
-            "grunt-clean-task.json", "grunt-copy-task.json", "grunt-cssmin-task.json", "grunt-jshint-task.json",
-            "hammerkit.json", "jekyll.json", "jsbeautifyrc-nested.json", "lsdlschema.json",
-            "minecraft-advancement.json", "minecraft-pack-mcmeta.json", "minecraft-texture-mcmeta.json",
-            "mta.json", "mtaext.json", "partial-pdm.json", "partial-tox.json", "pep-723.json", "poetry.json",
-            "pre-commit-config.json", "prisma.json", "rancher-fleet-0.5.json", "rancher-fleet-0.8.json",
-            "rc3-collection-0.0.3.json", "rc3-folder-0.0.3.json", "rc3-request-0.0.3.json",
+            "azure-iot-edge-deployment-template-4.0.json", "bitrise.json", "cheatsheets.json", "cibuildwheel.json",
+            "cinnamon-spice.info.json", "clang-format.json", "clangd.json", "clasp.json", "coffeelint.json",
+            "cryproj.52.schema.json", "cryproj.53.schema.json", "drone.json", "eslintrc.json",
+            "gematik-test-hcpis.json", "gematik-test-hcps.json", "github-pages-jekyll.json", "grunt-clean-task.json",
+            "grunt-copy-task.json", "grunt-cssmin-task.json", "grunt-jshint-task.json", "hammerkit.json",
+            "jekyll.json", "jsbeautifyrc-nested.json", "minecraft-advancement.json", "minecraft-pack-mcmeta.json",
+            "minecraft-texture-mcmeta.json", "mta.json", "mtaext.json", "partial-pdm.json", "partial-tox.json",
+            "pep-723.json", "poetry.json", "pre-commit-config.json", "prisma.json", "rancher-fleet-0.5.json",
+            "rancher-fleet-0.8.json", "rc3-collection-0.0.3.json", "rc3-folder-0.0.3.json", "rc3-request-0.0.3.json",
+            "replit.json", "rudder-techniques.json", "rust-toolchain.json",
             "sarif-external-property-file-2.1.0-rtm.0.json", "sarif-external-property-file-2.1.0-rtm.1.json",
             "sarif-external-property-file-2.1.0-rtm.2.json", "sarif-external-property-file-2.1.0-rtm.3.json",
             "sarif-external-property-file-2.1.0-rtm.4.json", "sarif-external-property-file-2.1.0-rtm.5.json",
-            "sarif-external-property-file.json", "schema-org-action.json", "schema-org-contact-point.json",
-            "schema-org-place.json", "schema-org-thing.json", "scikit-build.json", "setuptools.json",
-            "ti8m-cdk-concrete-environment-config.json", "ti8m-cdk-concrete-environments.json",
-            "vs-2017.3.host.json", "web-manifest-app-info.json", "web-manifest-combined.json"
+            "sarif-external-property-file.json", "scarb.json", "schema-org-action.json",
+            "schema-org-contact-point.json", "schema-org-place.json", "schema-org-thing.json", "scikit-build.json",
+            "setuptools.json", "ti8m-cdk-concrete-environment-config.json", "ti8m-cdk-concrete-environments.json",
+            "tsoa.json", "vs-2017.3.host.json", "web-manifest-app-info.json"
     );
 
     // Bugs/gaps in gjuton itself: parser limitations, generation crashes, or generated
@@ -153,38 +161,19 @@ class IntegrationTest {
     private static final Set<String> NON_WORKING_SCHEMAS = Set.of(
             // Schema build fails: missing local $ref target file
             "base-04.json", // schema build: missing local ref target "path" (NoSuchFileException)
-            "clasp.json", // schema build: missing local ref target "path" (NoSuchFileException)
             "feed.json", // schema build: missing local ref target "feed-1" (NoSuchFileException)
-            "tsoa.json", // schema build: missing local ref target "tsconfig" (NoSuchFileException)
 
             // Schema build fails: unresolved $ref fragment
             "dss-2.0.0.json", // schema build: unresolved percent-encoded $ref fragment
             "opspec-io-0.1.7.json", // schema build: unresolved percent-encoded $ref fragment
 
-            // Crashes during generation (StackOverflowError)
-            "json-patch.json", // StackOverflowError during generation
-            "okh.json", // StackOverflowError during generation
-
-            // Generates JSON violating other constraints (oneOf/const/required/type/dependentSchemas/contentMediaType)
+            // Generates JSON violating other constraints (oneOf/const/required/type/dependentSchemas)
             "es6importsorterrc.json", // generates /preCommands/0 violating its oneOf
             "prometheus.json", // generates /remote_write/0/authorization violating its const constraint
             "tmlanguage.json", // generates /patterns entries missing required 'begin'/'end'
             "tslint.json", // generates /rules/* entries with null where boolean is required
-            "venvplus-schema-v1.0.0.json", // generates /offline-config/source-files entries violating oneOf
-            "venvplus-schema-v1.1.0.json", // generates /offline-config/source-files and file-path properties violating constraints
             "vim-addon-info.json", // generates /repository violating dependentSchemas constraint
             "web-manifest.json", // generates /orientation ambiguously valid under 2 oneOf branches
-            "azure-iot-edge-deployment-1.0.json", // generates createOptions violating 'is not a content media type'
-            "azure-iot-edgeagent-deployment-1.0.json", // generates createOptions violating 'is not a content media type'
-            "vega.json", // generates /data/0 missing required 'name', invalid under its oneOf
-
-            // Novelty score never reaches zero within the iteration budget
-            "pre-commit-hooks.json",
-            "coffeelint.json",
-            "scarb.json",
-            "replit.json",
-            "cryproj.52.schema.json",
-            "cryproj.53.schema.json",
 
             // Throws UnsatisfiableSchemaException; not yet triaged to confirm whether the
             // schema is genuinely unsatisfiable or gjuton's generator/solver is at fault.
@@ -195,7 +184,6 @@ class IntegrationTest {
             //    a time, when if/then is used as a type-discriminated union (bmml, gitea-issue-forms,
             //    likely github-issue-forms)
             "bmml.json", // UnsatisfiableSchemaException at /meta
-            "bundleconfig.json", // UnsatisfiableSchemaException at /0
             "compilerconfig.json", // UnsatisfiableSchemaException at /0
             "flatpak-manifest.json", // UnsatisfiableSchemaException
             "foundryvtt-base-package-manifest.json", // UnsatisfiableSchemaException at /id (pattern+length)
@@ -203,16 +191,11 @@ class IntegrationTest {
             "github-issue-forms.json", // UnsatisfiableSchemaException at /body/0
             "pnpm-workspace.json", // UnsatisfiableSchemaException at /catalog
             "popxf-1.0.json", // UnsatisfiableSchemaException, and generates values violating property-name regex patterns
-            "pylock.json", // UnsatisfiableSchemaException
-            "rudder-techniques.json", // UnsatisfiableSchemaException at /items/0
-            "rust-toolchain.json", // UnsatisfiableSchemaException at /toolchain
             "specif-1.0.json", // UnsatisfiableSchemaException at /$schema (pattern+length)
             "specif-1.1.json", // UnsatisfiableSchemaException at /$schema (pattern+length)
             "starlake.json", // UnsatisfiableSchemaException
             "venvironment-schema-v4.0.0.json", // UnsatisfiableSchemaException at /can-networks/0/database
-            "vhwdebugger-binding-schema.json", // UnsatisfiableSchemaException
-            "vtestunit-schema.json", // UnsatisfiableSchemaException
-            "webjob-publish-settings.json" // UnsatisfiableSchemaException
+            "vhwdebugger-binding-schema.json" // UnsatisfiableSchemaException
     );
 
     // Failures caused by a third-party validation library bug, not gjuton.
@@ -363,7 +346,8 @@ class IntegrationTest {
                 files.filter(p -> !Files.isDirectory(p))
                         .filter(p -> p.toString().endsWith(".json"))
                         .filter(p -> !SLOW_SCHEMAS.contains(p.getFileName().toString()))
-                        .filter(p -> !SCHEMAS_THAT_NEED_NETWORK.contains(p.getFileName().toString()))
+                        .filter(p -> !SCHEMAS_THAT_NEED_NETWORK_NON_WORKING.contains(p.getFileName().toString()))
+                        .filter(p -> !SCHEMAS_THAT_NEED_NETWORK_WORKING.contains(p.getFileName().toString()))
                         .filter(p -> !NON_WORKING_SCHEMAS.contains(p.getFileName().toString()))
                         .filter(p -> !FAILS_IN_VALIDATION_LIBRARY.contains(p.getFileName().toString()))
                         .filter(p -> !UNSUPPORTED_REGEX_GENERATION.contains(p.getFileName().toString()))

@@ -1,0 +1,35 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+        "l1": {"$ref": "#/$defs/L1"}
+    },
+    "required": ["l1"],
+    "additionalProperties": false,
+    "$defs": {
+        "L1": {
+            "type": "object",
+            "properties": {"l2": {"$ref": "#/$defs/L2"}},
+            "required": ["l2"],
+            "additionalProperties": false
+        },
+        "L2": {
+            "type": "object",
+            "properties": {"l3": {"$ref": "#/$defs/L3"}},
+            "required": ["l3"],
+            "additionalProperties": false
+        },
+        "L3": {
+            "type": "object",
+            "properties": {"l4": {"$ref": "#/$defs/L4"}},
+            "required": ["l4"],
+            "additionalProperties": false
+        },
+        "L4": {
+            "type": "object",
+            "properties": {"leaf": {"type": "string"}},
+            "required": ["leaf"],
+            "additionalProperties": false
+        }
+    }
+}

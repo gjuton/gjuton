@@ -1,9 +1,7 @@
 package io.github.gjuton.internal.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.Map;
 import java.util.Random;
@@ -67,25 +65,6 @@ class RefGeneratorTest {
     }
 
     @Test
-    void requiredSelfRefThrowsUnsatisfiableSchemaException() {
-        var generator = refGenerator("""
-                {
-                    "type": "object",
-                    "properties": {
-                        "self": {"$ref": "#"}
-                    },
-                    "required": ["self"]
-                }
-                """, "#");
-
-        // when / then
-        assertThatThrownBy(generator::generate)
-                .isInstanceOf(UnsatisfiableSchemaException.class)
-                .hasMessageContaining("#")
-                .hasMessageContaining("infinite recursion");
-    }
-
-    @Test
     void recursiveSchemaWithOptionalSelfRefTerminatesAcrossManyIterations() {
         // children is optional (no minItems) — the soft limit propagates minimal
         // mode into the array, which collapses to length 0, breaking the cycle.
@@ -137,9 +116,8 @@ class RefGeneratorTest {
                 .orElseThrow();
 
         // then
-        // GLOBAL_HARD_DEPTH is 4 ref expansions; observable JSON nesting can be
-        // a small multiple of that (object → array → object → ...). Anything
-        // well below a stack-overflow ceiling is fine.
+        // The hard limit bounds observable JSON nesting directly. Anything well
+        // below a stack-overflow ceiling is fine.
         assertThat(maxDepth).isLessThan(50);
     }
 

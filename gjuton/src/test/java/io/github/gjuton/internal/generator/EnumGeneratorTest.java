@@ -98,8 +98,8 @@ class EnumGeneratorTest {
         // values than it has.
         var values = List.<Object>of("red", "green");
         var context = withSeed(42);
-        context.incrementGlobalRefDepth();
-        context.incrementGlobalRefDepth();
+        context.enterPath(".a");
+        context.enterPath(".a");
         var generator = new EnumGenerator(context, values, enumSchema(values));
 
         // when / then

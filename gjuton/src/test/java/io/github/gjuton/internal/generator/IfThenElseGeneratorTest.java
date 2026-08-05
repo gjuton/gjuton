@@ -171,8 +171,8 @@ class IfThenElseGeneratorTest {
                 }
                 """);
         var context = GeneratorContext.testContext(document, new Random(42));
-        context.incrementGlobalRefDepth();
-        context.incrementGlobalRefDepth();
+        context.enterPath(".a");
+        context.enterPath(".a");
         var generator = new IfThenElseGenerator(context, document.getRoot());
 
         // when / then -- minimal mode must not surface the internal IllegalStateException

@@ -1,0 +1,17 @@
+{
+  "$ref": "#/$defs/Tree",
+  "$defs": {
+    "Tree": {
+      "type": "object",
+      "required": ["node"],
+      "properties": {
+        "node": {
+          "oneOf": [
+            { "$ref": "#/$defs/Tree" },
+            { "type": "string" }
+          ]
+        }
+      }
+    }
+  }
+}

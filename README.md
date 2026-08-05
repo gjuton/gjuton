@@ -196,20 +196,21 @@ exercise consumers that don't expect unknown fields. Off by default.
 Gjuton gen = Gjuton.of(schema).withAdditionalProperties();
 ```
 
-### Recursion limits
+### Nesting limits
 
-For schemas with recursive `$ref` chains, you can tune the depth at which
-recursion collapses to the smallest valid form:
+Generated output is bounded by how deeply it nests — each object property and
+each array element is one level. You can tune the depth at which generation
+collapses to the smallest valid form:
 
-- `withRecursionLimitsShallow()` — favour compact output.
-- `withRecursionLimitsDeep()` — for schemas with legitimately deep nesting.
-- `withRecursionLimits(int soft, int hard)` — set the ceilings explicitly. At the
-  soft ceiling recursive structures collapse to their smallest valid form; at the
-  hard ceiling a `$ref` that still hasn't bottomed out is treated as
-  unsatisfiable and generation fails.
+- `withNestingLimitsShallow()` — favour compact output.
+- `withNestingLimitsDeep()` — for schemas with legitimately deep nesting.
+- `withNestingLimits(int soft, int hard)` — set the ceilings explicitly. At the
+  soft ceiling generation collapses to the smallest valid form, bounding the
+  size of recursive optional structures; past the hard ceiling generation fails
+  rather than emit a value missing a required property.
 
 ```java
-Gjuton gen = Gjuton.of(schema).withRecursionLimitsShallow();
+Gjuton gen = Gjuton.of(schema).withNestingLimitsShallow();
 ```
 
 ## Knowing when to stop

@@ -437,11 +437,11 @@ class AnyOfAllOfOneOfGeneratorTest {
         }
 
         @Test
-        void mutuallyRecursiveAllOfRefsThrowCleanException() {
-            // when / then -- "A"'s allOf $refs "B", "B"'s allOf $refs back to "A";
-            // neither is the exact self-ref mergeParentWithAllOf already special-cases,
-            // so resolving one pulls in the other's still-unresolved allOf, forever.
-            assertThatThrownBy(() -> generatorFor("""
+        @SuppressWarnings("unchecked")
+        void mutuallyRecursiveAllOfRefsContributeBothTheirConstraints() {
+            // given "A"'s allOf $refs "B" and "B"'s allOf $refs back to "A", so the
+            // two constrain alike and one pass over each is the whole of the merge
+            var generator = generatorFor("""
                     {
                         "definitions": {
                             "A": {
@@ -459,8 +459,13 @@ class AnyOfAllOfOneOfGeneratorTest {
                         },
                         "allOf": [{"$ref": "#/definitions/A"}]
                     }
-                    """).generate())
-                    .isInstanceOf(UnsatisfiableSchemaException.class);
+                    """);
+
+            // when
+            var value = (Map<String, Object>) generator.generate();
+
+            // then
+            assertThat(value).containsKeys("a", "b");
         }
 
         @Test
@@ -1155,8 +1160,8 @@ class AnyOfAllOfOneOfGeneratorTest {
                     }
                     """);
             var context = GeneratorContext.testContext(document, new Random(42));
-            context.incrementGlobalRefDepth();
-            context.incrementGlobalRefDepth();
+            context.enterPath(".a");
+            context.enterPath(".a");
             var validator = new SchemaValidator(context);
             var generator = new AnyOfAllOfOneOfGenerator(context, document.getRoot());
 
