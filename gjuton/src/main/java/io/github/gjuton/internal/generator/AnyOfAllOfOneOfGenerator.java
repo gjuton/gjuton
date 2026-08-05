@@ -7,9 +7,11 @@ import io.github.gjuton.internal.model.ObjectSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.util.RandomUtil;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Generator for schemas carrying one or more combining keywords
@@ -39,7 +41,7 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
         super(GenerationPhase.class, context);
         this.validator = new SchemaValidator(context);
 
-        var merged = mergeParentWithAllOf(context, parent);
+        var merged = mergeParentWithAllOf(context, parent, new HashSet<>());
 
         // Create a base schema without oneOf and anyOf, we will pick from fields
         // anyOfGroups and oneOfGroups when building values
@@ -79,7 +81,7 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
         this.oneOfGroups = new ArrayList<>();
         for (int i = 0; i < allOneOfGroups.size(); i++) {
             var group = allOneOfGroups.get(i);
-            var mergedGroup = SchemaMerger.mergeEachWith(group, base);
+            var mergedGroup = SchemaMerger.mergeEachWith(context, group, base);
             if (mergedGroup.isEmpty()) {
                 throw new UnsatisfiableSchemaException(
                         "Unable to merge any oneOf branch with the parent schema",
@@ -92,7 +94,7 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
         this.anyOfGroups = new ArrayList<>();
         for (int i = 0; i < allAnyOfGroups.size(); i++) {
             var group = allAnyOfGroups.get(i);
-            var mergedGroup = SchemaMerger.mergeEachWith(group, base);
+            var mergedGroup = SchemaMerger.mergeEachWith(context, group, base);
             if (mergedGroup.isEmpty()) {
                 throw new UnsatisfiableSchemaException(
                         "Unable to merge any anyOf branch with the parent schema",
@@ -116,15 +118,14 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
     /**
      * Merges the parent schema with its {@code allOf} branches, resolving
      * {@code $ref}s — each resolved branch's own {@code allOf} is fully
-     * merged in as well — and skipping self-referential ones. Returns the
-     * parent itself (minus combining keywords) when no {@code allOf} is
-     * present.
+     * merged in as well — and skipping branches constraining nothing the
+     * merge already carries. Returns the parent itself (minus combining
+     * keywords) when no {@code allOf} is present.
      *
-     * @throws UnsatisfiableSchemaException if a branch's {@code allOf} chain
-     *         does not bottom out within the configured hard {@code $ref}
-     *         depth limit
+     * @param visitedRefs the references this merge is already inside; a fresh
+     *     merge passes an empty mutable set
      */
-    private Schema mergeParentWithAllOf(GeneratorContext context, Schema parent) {
+    private Schema mergeParentWithAllOf(GeneratorContext context, Schema parent, Set<String> visitedRefs) {
         var baseTemp = parent.toBuilder()
                 .oneOf(null)
                 .anyOf(null)
@@ -141,6 +142,13 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
             int locationIndex = 0;
             for (var branch : parent.getAllOf()) {
                 if (branch.getRef() != null) {
+                    // Stops A's allOf naming B and B's naming A from resolving
+                    // forever. Safe to skip: a ref already merged constrains
+                    // nothing further the second time round.
+                    if (!visitedRefs.add(branch.getRef())) {
+                        locationIndex++;
+                        continue;
+                    }
                     var resolved = context.resolveRef(branch.getRef());
                     // Identity check: the parser reuses the same Schema instance for "#",
                     // so == detects self-referential $ref. Self-ref is tautological in
@@ -151,7 +159,14 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
                         locationIndex++;
                         continue;
                     }
-                    branches.add(resolveAllOfChain(context, resolved));
+                    // A branch with no allOf of its own goes in as written; merging it
+                    // would strip the combining keywords it still has to contribute.
+                    if (resolved.getAllOf() == null) {
+                        branches.add(resolved);
+                    } else {
+                        var branchSchema = mergeParentWithAllOf(context, resolved, visitedRefs);
+                        branches.add(branchSchema);
+                    }
                 } else {
                     branches.add(branch);
                 }
@@ -160,40 +175,11 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
             }
             branches.add(baseTemp);
             locations.add("");
-            merged = SchemaMerger.merge(branches, locations, context.currentJsonPointer());
+            merged = SchemaMerger.merge(context, branches, locations, context.currentJsonPointer());
         } else {
             merged = baseTemp;
         }
         return merged;
-    }
-
-    /**
-     * Fully resolves {@code schema}'s own {@code allOf} chain, returning a
-     * schema with no unresolved {@code allOf} of its own.
-     *
-     * @throws UnsatisfiableSchemaException if the chain does not bottom out
-     *         within the configured hard {@code $ref} depth limit
-     */
-    private Schema resolveAllOfChain(GeneratorContext context, Schema schema) {
-        if (schema.getAllOf() == null) {
-            return schema;
-        }
-        if (context.getGlobalRefDepth() >= context.refHardDepth()) {
-            throw new UnsatisfiableSchemaException(
-                    "Recursive allOf $ref could not bottom out within " + context.refHardDepth()
-                            + " levels — schema appears to require infinite recursion",
-                    context.currentJsonPointer());
-        }
-        // Without this, a branch's own unresolved allOf carries forward onto the merged
-        // schema, and mutually-recursive $refs (A's allOf -> B, B's allOf -> A) reconstruct
-        // a new AnyOfAllOfOneOfGenerator each time that merged schema is generated,
-        // recursing without bound.
-        context.incrementGlobalRefDepth();
-        try {
-            return mergeParentWithAllOf(context, schema);
-        } finally {
-            context.decrementGlobalRefDepth();
-        }
     }
 
     @Override
@@ -204,7 +190,6 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
     @Override
     protected GenerationPhase advanceToNext(GenerationPhase current) {
         if (current == GenerationPhase.EXHAUSTIVE) {
-            index++;
             int maxSize = 0;
             for (var group : oneOfGroups) {
                 maxSize = Math.max(maxSize, group.size());
@@ -231,9 +216,16 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
      */
     @Override
     protected GenerationResult<Object> generatePhase(GenerationPhase phase) {
-        lastPickedIndex = Math.min(index, exhaustiveCycleLength);
+        // A recursive $ref resolves to one Schema instance, so this generator is
+        // re-entered by its own descent below. Claiming the branch before
+        // descending is what makes the nested visit take a different one.
+        int pickIndex = index;
+        if (phase == GenerationPhase.EXHAUSTIVE) {
+            index++;
+        }
+        lastPickedIndex = Math.min(pickIndex, exhaustiveCycleLength);
         var schema = switch (phase) {
-            case EXHAUSTIVE -> pickExhaustive();
+            case EXHAUSTIVE -> pickExhaustive(pickIndex);
             case RANDOM -> pickRandom();
         };
         var candidate = context.generatorFor(schema).generate();
@@ -316,20 +308,20 @@ final class AnyOfAllOfOneOfGenerator extends PhaseGenerator<AnyOfAllOfOneOfGener
     }
 
     /**
-     * Selects the next branch from each group using the current index,
-     * wrapping around shorter groups. Falls back to the base schema
-     * when no oneOf or anyOf groups exist (allOf-only case).
+     * Selects the branch at {@code pickIndex} from each group, wrapping
+     * around shorter groups. Falls back to the base schema when no oneOf
+     * or anyOf groups exist (allOf-only case).
      */
-    private Schema pickExhaustive() {
+    private Schema pickExhaustive(int pickIndex) {
         if (oneOfGroups.isEmpty() && anyOfGroups.isEmpty()) {
             return base;
         }
         var picks = new ArrayList<Schema>();
         for (var group : oneOfGroups) {
-            picks.add(group.get(index % group.size()));
+            picks.add(group.get(pickIndex % group.size()));
         }
         for (var group : anyOfGroups) {
-            picks.add(group.get(index % group.size()));
+            picks.add(group.get(pickIndex % group.size()));
         }
         return context.mergedSchema(picks);
     }

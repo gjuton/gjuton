@@ -1,5 +1,6 @@
 package io.github.gjuton.internal.generator;
 
+import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.SchemaDocument;
 import java.util.ArrayDeque;
@@ -31,6 +32,16 @@ public final class GeneratorContext {
     private static final int NOVELTY_WINDOW_SIZE = 5;
 
     /**
+     * The allowance {@link #enterRetryLoop} grants the outermost round of
+     * attempts, what it decays by for each round nested inside it, and the
+     * floor it never falls under. The floor leaves every round enough attempts
+     * to walk past a phase that declines.
+     */
+    private static final int MAX_RETRY_BUDGET = 10;
+    private static final double RETRY_BUDGET_DECAY = 0.6;
+    private static final int MIN_RETRY_BUDGET = 2;
+
+    /**
      * Upper bound on {@link #mergedSchemaCache}'s size. Bounds memory for
      * schemas whose {@code anyOf}/{@code oneOf} random-subset picks can
      * produce a large number of distinct branch combinations over a long
@@ -55,20 +66,19 @@ public final class GeneratorContext {
     private final Map<Schema, JsonGenerator> generatorCache = new IdentityHashMap<>();
 
     /**
-     * Number of {@code $ref} expansions currently on the call stack — across
-     * both {@link RefGenerator} and {@code allOf} branch resolution, which
-     * carries the same unbounded-recursion risk. Drives minimal-mode: when
-     * this reaches the soft depth limit, downstream generators collapse to
-     * their smallest valid form so recursion terminates.
+     * How deeply the position currently being generated sits inside the root
+     * value: a property and an element each count one level, a {@code $ref}
+     * none. Past the soft limit generators collapse to their smallest valid
+     * form, bounding recursive optional structures.
      */
-    private int globalRefDepth;
+    private int nestingDepth;
 
     /**
-     * The named {@code $ref} expansions currently on the call stack,
-     * outermost first. Tracks only part of {@link #globalRefDepth}: an
-     * {@code allOf} chain adds to the depth without naming a reference.
+     * How many rounds of attempts are under way at the position currently being
+     * generated, which {@link #enterRetryLoop} rations against. Unrelated to
+     * {@link #nestingDepth}: a level may cost several rounds or none.
      */
-    private final List<String> refChain = new ArrayList<>();
+    private int retryLoopsUnderWay;
 
     /**
      * JSON path of the position currently being generated, e.g. {@code $.a[0]}.
@@ -178,50 +188,42 @@ public final class GeneratorContext {
         return config.generateAdditionalProperties();
     }
 
-    /**
-     * Ceiling for required-field recursion that can never bottom out —
-     * beyond this depth the schema is unsatisfiable.
-     */
-    int refHardDepth() {
-        return config.refHardDepth();
-    }
-
     boolean isMinimal() {
-        return globalRefDepth >= config.refSoftDepth();
-    }
-
-    int getGlobalRefDepth() {
-        return globalRefDepth;
-    }
-
-    void incrementGlobalRefDepth() {
-        globalRefDepth++;
-        MDC.put(GjutonMdc.REF_DEPTH_KEY, Integer.toString(globalRefDepth));
-    }
-
-    void decrementGlobalRefDepth() {
-        globalRefDepth--;
-        MDC.put(GjutonMdc.REF_DEPTH_KEY, Integer.toString(globalRefDepth));
+        return nestingDepth >= config.softNestingDepth();
     }
 
     /**
-     * Descends into {@code ref}, deepening the ref depth for as long as
-     * generation stays inside it. Must be paired with an {@link #exitRef}.
+     * Begins a round of attempts nested inside those already under way, and
+     * answers how many it may spend — fewer the further in it sits, but never
+     * below what walking past a declining phase takes. Must be paired with an
+     * {@link #exitRetryLoop}; a call that throws needs no pairing.
+     *
+     * @throws UnsatisfiableSchemaException if the rounds under way outnumber
+     *     the levels the hard limit allows, so some produced nothing
      */
-    void enterRef(String ref) {
-        refChain.add(ref);
-        incrementGlobalRefDepth();
-        MDC.put(GjutonMdc.REF_CHAIN_KEY, String.join(" > ", refChain));
+    int enterRetryLoop() {
+        int enclosingRounds = retryLoopsUnderWay;
+        // Rounds outnumbering the levels allowed means one produced nothing —
+        // recursion on the spot, which one more round never ends. Rounds merely
+        // equalling them are ordinary generation, left for enterPath to refuse.
+        if (enclosingRounds > config.hardNestingDepth()) {
+            throw new UnsatisfiableSchemaException(
+                    "Generating this schema keeps recursing without producing a value, past the configured nesting limit of "
+                            + config.hardNestingDepth() + " levels",
+                    currentJsonPointer());
+        }
+        retryLoopsUnderWay++;
+        double decayed = MAX_RETRY_BUDGET * Math.pow(RETRY_BUDGET_DECAY, enclosingRounds);
+        long rounded = Math.round(decayed);
+        return (int) Math.max(MIN_RETRY_BUDGET, rounded);
     }
 
     /**
-     * Ascends out of the reference entered with {@link #enterRef}, restoring
-     * the trace context to what it was before.
+     * Ends the round of attempts begun by {@link #enterRetryLoop}, restoring
+     * the allowance the next one is granted to what it was before.
      */
-    void exitRef() {
-        refChain.removeLast();
-        decrementGlobalRefDepth();
-        MDC.put(GjutonMdc.REF_CHAIN_KEY, String.join(" > ", refChain));
+    void exitRetryLoop() {
+        retryLoopsUnderWay--;
     }
 
     JsonGenerator generatorFor(Schema schema) {
@@ -237,8 +239,7 @@ public final class GeneratorContext {
         overridesThisRun.clear();
         visitJournal.clear();
         MDC.put(GjutonMdc.PATH_KEY, currentPath.toString());
-        MDC.put(GjutonMdc.REF_DEPTH_KEY, Integer.toString(globalRefDepth));
-        MDC.put(GjutonMdc.REF_CHAIN_KEY, String.join(" > ", refChain));
+        MDC.put(GjutonMdc.NESTING_DEPTH_KEY, Integer.toString(nestingDepth));
         MDC.put(GjutonMdc.MODE_KEY, config.randomOnly() ? "RANDOM" : "EXHAUSTIVE");
     }
 
@@ -315,7 +316,7 @@ public final class GeneratorContext {
         if (cached != null) {
             return cached;
         }
-        var merged = SchemaMerger.merge(schemas, null, currentJsonPointer());
+        var merged = SchemaMerger.merge(this, schemas, null, currentJsonPointer());
         mergedSchemaCache.put(key, merged);
         return merged;
     }
@@ -415,14 +416,25 @@ public final class GeneratorContext {
     }
 
     /**
-     * Descends into the child position reached by appending {@code pathSegment}
-     * to the current path (e.g. {@code ".name"} or {@code "[0]"}). Every call
-     * must be paired with an {@link #exitPath} for the same segment once the
-     * child has been generated.
+     * Descends one level, into the child reached by appending
+     * {@code pathSegment} (e.g. {@code ".name"} or {@code "[0]"}). Must be
+     * paired with an {@link #exitPath} for the same segment; a call that throws
+     * needs no pairing.
+     *
+     * @throws UnsatisfiableSchemaException if the child would nest deeper than
+     *     the hard limit allows
      */
     void enterPath(String pathSegment) {
+        if (nestingDepth >= config.hardNestingDepth()) {
+            throw new UnsatisfiableSchemaException(
+                    "Generating this schema needs more than the configured nesting limit of " + config.hardNestingDepth()
+                            + " levels of objects and arrays",
+                    currentJsonPointer());
+        }
         currentPath.append(pathSegment);
+        nestingDepth++;
         MDC.put(GjutonMdc.PATH_KEY, currentPath.toString());
+        MDC.put(GjutonMdc.NESTING_DEPTH_KEY, Integer.toString(nestingDepth));
     }
 
     /**
@@ -432,7 +444,9 @@ public final class GeneratorContext {
      */
     void exitPath(String pathSegment) {
         currentPath.setLength(currentPath.length() - pathSegment.length());
+        nestingDepth--;
         MDC.put(GjutonMdc.PATH_KEY, currentPath.toString());
+        MDC.put(GjutonMdc.NESTING_DEPTH_KEY, Integer.toString(nestingDepth));
     }
 
     /**

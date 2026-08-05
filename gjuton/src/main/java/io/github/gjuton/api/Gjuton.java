@@ -47,8 +47,8 @@ public final class Gjuton {
     private final Map<String, ValueOverride> formatOverrides;
     private final GenerationMode mode;
     private final boolean generateAdditionalProperties;
-    private final int refSoftDepth;
-    private final int refHardDepth;
+    private final int softNestingDepth;
+    private final int hardNestingDepth;
     private final Constraints constraints;
     private final JsonGenerator generator;
     private final SchemaDocument document;
@@ -62,8 +62,8 @@ public final class Gjuton {
             Map<String, ValueOverride> formatOverrides,
             GenerationMode mode,
             boolean generateAdditionalProperties,
-            int refSoftDepth,
-            int refHardDepth,
+            int softNestingDepth,
+            int hardNestingDepth,
             Constraints constraints) {
         this.schema = schema;
         this.document = document;
@@ -73,14 +73,14 @@ public final class Gjuton {
         this.formatOverrides = formatOverrides;
         this.mode = mode;
         this.generateAdditionalProperties = generateAdditionalProperties;
-        this.refSoftDepth = refSoftDepth;
-        this.refHardDepth = refHardDepth;
+        this.softNestingDepth = softNestingDepth;
+        this.hardNestingDepth = hardNestingDepth;
         this.constraints = constraints;
         var config = new GeneratorConfig(
                 mode == GenerationMode.RANDOM,
                 generateAdditionalProperties,
-                refSoftDepth,
-                refHardDepth,
+                softNestingDepth,
+                hardNestingDepth,
                 toValueSuppliers(overrides),
                 toValueSuppliers(nameOverrides),
                 toValueSuppliers(formatOverrides),
@@ -140,8 +140,8 @@ public final class Gjuton {
                 Collections.emptyMap(),
                 GenerationMode.RANDOM,
                 false,
-                GeneratorConfig.DEFAULT_REF_SOFT_DEPTH,
-                GeneratorConfig.DEFAULT_REF_HARD_DEPTH,
+                GeneratorConfig.DEFAULT_SOFT_NESTING_DEPTH,
+                GeneratorConfig.DEFAULT_HARD_NESTING_DEPTH,
                 Constraints.of());
     }
 
@@ -171,8 +171,8 @@ public final class Gjuton {
                 Collections.emptyMap(),
                 GenerationMode.RANDOM,
                 false,
-                GeneratorConfig.DEFAULT_REF_SOFT_DEPTH,
-                GeneratorConfig.DEFAULT_REF_HARD_DEPTH,
+                GeneratorConfig.DEFAULT_SOFT_NESTING_DEPTH,
+                GeneratorConfig.DEFAULT_HARD_NESTING_DEPTH,
                 Constraints.of());
     }
 
@@ -206,8 +206,8 @@ public final class Gjuton {
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
-                refSoftDepth,
-                refHardDepth,
+                softNestingDepth,
+                hardNestingDepth,
                 constraints);
     }
 
@@ -257,8 +257,8 @@ public final class Gjuton {
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
-                refSoftDepth,
-                refHardDepth,
+                softNestingDepth,
+                hardNestingDepth,
                 constraints);
     }
 
@@ -309,8 +309,8 @@ public final class Gjuton {
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
-                refSoftDepth,
-                refHardDepth,
+                softNestingDepth,
+                hardNestingDepth,
                 constraints);
     }
 
@@ -357,8 +357,8 @@ public final class Gjuton {
                 Collections.unmodifiableMap(merged),
                 mode,
                 generateAdditionalProperties,
-                refSoftDepth,
-                refHardDepth,
+                softNestingDepth,
+                hardNestingDepth,
                 constraints);
     }
 
@@ -382,8 +382,8 @@ public final class Gjuton {
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
-                refSoftDepth,
-                refHardDepth,
+                softNestingDepth,
+                hardNestingDepth,
                 constraints);
     }
 
@@ -403,45 +403,47 @@ public final class Gjuton {
                 formatOverrides,
                 mode,
                 true,
-                refSoftDepth,
-                refHardDepth,
+                softNestingDepth,
+                hardNestingDepth,
                 constraints);
     }
 
     /**
-     * Returns a new generator that expands {@code $ref} chains shallowly,
-     * favouring compact output over deeply nested structure. Overrides any
-     * recursion limits set by a previous call.
-     */
-    public Gjuton withRecursionLimitsShallow() {
-        return withRecursionLimits(GeneratorConfig.SHALLOW_REF_SOFT_DEPTH, GeneratorConfig.SHALLOW_REF_HARD_DEPTH);
-    }
-
-    /**
-     * Returns a new generator that expands {@code $ref} chains deeply, for
-     * schemas with legitimately deep nesting. Overrides any recursion limits
+     * Returns a new generator that nests generated values shallowly, favouring
+     * compact output over deeply nested structure. Overrides any nesting limits
      * set by a previous call.
      */
-    public Gjuton withRecursionLimitsDeep() {
-        return withRecursionLimits(GeneratorConfig.DEEP_REF_SOFT_DEPTH, GeneratorConfig.DEEP_REF_HARD_DEPTH);
+    public Gjuton withNestingLimitsShallow() {
+        return withNestingLimits(GeneratorConfig.SHALLOW_SOFT_NESTING_DEPTH, GeneratorConfig.SHALLOW_HARD_NESTING_DEPTH);
     }
 
     /**
-     * Returns a new generator using the given {@code $ref} expansion ceilings,
-     * overriding any recursion limits set by a previous call. At the soft
-     * ceiling recursive structures collapse to their smallest valid form so
-     * generation terminates; at the hard ceiling a {@code $ref} that still has
-     * not bottomed out is treated as unsatisfiable and generation fails.
+     * Returns a new generator that nests generated values deeply, for schemas
+     * with legitimately deep nesting. Overrides any nesting limits set by a
+     * previous call.
+     */
+    public Gjuton withNestingLimitsDeep() {
+        return withNestingLimits(GeneratorConfig.DEEP_SOFT_NESTING_DEPTH, GeneratorConfig.DEEP_HARD_NESTING_DEPTH);
+    }
+
+    /**
+     * Returns a new generator using the given nesting-depth ceilings, overriding
+     * any set by a previous call. Depth counts levels of objects and arrays in
+     * the generated value; a {@code $ref} adds none, so how a schema is factored
+     * into definitions does not affect it.
      *
-     * <p>When unset, the default {@code $ref} depth limits apply.
+     * <p>At the soft ceiling generation collapses to the smallest valid form,
+     * bounding recursive optional structures. Past the hard ceiling
+     * {@code generate} throws {@link UnsatisfiableSchemaException} rather than
+     * return a value missing a required property. When unset, the default
+     * nesting limits apply.
      *
-     * @param soft depth at which recursive structures collapse to their
-     *     smallest valid form; must be {@code >= 1} and {@code <= hard}
-     * @param hard depth beyond which a still-recursing {@code $ref} is
-     *     unsatisfiable
+     * @param soft depth at which generation collapses to the smallest valid
+     *     form; must be {@code >= 1} and {@code <= hard}
+     * @param hard depth past which generation fails
      * @throws IllegalArgumentException if {@code soft < 1} or {@code soft > hard}
      */
-    public Gjuton withRecursionLimits(int soft, int hard) {
+    public Gjuton withNestingLimits(int soft, int hard) {
         if (soft < 1) {
             throw new IllegalArgumentException("soft limit must be at least 1, was " + soft);
         }
@@ -499,8 +501,8 @@ public final class Gjuton {
                 formatOverrides,
                 mode,
                 generateAdditionalProperties,
-                refSoftDepth,
-                refHardDepth,
+                softNestingDepth,
+                hardNestingDepth,
                 constraints);
     }
 

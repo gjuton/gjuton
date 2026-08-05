@@ -21,18 +21,10 @@ public final class GjutonMdc {
     public static final String PATH_KEY = "gjutonPath";
 
     /**
-     * How many {@code $ref} expansions stand between the root schema and the
-     * position a line concerns.
+     * How many levels of objects and arrays stand between the root of the
+     * generated value and the position a line concerns.
      */
-    public static final String REF_DEPTH_KEY = "gjutonRefDepth";
-
-    /**
-     * The {@code $ref} expansions enclosing the position a line concerns,
-     * outermost first, naming where in the schema its subject is defined.
-     * Only named references appear; {@link #REF_DEPTH_KEY} also counts
-     * {@code allOf} resolution, so it may exceed the chain's length.
-     */
-    public static final String REF_CHAIN_KEY = "gjutonRefChain";
+    public static final String NESTING_DEPTH_KEY = "gjutonNestingDepth";
 
     /**
      * The seed the run generated from, prefixed {@code supplied-} when the
@@ -59,8 +51,7 @@ public final class GjutonMdc {
     public static void clear() {
         MDC.remove(RUN_ID_KEY);
         MDC.remove(PATH_KEY);
-        MDC.remove(REF_DEPTH_KEY);
-        MDC.remove(REF_CHAIN_KEY);
+        MDC.remove(NESTING_DEPTH_KEY);
         MDC.remove(SEED_KEY);
         MDC.remove(MODE_KEY);
     }

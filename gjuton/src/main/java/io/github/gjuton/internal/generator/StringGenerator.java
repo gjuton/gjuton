@@ -20,6 +20,12 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
 
     private static final int PATTERN_RETRY_BUDGET = 100;
 
+    /**
+     * How far an unbounded quantifier in a {@code pattern} may repeat when the
+     * schema sets no {@code maxLength}. Nested ones multiply, so it stays low.
+     */
+    private static final int UNBOUNDED_REPETITION_LIMIT = 8;
+
     private final StringSchema schema;
     private final RgxGen rgxGen;
 
@@ -39,11 +45,9 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
     }
 
     private static RgxGen buildRgxGen(StringSchema schema, int maxLength) {
-        if (maxLength == Integer.MAX_VALUE) {
-            return RgxGen.parse(schema.getPattern());
-        }
+        int repetition = maxLength == Integer.MAX_VALUE ? UNBOUNDED_REPETITION_LIMIT : maxLength;
         var properties = new RgxGenProperties();
-        RgxGenOption.INFINITE_PATTERN_REPETITION.setInProperties(properties, maxLength);
+        RgxGenOption.INFINITE_PATTERN_REPETITION.setInProperties(properties, repetition);
         return RgxGen.parse(properties, schema.getPattern());
     }
 

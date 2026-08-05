@@ -15,10 +15,10 @@ import java.util.function.Supplier;
  *                                      boundary-value cycle
  * @param generateAdditionalProperties  add random extra properties to objects
  *                                      wherever the schema permits them
- * @param refSoftDepth                  {@code $ref} depth at which generation
+ * @param softNestingDepth              nesting depth at which generation
  *                                      collapses to minimal form
- * @param refHardDepth                  {@code $ref} depth beyond which the
- *                                      schema is treated as unsatisfiable
+ * @param hardNestingDepth              nesting depth beyond which the schema
+ *                                      is treated as unsatisfiable
  * @param pathOverrides                 value overrides keyed by JSON path; the
  *                                      supplier at a path yields a ready
  *                                      value-tree node to place there instead
@@ -36,26 +36,25 @@ import java.util.function.Supplier;
 public record GeneratorConfig(
         boolean randomOnly,
         boolean generateAdditionalProperties,
-        int refSoftDepth,
-        int refHardDepth,
+        int softNestingDepth,
+        int hardNestingDepth,
         Map<String, Supplier<Object>> pathOverrides,
         Map<String, Supplier<Object>> nameOverrides,
         Map<String, Supplier<Object>> formatOverrides,
         ValueConstraints constraints) {
 
     /**
-     * The {@code $ref} expansion ceilings for the three presets, and the single
-     * source of truth for the depths the public API exposes. A soft ceiling is
-     * the depth at which recursive structures collapse to their smallest valid
-     * form so generation terminates; a hard ceiling is the depth beyond which a
-     * still-recursing {@code $ref} is treated as unsatisfiable.
+     * The nesting-depth ceilings for the three presets the public API exposes,
+     * in levels of objects and arrays. At the soft one structures collapse to
+     * their smallest valid form; past the hard one generation fails rather than
+     * emit a value missing a required property.
      */
-    public static final int DEFAULT_REF_SOFT_DEPTH = 3;
-    public static final int DEFAULT_REF_HARD_DEPTH = 4;
-    public static final int SHALLOW_REF_SOFT_DEPTH = 1;
-    public static final int SHALLOW_REF_HARD_DEPTH = 2;
-    public static final int DEEP_REF_SOFT_DEPTH = 5;
-    public static final int DEEP_REF_HARD_DEPTH = 8;
+    public static final int DEFAULT_SOFT_NESTING_DEPTH = 3;
+    public static final int DEFAULT_HARD_NESTING_DEPTH = 10;
+    public static final int SHALLOW_SOFT_NESTING_DEPTH = 1;
+    public static final int SHALLOW_HARD_NESTING_DEPTH = 10;
+    public static final int DEEP_SOFT_NESTING_DEPTH = 5;
+    public static final int DEEP_HARD_NESTING_DEPTH = 13;
 
     public GeneratorConfig {
         pathOverrides = Map.copyOf(pathOverrides);
@@ -65,7 +64,7 @@ public record GeneratorConfig(
 
     /**
      * A test fixture: exhaustive boundary-value generation, no synthesized
-     * extra properties, no value overrides, and the default {@code $ref} depth
+     * extra properties, no value overrides, and the default nesting depth
      * limits. Not the configuration a caller who sets no options gets — that
      * one is built from {@code GenerationMode.RANDOM}.
      */
@@ -73,8 +72,8 @@ public record GeneratorConfig(
         return new GeneratorConfig(
                 false,
                 false,
-                DEFAULT_REF_SOFT_DEPTH,
-                DEFAULT_REF_HARD_DEPTH,
+                DEFAULT_SOFT_NESTING_DEPTH,
+                DEFAULT_HARD_NESTING_DEPTH,
                 Map.of(),
                 Map.of(),
                 Map.of(),

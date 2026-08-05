@@ -2,6 +2,7 @@ package io.github.gjuton;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -9,8 +10,10 @@ import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
 import io.github.gjuton.errors.JsonBindingException;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.generator.GeneratorConfig;
 import io.github.gjuton.internal.generator.GjutonMdc;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
@@ -21,6 +24,8 @@ import java.util.function.Supplier;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.MDC;
 
 class GjutonTest {
@@ -127,12 +132,12 @@ class GjutonTest {
     }
 
     @Test
-    void deepRecursionLimitsAllowDeeperNestingThanShallow() {
+    void deepNestingLimitsAllowDeeperNestingThanShallow() {
         // when
         int shallow = maxNestingDepth(
-                Gjuton.of(RECURSIVE_SCHEMA).withRecursionLimitsShallow().withSeed(9L));
+                Gjuton.of(RECURSIVE_SCHEMA).withNestingLimitsShallow().withSeed(9L));
         int deep = maxNestingDepth(
-                Gjuton.of(RECURSIVE_SCHEMA).withRecursionLimitsDeep().withSeed(9L));
+                Gjuton.of(RECURSIVE_SCHEMA).withNestingLimitsDeep().withSeed(9L));
 
         // then
         assertThat(deep).isGreaterThan(shallow);
@@ -165,16 +170,16 @@ class GjutonTest {
     }
 
     @Test
-    void withRecursionLimitsRejectsSoftBelowOne() {
+    void withNestingLimitsRejectsSoftBelowOne() {
         // then
-        assertThatThrownBy(() -> Gjuton.of(INT_SCHEMA).withRecursionLimits(0, 4))
+        assertThatThrownBy(() -> Gjuton.of(INT_SCHEMA).withNestingLimits(0, 4))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
-    void withRecursionLimitsRejectsSoftAboveHard() {
+    void withNestingLimitsRejectsSoftAboveHard() {
         // then
-        assertThatThrownBy(() -> Gjuton.of(INT_SCHEMA).withRecursionLimits(5, 4))
+        assertThatThrownBy(() -> Gjuton.of(INT_SCHEMA).withNestingLimits(5, 4))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -942,31 +947,518 @@ class GjutonTest {
             assertThat(observed).singleElement().asString().matches("random--?\\d+");
         }
 
-        @Test
-        void namesTheRefsGenerationIsCurrentlyInside() {
-            // given
-            var observed = new ArrayList<String>();
-            var schema = """
-                    {"type": "object",
-                     "properties": {"a": {"$ref": "#/$defs/Wrapper"}},
-                     "required": ["a"],
-                     "$defs": {
-                       "Wrapper": {"type": "object", "properties": {"b": {"$ref": "#/$defs/Leaf"}}, "required": ["b"]},
-                       "Leaf": {"type": "integer"}
-                     }}
-                    """;
-            var gen = Gjuton.of(schema)
-                    .withOverrideByName("b", () -> {
-                        observed.add(MDC.get(GjutonMdc.REF_CHAIN_KEY));
-                        return 1;
-                    });
+    }
 
+    /**
+     * Depth is nesting in the generated value, so a schema factored into one
+     * definition per level generates what the same schema written inline does.
+     * Recursion through an omittable position bottoms out at the soft limit;
+     * recursion with no way out runs into the hard limit.
+     */
+    @Nested
+    class NestingLimits {
+
+        private static final String REF_CHAIN_FIVE_LEVELS = """
+                {
+                  "type": "object",
+                  "properties": { "l1": { "$ref": "#/$defs/L1" } },
+                  "required": ["l1"],
+                  "$defs": {
+                    "L1": { "type": "object", "properties": { "l2": { "$ref": "#/$defs/L2" } }, "required": ["l2"] },
+                    "L2": { "type": "object", "properties": { "l3": { "$ref": "#/$defs/L3" } }, "required": ["l3"] },
+                    "L3": { "type": "object", "properties": { "l4": { "$ref": "#/$defs/L4" } }, "required": ["l4"] },
+                    "L4": { "type": "object", "properties": { "leaf": { "type": "string" } }, "required": ["leaf"] }
+                  }
+                }""";
+        private static final String INLINE_FIVE_LEVELS = """
+                {
+                  "type": "object",
+                  "properties": {
+                    "l1": { "type": "object", "properties": {
+                      "l2": { "type": "object", "properties": {
+                        "l3": { "type": "object", "properties": {
+                          "l4": { "type": "object", "properties": {
+                            "leaf": { "type": "string" }
+                          }, "required": ["leaf"] }
+                        }, "required": ["l4"] }
+                      }, "required": ["l3"] }
+                    }, "required": ["l2"] }
+                  },
+                  "required": ["l1"]
+                }""";
+        private static final String NESTED_ARRAYS = """
+                {
+                  "type": "array",
+                  "minItems": 1,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 2,
+                    "items": { "type": "array", "minItems": 1, "maxItems": 2, "items": { "type": "integer" } }
+                  }
+                }""";
+        private static final String OPTIONAL_SELF_REFERENCE = """
+                {
+                  "$ref": "#/$defs/Node",
+                  "$defs": {
+                    "Node": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "name": { "type": "string" },
+                        "next": { "$ref": "#/$defs/Node" }
+                      }
+                    }
+                  }
+                }""";
+        private static final String SELF_REFERENCE_REQUIRED = """
+                {
+                  "$ref": "#/$defs/A",
+                  "$defs": {
+                    "A": {
+                      "type": "object",
+                      "required": ["a"],
+                      "properties": { "a": { "$ref": "#/$defs/A" } }
+                    }
+                  }
+                }""";
+        private static final String MUTUAL_REFERENCE_REQUIRED = """
+                {
+                  "$ref": "#/$defs/A",
+                  "$defs": {
+                    "A": { "type": "object", "required": ["b"], "properties": { "b": { "$ref": "#/$defs/B" } } },
+                    "B": { "type": "object", "required": ["a"], "properties": { "a": { "$ref": "#/$defs/A" } } }
+                  }
+                }""";
+        /**
+         * The only branch of a required property names the definition it sits
+         * under, which no {@code RefGenerator} ever expands.
+         */
+        private static final String SELF_REFERENCE_THROUGH_BRANCH = """
+                {
+                  "$ref": "#/$defs/A",
+                  "$defs": {
+                    "A": {
+                      "type": "object",
+                      "required": ["a"],
+                      "properties": {
+                        "a": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/$defs/A"
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  }
+                }""";
+
+        @Test
+        void aChainOfDefinitionsGeneratesEveryLevelItSpans() {
             // when
-            gen.generate();
+            var json = Gjuton.of(REF_CHAIN_FIVE_LEVELS).withSeed(1L).generate();
+            var root = parse(json);
 
             // then
-            assertThat(observed).containsExactly("#/$defs/Wrapper");
-            assertThat(MDC.get(GjutonMdc.REF_CHAIN_KEY)).isNull();
+            var leaf = root.get("l1").get("l2").get("l3").get("l4").get("leaf");
+            assertThat(leaf.isTextual()).isTrue();
+        }
+
+        @Test
+        void aChainOfDefinitionsMatchesTheEquivalentInlineSchema() {
+            // when
+            var factored = Gjuton.of(REF_CHAIN_FIVE_LEVELS).withSeed(1L).generate();
+            var inline = Gjuton.of(INLINE_FIVE_LEVELS).withSeed(1L).generate();
+
+            // then
+            var factoredShape = shape(parse(factored));
+            var inlineShape = shape(parse(inline));
+            assertThat(factoredShape).isEqualTo(inlineShape);
+        }
+
+        @Test
+        void tenDefinitionsEachAddingALevelGenerateToFullDepthUnderTheDeepPreset() {
+            // when
+            var gen = Gjuton.of(chainOfDefinitions(10)).withNestingLimitsDeep().withSeed(1L);
+            var node = parse(gen.generate());
+
+            // then
+            for (int level = 1; level <= 10; level++) {
+                node = node.get("l" + level);
+                assertThat(node).as("level l%d", level).isNotNull();
+            }
+            assertThat(node.get("leaf").isTextual()).isTrue();
+        }
+
+        @Test
+        void everyArrayElementLevelCountsTowardDepth() {
+            // when — three nested array levels fit under the default hard limit,
+            // which they would not if only $ref expansions were counted against it
+            var json = Gjuton.of(NESTED_ARRAYS).withSeed(1L).generate();
+            var root = parse(json);
+
+            // then
+            assertThat(root.get(0).get(0).get(0).isInt()).isTrue();
+        }
+
+        @Test
+        void aRequiredChainDeeperThanTheHardLimitReportsTheNestingLimit() {
+            // when — the shallow preset's hard limit is the cheapest one to exceed
+            var gen = Gjuton.of(chainOfDefinitions(GeneratorConfig.SHALLOW_HARD_NESTING_DEPTH + 1))
+                    .withNestingLimitsShallow()
+                    .withSeed(1L);
+
+            // then
+            assertThatThrownBy(gen::generate)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("nesting limit of " + GeneratorConfig.SHALLOW_HARD_NESTING_DEPTH)
+                    .hasMessageNotContaining("infinite recursion");
+        }
+
+        @Test
+        void aRecursiveOptionalSchemaCollapsesAtTheSoftLimit() {
+            // when
+            int depth = maxNestingDepth(Gjuton.of(RECURSIVE_SCHEMA).withSeed(9L));
+
+            // then
+            assertThat(depth).isLessThanOrEqualTo(GeneratorConfig.DEFAULT_SOFT_NESTING_DEPTH);
+        }
+
+        @Test
+        void aLongFiniteAllOfInheritanceChainGeneratesEveryPropertyItInherits() {
+            // given seven definitions inheriting from each other through allOf,
+            // none of which adds a value level
+            var gen = Gjuton.of("""
+                    {
+                      "$ref": "#/$defs/L7",
+                      "$defs": {
+                        "L1": { "type": "object", "properties": { "p1": { "type": "string" } }, "required": ["p1"] },
+                        "L2": { "allOf": [ { "$ref": "#/$defs/L1" } ], "properties": { "p2": { "type": "string" } }, "required": ["p2"] },
+                        "L3": { "allOf": [ { "$ref": "#/$defs/L2" } ], "properties": { "p3": { "type": "string" } }, "required": ["p3"] },
+                        "L4": { "allOf": [ { "$ref": "#/$defs/L3" } ], "properties": { "p4": { "type": "string" } }, "required": ["p4"] },
+                        "L5": { "allOf": [ { "$ref": "#/$defs/L4" } ], "properties": { "p5": { "type": "string" } }, "required": ["p5"] },
+                        "L6": { "allOf": [ { "$ref": "#/$defs/L5" } ], "properties": { "p6": { "type": "string" } }, "required": ["p6"] },
+                        "L7": { "allOf": [ { "$ref": "#/$defs/L6" } ], "properties": { "p7": { "type": "string" } }, "required": ["p7"] }
+                      }
+                    }""").withSeed(1L);
+
+            // when
+            var generated = parse(gen.generate());
+
+            // then
+            assertThat(generated.get("p1").isTextual()).isTrue();
+            assertThat(generated.get("p7").isTextual()).isTrue();
+        }
+
+        @Test
+        void aLongFiniteChainOfBranchReferencesGenerates() {
+            // given six definitions each reaching the next through a single
+            // oneOf branch, none of which adds a value level
+            var gen = Gjuton.of("""
+                    {
+                      "$ref": "#/$defs/B6",
+                      "$defs": {
+                        "B1": { "type": "object", "properties": { "leaf": { "type": "string" } }, "required": ["leaf"] },
+                        "B2": { "type": "object", "oneOf": [ { "$ref": "#/$defs/B1" } ] },
+                        "B3": { "type": "object", "oneOf": [ { "$ref": "#/$defs/B2" } ] },
+                        "B4": { "type": "object", "oneOf": [ { "$ref": "#/$defs/B3" } ] },
+                        "B5": { "type": "object", "oneOf": [ { "$ref": "#/$defs/B4" } ] },
+                        "B6": { "type": "object", "oneOf": [ { "$ref": "#/$defs/B5" } ] }
+                      }
+                    }""").withSeed(1L);
+
+            // when
+            var generated = parse(gen.generate());
+
+            // then
+            assertThat(generated.get("leaf").isTextual()).isTrue();
+        }
+
+        @Test
+        void aSelfReferencingAdditionalPropertiesFillTerminates() {
+            // given a schema whose every property must itself be one of these
+            // objects, and which must have at least one property
+            var gen = Gjuton.of("""
+                    {
+                      "$ref": "#/$defs/Node",
+                      "$defs": {
+                        "Node": {
+                          "type": "object",
+                          "minProperties": 1,
+                          "additionalProperties": { "$ref": "#/$defs/Node" }
+                        }
+                      }
+                    }""").withNestingLimitsShallow().withSeed(1L);
+
+            // when
+            var thrown = catchThrowable(gen::generate);
+
+            // then
+            assertThat(thrown)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("nesting limit");
+        }
+
+        @Test
+        void anOptionalSelfReferenceGeneratesAFiniteDocument() {
+            // when
+            var values = generate(Gjuton.of(OPTIONAL_SELF_REFERENCE).withSeed(1L), 20);
+
+            // then — every run bottoms out, and the recursion is still explored
+            assertThat(values).allSatisfy(value -> assertThat(parse(value).isObject()).isTrue());
+            assertThat(values).anySatisfy(value -> assertThat(parse(value).has("next")).isTrue());
+        }
+
+        @Test
+        void anOptionalSelfReferenceForcedInByMinPropertiesGeneratesAFiniteDocument() {
+            // given a definition whose only self-referencing property is
+            // optional, but which must carry at least one property, so
+            // generation selects an optional property even at its smallest
+            var schema = OPTIONAL_SELF_REFERENCE.replace("\"type\": \"object\",", "\"type\": \"object\", \"minProperties\": 1,");
+
+            // when
+            var values = generate(Gjuton.of(schema).withSeed(1L), 20);
+
+            // then
+            assertThat(values).allSatisfy(value -> assertThat(parse(value).size()).isGreaterThanOrEqualTo(1));
+            assertThat(values).anySatisfy(value -> assertThat(parse(value).has("next")).isTrue());
+        }
+
+        @Test
+        void aRecursiveSchemaBottomingOutThroughAnEmptyArrayGenerates() {
+            // given a required property whose array may be empty
+            var gen = Gjuton.of("""
+                    {
+                      "$ref": "#/$defs/Node",
+                      "$defs": {
+                        "Node": {
+                          "type": "object",
+                          "required": ["children"],
+                          "properties": {
+                            "children": { "type": "array", "minItems": 0, "items": { "$ref": "#/$defs/Node" } }
+                          }
+                        }
+                      }
+                    }""").withSeed(1L);
+
+            // when
+            var values = generate(gen, 20);
+
+            // then
+            assertThat(values).allSatisfy(value -> assertThat(parse(value).get("children").isArray()).isTrue());
+        }
+
+        @ParameterizedTest
+        @ValueSource(strings = {SELF_REFERENCE_REQUIRED, MUTUAL_REFERENCE_REQUIRED, SELF_REFERENCE_THROUGH_BRANCH})
+        void recursionWithNoWayOutRunsIntoTheNestingLimit(String schema) {
+            // when
+            var thrown = catchThrowable(() -> Gjuton.of(schema).withSeed(1L).generate());
+
+            // then the message names the limit, whether the recursion ran out
+            // of levels or spent rounds faster than it produced them
+            assertThat(thrown)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("configured nesting limit of 10 levels");
+        }
+
+        @Test
+        void aBranchLeadingOutOfTheCycleBottomsOutEveryValue() throws IOException {
+            // given one branch re-enters the definition, the other does not
+            var schema = GjutonTest.class.getResourceAsStream("/schemas/recursive-required-oneof-escape.json");
+
+            // when
+            var values = generate(Gjuton.of(schema).withSeed(1L), 20);
+
+            // then — however deep the recursive branch is taken, the escape
+            // branch ends it
+            assertThat(values).allSatisfy(value -> {
+                var node = parse(value).get("node");
+                while (node.isObject()) {
+                    node = node.get("node");
+                }
+                assertThat(node.isTextual()).isTrue();
+            });
+        }
+
+        /**
+         * A schema of {@code levels} definitions, each adding one required
+         * object level, with a string leaf inside the innermost one.
+         */
+        private static String chainOfDefinitions(int levels) {
+            var defs = new StringBuilder();
+            for (int level = 1; level <= levels; level++) {
+                var body = level == levels
+                        ? "{ \"type\": \"object\", \"properties\": { \"leaf\": { \"type\": \"string\" } }, \"required\": [\"leaf\"] }"
+                        : "{ \"type\": \"object\", \"properties\": { \"l" + (level + 1) + "\": { \"$ref\": \"#/$defs/D" + (level + 1)
+                                + "\" } }, \"required\": [\"l" + (level + 1) + "\"] }";
+                defs.append(level > 1 ? "," : "").append("\"D").append(level).append("\": ").append(body);
+            }
+            return "{ \"type\": \"object\", \"properties\": { \"l1\": { \"$ref\": \"#/$defs/D1\" } }, "
+                    + "\"required\": [\"l1\"], \"$defs\": { " + defs + " } }";
+        }
+
+        /**
+         * The structure of {@code node} with its scalar values erased, so two
+         * documents can be compared on shape alone.
+         */
+        private static String shape(JsonNode node) {
+            if (node.isObject()) {
+                var fields = new ArrayList<String>();
+                node.fields().forEachRemaining(entry -> fields.add(entry.getKey() + ":" + shape(entry.getValue())));
+                return "{" + String.join(",", fields) + "}";
+            }
+            if (node.isArray()) {
+                var elements = new ArrayList<String>();
+                node.forEach(element -> elements.add(shape(element)));
+                return "[" + String.join(",", elements) + "]";
+            }
+            return node.getNodeType().toString();
+        }
+    }
+    /**
+     * A {@code oneOf} or {@code anyOf} branch that is nothing but a
+     * {@code $ref} constrains the value through the definition it names,
+     * instead of leaving the parent schema to stand on its own.
+     */
+    @Nested
+    class BranchReferences {
+
+        private static final String SINGLE_REF_BRANCH = """
+                {
+                  "type": "object",
+                  "%s": [
+                    {
+                      "$ref": "#/$defs/Named"
+                    }
+                  ],
+                  "$defs": {
+                    "Named": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      },
+                      "required": ["name"]
+                    }
+                  }
+                }""";
+
+        @ParameterizedTest
+        @ValueSource(strings = {"oneOf", "anyOf"})
+        void aBranchThatIsOnlyAReferenceIsHonoured(String keyword) {
+            // when
+            var schema = SINGLE_REF_BRANCH.formatted(keyword);
+            var json = Gjuton.of(schema).withSeed(1L).generate();
+            var root = parse(json);
+
+            // then
+            assertThat(root.get("name").isTextual()).isTrue();
+        }
+
+        @Test
+        void aBranchReferenceConflictingWithTheParentIsDroppedFromItsGroup() {
+            // given a group where only the second branch can be an object
+            var gen = Gjuton.of("""
+                    {
+                      "type": "object",
+                      "oneOf": [
+                        {
+                          "$ref": "#/$defs/Text"
+                        },
+                        {
+                          "$ref": "#/$defs/Named"
+                        }
+                      ],
+                      "$defs": {
+                        "Text": {
+                          "type": "string"
+                        },
+                        "Named": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string",
+                              "minLength": 1
+                            }
+                          },
+                          "required": ["name"]
+                        }
+                      }
+                    }""").withSeed(1L);
+
+            // when
+            var generated = new ArrayList<JsonNode>();
+            for (int i = 0; i < 5; i++) {
+                generated.add(parse(gen.generate()));
+            }
+
+            // then
+            assertThat(generated).allMatch(value -> value.get("name").isTextual());
+        }
+
+        @Test
+        void aGroupWhoseEveryBranchReferenceConflictsWithTheParentFails() {
+            // given
+            var schema = """
+                    {
+                      "type": "object",
+                      "oneOf": [
+                        {
+                          "$ref": "#/$defs/Text"
+                        }
+                      ],
+                      "$defs": {
+                        "Text": {
+                          "type": "string"
+                        }
+                      }
+                    }""";
+
+            // when
+            var thrown = catchThrowable(() -> Gjuton.of(schema).withSeed(1L).generate());
+
+            // then
+            assertThat(thrown)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("Unable to merge any oneOf branch with the parent schema");
+        }
+
+        @Test
+        void mutuallyReferencingBranchesFailWithoutOverflowingTheStack() {
+            // given two definitions whose only branch reaches the other, so no
+            // property or element is ever generated between the expansions
+            var gen = Gjuton.of("""
+                    {
+                      "$ref": "#/$defs/A",
+                      "$defs": {
+                        "A": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/$defs/B"
+                            }
+                          ]
+                        },
+                        "B": {
+                          "oneOf": [
+                            {
+                              "$ref": "#/$defs/A"
+                            }
+                          ]
+                        }
+                      }
+                    }""").withSeed(1L);
+
+            // when
+            var thrown = catchThrowable(gen::generate);
+
+            // then
+            assertThat(thrown)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("keeps recursing without producing a value");
         }
     }
 

@@ -256,6 +256,28 @@ class SchemaMergerTest {
     }
 
     @Nested
+    class BooleanMerges {
+
+        @Test
+        void mergesTwoBooleans() {
+            var a = readSchema("""
+                    {"type": "boolean"}
+                    """);
+            var b = readSchema("""
+                    {"type": "boolean"}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged).isEqualTo(readSchema("""
+                    {"type": "boolean"}
+                    """));
+        }
+    }
+
+    @Nested
     class ObjectMerges {
 
         @Test
@@ -482,6 +504,56 @@ class SchemaMergerTest {
         }
 
         @Test
+        void rejectsRequiredPropertyTheOtherSideDoesNotAllow() {
+            var a = readSchema("""
+                    {
+                        "type": "object",
+                        "properties": {"url": {"type": "string"}},
+                        "required": ["url"],
+                        "additionalProperties": false
+                    }
+                    """);
+            var b = readSchema("""
+                    {
+                        "type": "object",
+                        "properties": {"values": {"type": "string"}},
+                        "required": ["values"],
+                        "additionalProperties": false
+                    }
+                    """);
+
+            // when
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b)))
+                    // then
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("required property 'url' is not allowed by additionalProperties");
+        }
+
+        @Test
+        void allowsRequiredPropertyTheOtherSideCoversByPattern() {
+            var a = readSchema("""
+                    {
+                        "type": "object",
+                        "properties": {"x-url": {"type": "string"}},
+                        "required": ["x-url"]
+                    }
+                    """);
+            var b = readSchema("""
+                    {
+                        "type": "object",
+                        "patternProperties": {"^x-": {"type": "string"}},
+                        "additionalProperties": false
+                    }
+                    """);
+
+            // when
+            var merged = (ObjectSchema) SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged.getRequired()).containsExactly("x-url");
+        }
+
+        @Test
         void additionalPropertiesFalseWinsOverTrue() {
             var a = readSchema("""
                     {
@@ -621,6 +693,21 @@ class SchemaMergerTest {
             assertThat(merged).isEqualTo(readSchema("""
                     {"type": "array", "minItems": 2, "maxItems": 5, "items": {"type": "string"}}
                     """));
+        }
+
+        @Test
+        void emptyLengthRangeThrows() {
+            var a = readSchema("""
+                    {"type": "array", "minItems": 1, "items": {"type": "string"}}
+                    """);
+            var b = readSchema("""
+                    {"type": "array", "maxItems": 0, "items": {"type": "string"}}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b)))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("minItems 1 exceeds maxItems 0");
         }
 
         @Test
@@ -1106,6 +1193,72 @@ class SchemaMergerTest {
             assertThat(merged.getAnyOf()).hasSize(2);
             assertThat(merged.getAnyOf().get(0)).hasSize(1);
             assertThat(merged.getAnyOf().get(1)).hasSize(1);
+        }
+
+        @Test
+        void dropsAnyOfGroupBothSidesCarry() {
+            var a = readSchema("""
+                    {"anyOf": [{"type": "string"}, {"type": "integer"}]}
+                    """);
+            var b = readSchema("""
+                    {"anyOf": [{"type": "string"}, {"type": "integer"}]}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged.getAnyOf()).hasSize(1);
+            assertThat(merged.getAnyOf().getFirst()).hasSize(2);
+        }
+
+        @Test
+        void dropsAnyOfGroupListedInAnotherOrder() {
+            var a = readSchema("""
+                    {"anyOf": [{"type": "string"}, {"type": "integer"}]}
+                    """);
+            var b = readSchema("""
+                    {"anyOf": [{"type": "integer"}, {"type": "string"}]}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged.getAnyOf()).hasSize(1);
+        }
+
+        @Test
+        void dropsOneOfGroupBothSidesCarry() {
+            var a = readSchema("""
+                    {"oneOf": [{"type": "string"}, {"type": "integer"}]}
+                    """);
+            var b = readSchema("""
+                    {"oneOf": [{"type": "string"}, {"type": "integer"}]}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged.getOneOf()).hasSize(1);
+            assertThat(merged.getOneOf().getFirst()).hasSize(2);
+        }
+
+        @Test
+        void dropsOneOfGroupListedInAnotherOrder() {
+            var a = readSchema("""
+                    {"oneOf": [{"type": "string"}, {"type": "integer"}]}
+                    """);
+            var b = readSchema("""
+                    {"oneOf": [{"type": "integer"}, {"type": "string"}]}
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged.getOneOf()).hasSize(1);
         }
 
         @Test

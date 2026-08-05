@@ -34,9 +34,9 @@ class UntypedGeneratorTest {
             context.completeRun();
         }
 
-        // when — push ref depth past the soft limit so isMinimal() returns true
-        for (int i = 0; i < GeneratorConfig.DEFAULT_REF_SOFT_DEPTH; i++) {
-            context.incrementGlobalRefDepth();
+        // when — descend past the soft limit so isMinimal() returns true
+        for (int i = 0; i < GeneratorConfig.DEFAULT_SOFT_NESTING_DEPTH; i++) {
+            context.enterPath(".child");
         }
 
         // then

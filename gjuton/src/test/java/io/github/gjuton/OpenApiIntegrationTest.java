@@ -73,11 +73,7 @@ class OpenApiIntegrationTest {
     private static final int MAX_SCHEMAS_PER_DESCRIPTION = 200;
 
     // Bugs in gjuton itself. Dropping an entry is the acceptance test for the fix it names.
-    private static final Set<String> NON_WORKING_DESCRIPTIONS = Set.of(
-            // Schema build fails on a percent-encoded pointer in a $ref into #/paths/..., which
-            // path templates put {braces} in. Parked in IntegrationTest too. See issue #150.
-            "conjur.local-5.3.0.yaml"
-    );
+    private static final Set<String> NON_WORKING_DESCRIPTIONS = Set.of();
 
     // Descriptions are parsed before anything is generated, so these bound gjuton alone.
     private static final long BUILD_TIMEOUT_SECONDS = 10;

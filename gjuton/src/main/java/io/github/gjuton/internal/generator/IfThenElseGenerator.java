@@ -63,7 +63,7 @@ final class IfThenElseGenerator extends PhaseGenerator<IfThenElseGenerator.Gener
             }
         }
         try {
-            return SchemaMerger.merge(branches);
+            return SchemaMerger.merge(context, branches);
         } catch (UnsatisfiableSchemaException unsatisfiable) {
             // Branch incompatible with the parent -- drop it (null) so the
             // other branch can still generate. See generatePhase.
@@ -92,7 +92,7 @@ final class IfThenElseGenerator extends PhaseGenerator<IfThenElseGenerator.Gener
             return base;
         }
         try {
-            return SchemaMerger.merge(branches);
+            return SchemaMerger.merge(context, branches);
         } catch (UnsatisfiableSchemaException unsatisfiable) {
             // Branch incompatible with the parent -- drop it (null) so the
             // other branch can still generate. See generatePhase.

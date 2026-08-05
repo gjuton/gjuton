@@ -27,6 +27,13 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ### Changed
 
+- `withRecursionLimits*` are renamed `withNestingLimits*` (the old names are
+  removed) and now bound nesting depth in the generated value rather than
+  counting `$ref` expansions, so how a schema is factored into definitions no
+  longer changes what it generates. The presets are retuned, the same schema
+  and seed produce different values than before, and a schema that cannot be
+  generated within the limits — including one whose recursion cannot bottom
+  out — says so instead of reporting a `$ref` depth count.
 - `UnsatisfiableSchemaException` messages now say more about what failed and
   where: merge conflicts name the conflicting schema locations (JSON Pointers)
   and the values or types on both sides, a string `format` failure names only
@@ -40,6 +47,12 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ### Fixed
 
+- Constraints behind a `$ref` now survive a merge: an `allOf` or a
+  `oneOf`/`anyOf` branch built from a reference keeps what the definition it
+  names declares, instead of that being dropped. Two schemas that both fix a
+  value to `boolean` merge rather than reporting a type conflict, and branches
+  whose array-length bounds cannot both hold are recognised as incompatible up
+  front instead of failing part-way through generation.
 - A `$ref` appearing inside data rather than in a schema position — in an
   `example`, an `enum` payload, or under a property that happens to be named
   after a keyword — is no longer resolved as a schema, which could fail the

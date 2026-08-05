@@ -1,15 +1,9 @@
 package io.github.gjuton.internal.generator;
 
-import io.github.gjuton.errors.UnsatisfiableSchemaException;
-
 /**
  * Generator for schemas with a {@code $ref} keyword. A {@code $ref}
  * replaces the schema it appears in with the referenced schema, allowing
  * schema reuse and recursive definitions.
- *
- * <p>Depth tracking lives on {@link GeneratorContext} as a global counter
- * across all RefGenerator instances. This prevents exponential blowup on
- * recursive properties.
  */
 final class RefGenerator implements Generator<Object> {
 
@@ -23,19 +17,8 @@ final class RefGenerator implements Generator<Object> {
 
     @Override
     public Object generate() {
-        if (context.getGlobalRefDepth() >= context.refHardDepth()) {
-            throw new UnsatisfiableSchemaException(
-                    "Recursive $ref '" + ref + "' could not bottom out within " + context.refHardDepth()
-                            + " levels — schema appears to require infinite recursion",
-                    context.currentJsonPointer());
-        }
         var schema = context.resolveRef(ref);
         var target = context.generatorFor(schema);
-        context.enterRef(ref);
-        try {
-            return target.generate();
-        } finally {
-            context.exitRef();
-        }
+        return target.generate();
     }
 }
