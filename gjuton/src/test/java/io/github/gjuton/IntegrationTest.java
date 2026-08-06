@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.InputFormat;
+import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
 import com.networknt.schema.SchemaValidatorsConfig;
 import com.networknt.schema.SpecVersion.VersionFlag;
@@ -24,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -52,71 +54,11 @@ class IntegrationTest {
             new SchemaLocation("schemas/schemastore", 10, 1000)
     );
 
-    // Timings indicate a test run of instantiating Gjuton, generating 10 values and
-    // validating those 10 values. Measurement was capped at 1s, so entries marked ">1s"
-    // are only known to be at least that slow, not exactly that slow.
-    // Format is given as total (instantiate Gjuton/generate 10/validate 10).
+    // Excluded for time, not correctness: these generate valid JSON, but one value
+    // costs enough that it trips GENERATION_TIMEOUT_SECONDS once the suite runs them
+    // in parallel. A schema that generates wrong output belongs in one of the sets below.
     private static final Set<String> SLOW_SCHEMAS = Set.of(
-            "sigmacv.json", // >1s
-            "venvironment-schema-v5.0.0.json", // >1s
-            "venvironment-schema-v3.0.0.json", // 196ms (5ms/186ms/4ms)
-            "lsdlschema-4.1.json", // 899ms (1ms/894ms/2ms)
-            "lsdlschema-4.0.json", // >1s
-            "lsdlschema-3.5.json", // 309ms (4ms/297ms/7ms)
-            "lsdlschema-3.4.json", // 973ms (1ms/968ms/3ms)
-            "lsdlschema-3.3.json", // 953ms (1ms/948ms/2ms)
-            "lsdlschema-3.2.json", // >1s
-            "lsdlschema-3.1.json", // 747ms (1ms/744ms/2ms)
-            "lsdlschema-3.0.json", // >1s
-            "lsdlschema-2.0.json", // 289ms (1ms/284ms/2ms)
-            "jfrog-pipelines.json", // >1s
-            "jsconfig.json", // 280ms (2ms/275ms/2ms)
-            "winget-pkgs-installer-1.0.0.json", // 258ms (1ms/188ms/68ms)
-            "youtrack-app.json", // 379ms (0ms/377ms/0ms)
-            "codeship-steps.json", // >1s
-            "airlock-microgateway-3.2.json", // 128ms (7ms/115ms/4ms)
-            "utcm-monitor.json", // 135ms (86ms/0ms/41ms)
-            "vector.json", // 196ms (125ms/3ms/63ms)
-            "bosh-bpm-config.json", // 108ms (0ms/106ms/0ms)
-            "ruff.json", // 174ms (7ms/64ms/13ms)
-            "renovate-39.json", // >1s
-            "renovate-40.json", // >1s
-            "renovate-41.json", // >1s
-            "renovate-42.json", // >1s
-            "renovate-global-schema-41.json", // >1s
-            "renovate-global-schema-42.json", // >1s
-            "renovate-inherited-schema-42.json", // >1s
-            "sarif-2.0.0-csd.2.beta.2018-10-10.json", // >1s
-            "sarif-2.0.0-csd.2.beta.2019-01-09.json", // >1s
-            "sarif-2.0.0-csd.2.beta.2019-01-24.json", // >1s
-            "sarif-2.0.0.json", // >1s
-            "sarif-2.1.0.json", // >1s
-            "sarif-2.1.0-rtm.0.json", // >1s
-            "sarif-2.1.0-rtm.1.json", // >1s
-            "sarif-2.1.0-rtm.2.json", // >1s
-            "sarif-2.1.0-rtm.3.json", // >1s
-            "sarif-2.1.0-rtm.4.json", // >1s
-            "sarif-2.1.0-rtm.5.json", // >1s
-            "sarif-2.1.0-rtm.6.json", // >1s
-            "sarif.json", // >1s
-            "stylelintrc.json", // >1s
-            "workflows.json", // >1s
-            "jsdoc-1.0.0.json", // 203ms (124ms/22ms/56ms)
-            "mkdocs-1.0.json", // 103ms (102ms/0ms/0ms)
-            "openutau-character.json", // 79ms (0ms/0ms/79ms)
-            "apollo-router-2.9.0.json", // 51ms (11ms/19ms/19ms)
-            "dotnet-releases-index.json", // 58ms (6ms/32ms/19ms)
-            "tsconfig.json", // 67ms (16ms/42ms/6ms)
-            "venvironment-schema-v4.1.0.json", // 88ms (4ms/76ms/7ms)
-            "venvironment-schema-v3.2.0.json", // 96ms (5ms/85ms/4ms)
-            "venvironment-schema-v3.1.0.json", // 95ms (2ms/89ms/2ms)
-            "cryproj.54.schema.json", // 72ms (1ms/67ms/3ms)
-            "cryproj.55.schema.json", // 71ms (1ms/66ms/3ms)
-            "cryproj.json", // 54ms (2ms/46ms/4ms)
-            "cryproj.dev.schema.json", // 70ms (1ms/65ms/3ms)
-            "partial-eslint-plugins.json", // 90ms (11ms/38ms/38ms)
-            "claude-code-settings.json", // 75ms (5ms/49ms/20ms)
-            "cargo-lints-clippy.json" // 80ms (8ms/29ms/41ms)
+            "sigmacv.json" // ~225ms/value single-threaded; huge values from sentinel maxItems/maxLength (#168)
     );
 
     // Schemas that cannot be built without reaching the network. Ignored because
@@ -184,6 +126,7 @@ class IntegrationTest {
             //    a time, when if/then is used as a type-discriminated union (bmml, gitea-issue-forms,
             //    likely github-issue-forms)
             "bmml.json", // UnsatisfiableSchemaException at /meta
+            "codeship-steps.json", // UnsatisfiableSchemaException at /0; regressed in #184, passed before it
             "compilerconfig.json", // UnsatisfiableSchemaException at /0
             "flatpak-manifest.json", // UnsatisfiableSchemaException
             "foundryvtt-base-package-manifest.json", // UnsatisfiableSchemaException at /id (pattern+length)
@@ -191,16 +134,38 @@ class IntegrationTest {
             "github-issue-forms.json", // UnsatisfiableSchemaException at /body/0
             "pnpm-workspace.json", // UnsatisfiableSchemaException at /catalog
             "popxf-1.0.json", // UnsatisfiableSchemaException, and generates values violating property-name regex patterns
+            // All renovate variants fail in RANDOM mode only, within the first few invocations,
+            // and only at soft nesting depth >= 2 — their optional properties recurse into
+            // themselves (/ansible/ansible/ansible/...). Passes throughout at soft depth 1.
+            "renovate-39.json", // UnsatisfiableSchemaException: no enum value satisfies /ansible/ansible/autodiscoverRepoOrder
+            "renovate-40.json", // UnsatisfiableSchemaException: no enum value satisfies /ansible/argocd/autodiscoverRepoSort
+            "renovate-41.json", // UnsatisfiableSchemaException at /ansible/ansible-galaxy/encrypted
+            "renovate-42.json", // UnsatisfiableSchemaException: no oneOf branch merges with the parent at /ansible/ansible/autodiscoverFilter
+            "renovate-global-schema-41.json", // UnsatisfiableSchemaException at /ansible/ansible-galaxy/encrypted
+            "renovate-global-schema-42.json", // UnsatisfiableSchemaException: no oneOf branch merges at /ansible/ansible/autodiscoverFilter
+            "renovate-inherited-schema-42.json", // UnsatisfiableSchemaException: no oneOf branch merges at /ansible/ansible/autodiscoverFilter
             "specif-1.0.json", // UnsatisfiableSchemaException at /$schema (pattern+length)
             "specif-1.1.json", // UnsatisfiableSchemaException at /$schema (pattern+length)
             "starlake.json", // UnsatisfiableSchemaException
             "venvironment-schema-v4.0.0.json", // UnsatisfiableSchemaException at /can-networks/0/database
-            "vhwdebugger-binding-schema.json" // UnsatisfiableSchemaException
+            "vhwdebugger-binding-schema.json", // UnsatisfiableSchemaException
+            // Also slow, but excluded for failing: generates 8 valid values, then throws on the
+            // 9th in EXHAUSTIVE mode. RANDOM survives 20 invocations but is slow at deep limits.
+            "workflows.json" // UnsatisfiableSchemaException at $; see #168
     );
 
     // Failures caused by a third-party validation library bug, not gjuton.
     private static final Set<String> FAILS_IN_VALIDATION_LIBRARY = Set.of(
-            "vtesttree-schema-v2.2.0.json" // validation lib mis-resolves leading-zero $ref key "04112" as "4112"
+            "vtesttree-schema-v2.2.0.json", // validation lib mis-resolves leading-zero $ref key "04112" as "4112"
+
+            // Same leading-zero bug: gjuton generates these fine, but the validation lib
+            // reads a numeric $ref token as an integer, so "04874" resolves as "4874".
+            // RFC 6901 makes the token a literal member name when it addresses an object.
+            "venvironment-schema-v3.0.0.json", // "04874" mis-resolved as "4874"
+            "venvironment-schema-v3.1.0.json", // "04874" mis-resolved as "4874"
+            "venvironment-schema-v3.2.0.json", // "09047" mis-resolved as "9047"
+            "venvironment-schema-v4.1.0.json", // "09693" mis-resolved as "9693"
+            "venvironment-schema-v5.0.0.json" // "09693" mis-resolved as "9693"
     );
 
     // Generation fails because the rgxgen library used for `pattern` generation can't
@@ -246,6 +211,13 @@ class IntegrationTest {
     });
 
     private static final Map<VersionFlag, JsonSchemaFactory> FACTORIES = new EnumMap<>(VersionFlag.class);
+
+    /**
+     * The validator each schema is checked against, keyed by the schema's path.
+     * Compiling one costs far more than running it, and every invocation of a
+     * schema is validated against the same one.
+     */
+    private static final Map<Path, JsonSchema> VALIDATORS = new ConcurrentHashMap<>();
 
     static {
         for (var flag : VersionFlag.values()) {
@@ -377,8 +349,8 @@ class IntegrationTest {
         if (generationError != null) {
             fail(generationError);
         }
-        var factory = schemaFactoryFor(schemaContent);
-        Set<ValidationMessage> errors = validateOrFail(factory, schemaPath, json, schemaName, invocation);
+        var validator = validatorFor(schemaPath, schemaContent);
+        var errors = validateOrFail(validator, json, schemaName, invocation);
 
         // then
         assertThat(errors)
@@ -431,10 +403,8 @@ class IntegrationTest {
     }
 
     private static Set<ValidationMessage> validateOrFail(
-            JsonSchemaFactory factory, Path schemaPath, String json, String schemaName, int invocation) {
-        var config = SchemaValidatorsConfig.builder().preloadJsonSchema(false).build();
-        var location = com.networknt.schema.SchemaLocation.of(schemaPath.toUri().toString());
-        Callable<Set<ValidationMessage>> task = () -> factory.getSchema(location, config).validate(json, InputFormat.JSON);
+            JsonSchema validator, String json, String schemaName, int invocation) {
+        Callable<Set<ValidationMessage>> task = () -> validator.validate(json, InputFormat.JSON);
         try {
             return callWithTimeout(task, VALIDATION_TIMEOUT_SECONDS);
         } catch (RuntimeException e) {
@@ -457,10 +427,21 @@ class IntegrationTest {
         }
     }
 
-    private static JsonSchemaFactory schemaFactoryFor(String schemaContent) throws Exception {
+    private static JsonSchema validatorFor(Path schemaPath, String schemaContent) throws IOException {
+        var cached = VALIDATORS.get(schemaPath);
+        if (cached != null) {
+            return cached;
+        }
         var tree = MAPPER.readTree(schemaContent);
         var version = SpecVersionDetector.detectOptionalVersion(tree, false)
                 .orElse(VersionFlag.V7);
-        return FACTORIES.get(version);
+        var factory = FACTORIES.get(version);
+        // Preload what can be resolved up front, so the shared validator does as
+        // little lazy initialisation as possible while several threads use it.
+        var config = SchemaValidatorsConfig.builder().preloadJsonSchema(true).build();
+        var location = com.networknt.schema.SchemaLocation.of(schemaPath.toUri().toString());
+        var validator = factory.getSchema(location, config);
+        var raced = VALIDATORS.putIfAbsent(schemaPath, validator);
+        return raced != null ? raced : validator;
     }
 }
