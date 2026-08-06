@@ -55,9 +55,9 @@ public final class SchemaParser {
 
     private static SchemaDocument doParse(String jsonSchema, URI retrievalUri) {
         try {
-            var rootNode = MAPPER.readTree(jsonSchema);
+            var rootNode = MAPPER.readValue(jsonSchema, Object.class);
             SchemaNormalizer.normalize(rootNode);
-            var rootSchema = MAPPER.treeToValue(rootNode, Schema.class);
+            var rootSchema = MAPPER.convertValue(rootNode, Schema.class);
             var refs = RefCollector.collect(rootNode, rootSchema, retrievalUri);
             return new SchemaDocument(rootSchema, refs);
         } catch (JsonProcessingException e) {
