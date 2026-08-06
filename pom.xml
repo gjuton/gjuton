@@ -31,7 +31,7 @@
     </developers>
 
     <modules>
-        <module>gjuton</module>
+        <module>gjuton-core</module>
     </modules>
 
     <scm child.scm.connection.inherit.append.path="false"
