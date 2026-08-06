@@ -11,6 +11,8 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+## [0.0.2] — 2026-08-06
+
 ### Added
 
 - `withOverrideByFormat`, which overrides a value by what a position *is*

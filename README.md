@@ -20,14 +20,14 @@ Maven:
 <dependency>
     <groupId>io.github.gjuton</groupId>
     <artifactId>gjuton</artifactId>
-    <version>0.0.1</version>
+    <version>0.0.2</version>
 </dependency>
 ```
 
 Gradle:
 
 ```groovy
-implementation 'io.github.gjuton:gjuton:0.0.1'
+implementation 'io.github.gjuton:gjuton:0.0.2'
 ```
 
 Gjuton is pre-1.0 — breaking changes may land in any release. Pin a specific
