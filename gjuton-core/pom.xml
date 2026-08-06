@@ -11,9 +11,9 @@
         <version>0.0.3-SNAPSHOT</version>
     </parent>
 
-    <artifactId>gjuton</artifactId>
+    <artifactId>gjuton-core</artifactId>
 
-    <name>Gjuton</name>
+    <name>Gjuton Core</name>
     <description>Turns a JSON Schema into valid JSON test data.</description>
 
     <dependencies>
