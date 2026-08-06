@@ -1,9 +1,6 @@
 package io.github.gjuton.internal.parser;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.gjuton.internal.model.Schema;
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -11,6 +8,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -25,6 +23,13 @@ import java.util.Map;
 final class RefCollector {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    /**
+     * What {@link #resolvePointer} answers when a document holds nothing at
+     * the position a pointer names. Distinct from a JSON {@code null}, which
+     * is a value the document does hold.
+     */
+    private static final Object MISSING = new Object();
 
     private RefCollector() {
     }
@@ -45,7 +50,7 @@ final class RefCollector {
      * @throws IllegalArgumentException if a {@code $ref} names something that
      *     is not a schema, or cannot be resolved at all
      */
-    static Map<String, Schema> collect(JsonNode rootNode, Schema rootSchema, URI retrievalUri) throws JsonProcessingException {
+    static Map<String, Schema> collect(Object rootNode, Schema rootSchema, URI retrievalUri) {
         var refs = new HashMap<String, Schema>();
         // Self-reference always resolves to the same root Schema instance so phase state
         // is shared between the root and any "#" ref.
@@ -70,13 +75,12 @@ final class RefCollector {
      * <p>Refs already present in {@code refs} are left as they are, which is
      * what stops a cycle from recursing forever.
      */
-    private static void walk(JsonNode node, JsonNode currentDoc, String currentDocUri, URI enclosingBase, Map<String, Schema> refs,
-            Map<URI, JsonNode> loadedDocuments) throws JsonProcessingException {
-        if (node.isObject()) {
+    private static void walk(Object node, Object currentDoc, String currentDocUri, URI enclosingBase, Map<String, Schema> refs,
+            Map<URI, Object> loadedDocuments) {
+        if (node instanceof Map<?, ?> objectNode) {
             var baseUri = baseUriOf(node, enclosingBase);
-            var refNode = node.get("$ref");
-            if (refNode != null && refNode.isTextual()) {
-                var ref = refNode.asText();
+            var refNode = objectNode.get("$ref");
+            if (refNode instanceof String ref) {
                 if (!refs.containsKey(ref)) {
                     // Split the ref into the document it names and the fragment within it:
                     // "defs.json#/definitions/Address" sets targetDoc to the loaded defs.json,
@@ -120,7 +124,7 @@ final class RefCollector {
                     // The target may sit outside any sub-schema position and so be
                     // reachable only by following the ref that points at it. An empty
                     // fragment names the document itself.
-                    var target = targetDoc.at(fragment);
+                    var target = resolvePointer(targetDoc, fragment);
                     // Out of reach of the document-wide pass for that same reason, so the
                     // target is normalised here, where following the ref has established
                     // it is a schema.
@@ -131,7 +135,7 @@ final class RefCollector {
                     walk(target, targetDoc, targetDocUri, targetBase, refs, loadedDocuments);
                 }
             }
-            for (var property : node.properties()) {
+            for (var property : objectNode.entrySet()) {
                 var shape = SchemaNormalizer.SCHEMA_FIELDS.get(property.getKey());
                 if (shape == null) {
                     continue;
@@ -140,17 +144,19 @@ final class RefCollector {
                 if (shape == SchemaNormalizer.SchemaShape.SCHEMA_MAP) {
                     // The keys of a schema map are user-chosen property or definition
                     // names, so its schemas sit one level below the keyword.
-                    for (var entry : value.properties()) {
-                        walk(entry.getValue(), currentDoc, currentDocUri, baseUri, refs, loadedDocuments);
+                    if (value instanceof Map<?, ?> mapValue) {
+                        for (var entry : mapValue.entrySet()) {
+                            walk(entry.getValue(), currentDoc, currentDocUri, baseUri, refs, loadedDocuments);
+                        }
                     }
                 } else {
                     walk(value, currentDoc, currentDocUri, baseUri, refs, loadedDocuments);
                 }
             }
-        } else if (node.isArray()) {
+        } else if (node instanceof List<?> arrayNode) {
             // Only reachable from a whitelisted keyword above, so an array of
             // schemas is walked while an enum payload is never entered.
-            for (var element : node) {
+            for (var element : arrayNode) {
                 walk(element, currentDoc, currentDocUri, enclosingBase, refs, loadedDocuments);
             }
         }
@@ -163,19 +169,85 @@ final class RefCollector {
      * @throws IllegalArgumentException if the pointer names nothing, or
      *     names something that is not a schema
      */
-    private static Schema resolveFragment(String pointer, JsonNode document) throws JsonProcessingException {
+    private static Schema resolveFragment(String pointer, Object document) {
         if (pointer.isEmpty()) {
-            return MAPPER.treeToValue(document, Schema.class);
+            return MAPPER.convertValue(document, Schema.class);
         }
-        var target = document.at(pointer);
-        if (target.isMissingNode()) {
+        var target = resolvePointer(document, pointer);
+        if (target == MISSING) {
             throw new IllegalArgumentException("Unresolved $ref fragment: #" + pointer);
         }
-        var schema = MAPPER.treeToValue(target, Schema.class);
+        var schema = MAPPER.convertValue(target, Schema.class);
         if (schema == null) {
             throw new IllegalArgumentException("$ref target is not a schema: #" + pointer);
         }
         return schema;
+    }
+
+    /**
+     * The value {@code pointer} names within {@code document}, or
+     * {@link #MISSING} when the document holds nothing there. An empty
+     * pointer names {@code document} itself.
+     *
+     * <p>The answer is the live sub-tree, not a copy: changing it changes
+     * {@code document}.
+     *
+     * <p>Escapes are read as RFC 6901 writes them — {@code ~1} for a
+     * {@code /} within a key and {@code ~0} for a {@code ~}. Percent-encoding
+     * is left as written (issue #150).
+     */
+    private static Object resolvePointer(Object document, String pointer) {
+        if (pointer.isEmpty()) {
+            return document;
+        }
+        if (!pointer.startsWith("/")) {
+            return MISSING;
+        }
+        var current = document;
+        // The leading "/" opens the first segment rather than separating two, so the
+        // split starts past it. A trailing "/" names the empty key, hence the -1 limit.
+        var segments = pointer.substring(1).split("/", -1);
+        for (var segment : segments) {
+            // A pointer separates segments with /, so a key holding / or ~ arrives
+            // escaped: ~1 for /, ~0 for ~. Unescape ~1 first — taking ~0 first turns
+            // "~01" into "~1", which the next replace reads as an escape, collapsing a
+            // key literally named "~1" to "/".
+            var slashesRestored = segment.replace("~1", "/");
+            var key = slashesRestored.replace("~0", "~");
+            if (current instanceof Map<?, ?> objectNode) {
+                if (!objectNode.containsKey(key)) {
+                    return MISSING;
+                }
+                current = objectNode.get(key);
+            } else if (current instanceof List<?> arrayNode) {
+                int index = asIndex(key);
+                if (index < 0 || index >= arrayNode.size()) {
+                    return MISSING;
+                }
+                current = arrayNode.get(index);
+            } else {
+                return MISSING;
+            }
+        }
+        return current;
+    }
+
+    /**
+     * The array position {@code segment} names, or {@code -1} when it names
+     * no position at all. Only the canonical spelling counts: a leading zero
+     * or a sign names nothing.
+     */
+    private static int asIndex(String segment) {
+        if (segment.isEmpty() || segment.length() > 10 || (segment.length() > 1 && segment.charAt(0) == '0')) {
+            return -1;
+        }
+        for (int i = 0; i < segment.length(); i++) {
+            char digit = segment.charAt(i);
+            if (digit < '0' || digit > '9') {
+                return -1;
+            }
+        }
+        return Integer.parseInt(segment);
     }
 
     /**
@@ -190,18 +262,15 @@ final class RefCollector {
      * replaced, not appended to. An absolute {@code $id} stands on its own,
      * whatever scope it sits in.
      */
-    private static URI baseUriOf(JsonNode node, URI enclosingBase) {
-        if (!node.isObject()) {
+    private static URI baseUriOf(Object node, URI enclosingBase) {
+        if (!(node instanceof Map<?, ?> objectNode)) {
             return enclosingBase;
         }
-        var idNode = node.get("$id");
-        if (idNode == null) {
-            idNode = node.get("id");
-        }
-        if (idNode == null || !idNode.isTextual()) {
+        var idNode = objectNode.containsKey("$id") ? objectNode.get("$id") : objectNode.get("id");
+        if (!(idNode instanceof String declaredIdText)) {
             return enclosingBase;
         }
-        var declaredId = URI.create(idNode.asText());
+        var declaredId = URI.create(declaredIdText);
         return enclosingBase != null ? enclosingBase.resolve(declaredId) : declaredId;
     }
 
@@ -214,7 +283,7 @@ final class RefCollector {
      *
      * @throws java.io.UncheckedIOException if the document cannot be read
      */
-    private static JsonNode loadExternalDocument(URI location, Map<URI, JsonNode> loadedDocuments) {
+    private static Object loadExternalDocument(URI location, Map<URI, Object> loadedDocuments) {
         var alreadyLoaded = loadedDocuments.get(location);
         if (alreadyLoaded != null) {
             return alreadyLoaded;
@@ -229,7 +298,7 @@ final class RefCollector {
                 var path = Path.of(location);
                 content = Files.readString(path);
             }
-            var document = MAPPER.readTree(content);
+            var document = MAPPER.readValue(content, Object.class);
             SchemaNormalizer.normalize(document);
             var identity = baseUriOf(document, location);
             qualifyRefs(document, identity.toString());
@@ -256,12 +325,12 @@ final class RefCollector {
      * {@code example} — means nothing as a reference and is left as the data
      * it is.
      */
-    private static void qualifyRefs(JsonNode node, String docUri) {
-        if (node.isObject()) {
-            var objectNode = (ObjectNode) node;
+    private static void qualifyRefs(Object node, String docUri) {
+        if (node instanceof Map) {
+            @SuppressWarnings("unchecked")
+            var objectNode = (Map<String, Object>) node;
             var refNode = objectNode.get("$ref");
-            if (refNode != null && refNode.isTextual()) {
-                var ref = refNode.asText();
+            if (refNode instanceof String ref) {
                 if (ref.startsWith("#")) {
                     objectNode.put("$ref", docUri + ref);
                 } else {
@@ -273,7 +342,7 @@ final class RefCollector {
                     }
                 }
             }
-            for (var property : objectNode.properties()) {
+            for (var property : objectNode.entrySet()) {
                 var shape = SchemaNormalizer.SCHEMA_FIELDS.get(property.getKey());
                 if (shape == null) {
                     continue;
@@ -282,15 +351,17 @@ final class RefCollector {
                 if (shape == SchemaNormalizer.SchemaShape.SCHEMA_MAP) {
                     // The keys of a schema map are user-chosen property or definition
                     // names, so its schemas sit one level below the keyword.
-                    for (var entry : value.properties()) {
-                        qualifyRefs(entry.getValue(), docUri);
+                    if (value instanceof Map<?, ?> mapValue) {
+                        for (var entry : mapValue.entrySet()) {
+                            qualifyRefs(entry.getValue(), docUri);
+                        }
                     }
                 } else {
                     qualifyRefs(value, docUri);
                 }
             }
-        } else if (node.isArray()) {
-            for (var element : node) {
+        } else if (node instanceof List<?> arrayNode) {
+            for (var element : arrayNode) {
                 qualifyRefs(element, docUri);
             }
         }

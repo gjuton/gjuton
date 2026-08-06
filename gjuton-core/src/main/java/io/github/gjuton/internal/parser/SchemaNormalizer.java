@@ -2,11 +2,9 @@ package io.github.gjuton.internal.parser;
 
 import static java.util.Map.entry;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.github.gjuton.internal.model.UntypedSchema;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -93,13 +91,40 @@ final class SchemaNormalizer {
     }
 
     /**
+     * A copy of {@code node} that shares no mutable structure with it, so
+     * either may be changed without the other seeing it.
+     */
+    private static Object deepCopy(Object node) {
+        if (node instanceof Map<?, ?> objectNode) {
+            var copy = new LinkedHashMap<String, Object>();
+            for (var entry : objectNode.entrySet()) {
+                var copiedValue = deepCopy(entry.getValue());
+                copy.put((String) entry.getKey(), copiedValue);
+            }
+            return copy;
+        }
+        if (node instanceof List<?> arrayNode) {
+            var copy = new ArrayList<>();
+            for (var element : arrayNode) {
+                var copiedElement = deepCopy(element);
+                copy.add(copiedElement);
+            }
+            return copy;
+        }
+        // Scalars are immutable, so sharing one is indistinguishable from copying it.
+        return node;
+    }
+
+    /**
      * Normalises {@code node} and every sub-schema beneath it in place.
      *
      * <p>Afterwards no schema declares an array of types, and every schema
      * whose keywords imply exactly one type declares that type explicitly.
-     * A node that is already normalised is left unchanged.
+     * A node that is already normalised is left unchanged. A value that is
+     * not a JSON object — including one naming nothing at all — is left
+     * alone rather than rejected.
      */
-    static void normalize(JsonNode node) {
+    static void normalize(Object node) {
         // Type arrays first: inference reads the type keyword, and the branches
         // this produces are themselves schemas that still need inferring.
         rewriteTypeArrays(node);
@@ -111,12 +136,13 @@ final class SchemaNormalizer {
      * object node that (a) lacks one and (b) contains keywords implying
      * exactly one JSON Schema type.
      */
-    private static void inferMissingTypes(JsonNode node) {
-        if (!node.isObject()) {
+    private static void inferMissingTypes(Object node) {
+        if (!(node instanceof Map)) {
             return;
         }
-        var objectNode = (ObjectNode) node;
-        if (!objectNode.has("type")) {
+        @SuppressWarnings("unchecked")
+        var objectNode = (Map<String, Object>) node;
+        if (!objectNode.containsKey("type")) {
             var inferred = inferType(objectNode);
             if (inferred != null) {
                 objectNode.put("type", inferred);
@@ -130,22 +156,22 @@ final class SchemaNormalizer {
             switch (field.getValue()) {
                 case SCHEMA -> inferMissingTypes(value);
                 case SCHEMA_ARRAY -> {
-                    if (value.isArray()) {
-                        for (var element : value) {
+                    if (value instanceof List<?> arrayValue) {
+                        for (var element : arrayValue) {
                             inferMissingTypes(element);
                         }
                     }
                 }
                 case SCHEMA_MAP -> {
-                    if (value.isObject()) {
-                        for (var entry : value.properties()) {
+                    if (value instanceof Map<?, ?> mapValue) {
+                        for (var entry : mapValue.entrySet()) {
                             inferMissingTypes(entry.getValue());
                         }
                     }
                 }
                 case SCHEMA_OR_SCHEMA_ARRAY -> {
-                    if (value.isArray()) {
-                        for (var element : value) {
+                    if (value instanceof List<?> arrayValue) {
+                        for (var element : arrayValue) {
                             inferMissingTypes(element);
                         }
                     } else {
@@ -162,7 +188,7 @@ final class SchemaNormalizer {
      * or {@code null} if no type-specific keyword is present or keywords
      * from more than one type are mixed.
      */
-    private static String inferType(ObjectNode node) {
+    private static String inferType(Map<String, Object> node) {
         var candidates = new ArrayList<String>(4);
         if (hasAny(node, OBJECT_KEYWORDS)) {
             candidates.add("object");
@@ -179,15 +205,15 @@ final class SchemaNormalizer {
         return candidates.size() == 1 ? candidates.getFirst() : null;
     }
 
-    private static boolean hasAny(ObjectNode node, List<String> keywords) {
-        return keywords.stream().anyMatch(node::has);
+    private static boolean hasAny(Map<String, Object> node, List<String> keywords) {
+        return keywords.stream().anyMatch(node::containsKey);
     }
 
     /**
      * Normalises the Draft 7 {@code "type": ["string", "null"]} shorthand
      * into an explicit {@code oneOf} before deserialisation. Jackson uses
      * the scalar {@code type} field for subclass dispatch, so the array
-     * form must be rewritten before {@code treeToValue} can succeed.
+     * form must be rewritten before deserialisation can succeed.
      *
      * <p>For example,
      * <pre>{@code
@@ -210,33 +236,38 @@ final class SchemaNormalizer {
      * constraints irrelevant to a given type are silently ignored during
      * deserialisation.
      */
-    private static void rewriteTypeArrays(JsonNode node) {
-        if (node.isObject()) {
-            var objectNode = (ObjectNode) node;
+    private static void rewriteTypeArrays(Object node) {
+        if (node instanceof Map) {
+            @SuppressWarnings("unchecked")
+            var objectNode = (Map<String, Object>) node;
             var typeNode = objectNode.get("type");
-            if (typeNode != null && typeNode.isArray()) {
-                var oneOfArray = JsonNodeFactory.instance.arrayNode();
-                for (var typeElement : typeNode) {
-                    var branch = objectNode.deepCopy();
-                    branch.set("type", typeElement);
+            if (typeNode instanceof List<?> typeArray) {
+                var oneOfArray = new ArrayList<>();
+                for (var typeElement : typeArray) {
+                    @SuppressWarnings("unchecked")
+                    var branch = (Map<String, Object>) deepCopy(objectNode);
+                    branch.put("type", typeElement);
                     oneOfArray.add(branch);
                 }
                 var definitions = objectNode.get("definitions");
                 var defs = objectNode.get("$defs");
-                objectNode.removeAll();
+                objectNode.clear();
                 if (definitions != null) {
-                    objectNode.set("definitions", definitions);
+                    objectNode.put("definitions", definitions);
                 }
                 if (defs != null) {
-                    objectNode.set("$defs", defs);
+                    objectNode.put("$defs", defs);
                 }
-                objectNode.set("oneOf", oneOfArray);
+                objectNode.put("oneOf", oneOfArray);
             }
-            for (var entry : objectNode.properties()) {
-                rewriteTypeArrays(entry.getValue());
+            // The rewrite above replaces this node's own entries, so the walk reads a
+            // snapshot of them rather than a live view of the map it just repopulated.
+            var values = new ArrayList<>(objectNode.values());
+            for (var value : values) {
+                rewriteTypeArrays(value);
             }
-        } else if (node.isArray()) {
-            for (var element : node) {
+        } else if (node instanceof List<?> arrayNode) {
+            for (var element : arrayNode) {
                 rewriteTypeArrays(element);
             }
         }
