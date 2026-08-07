@@ -1,7 +1,6 @@
 package io.github.gjuton.internal.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.math.BigDecimal;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -33,7 +32,6 @@ public final class NumericSchema extends Schema {
      * </ul>
      */
     @Getter(lombok.AccessLevel.NONE)
-    @JsonDeserialize(using = NumberOrBooleanDeserializer.class)
     private Object exclusiveMinimum;
 
     /**
@@ -44,7 +42,6 @@ public final class NumericSchema extends Schema {
      * </ul>
      */
     @Getter(lombok.AccessLevel.NONE)
-    @JsonDeserialize(using = NumberOrBooleanDeserializer.class)
     private Object exclusiveMaximum;
 
     private BigDecimal multipleOf;

@@ -3,7 +3,6 @@ package io.github.gjuton.internal.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSetter;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.List;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -31,14 +30,12 @@ public final class ArraySchema extends Schema {
      * </ul>
      */
     @Getter(lombok.AccessLevel.NONE)
-    @JsonDeserialize(using = ItemsDeserializer.class)
     private Object items;
 
     /**
      * Draft 2019-09+ positional schemas. Each entry constrains the
      * element at the corresponding array index.
      */
-    @JsonDeserialize(contentUsing = SchemaDeserializer.class)
     private List<Schema> prefixItems;
 
     /**
@@ -47,7 +44,6 @@ public final class ArraySchema extends Schema {
      * Corresponds to Draft 7 {@code additionalItems}.
      */
     @Getter(lombok.AccessLevel.NONE)
-    @JsonDeserialize(using = BooleanOrSchemaDeserializer.class)
     private Object additionalItems;
 
     /**
@@ -60,7 +56,6 @@ public final class ArraySchema extends Schema {
     private List<Schema> contains;
 
     @JsonSetter("contains")
-    @JsonDeserialize(using = SchemaDeserializer.class)
     private void setContains(Schema contains) {
         this.contains = contains == null ? null : List.of(contains);
     }

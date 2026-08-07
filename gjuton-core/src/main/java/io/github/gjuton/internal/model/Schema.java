@@ -6,7 +6,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.AccessLevel;
@@ -55,23 +54,18 @@ public abstract sealed class Schema
 
     private List<List<Schema>> anyOf;
 
-    @JsonDeserialize(contentUsing = SchemaDeserializer.class)
     private List<Schema> allOf;
 
     @JsonProperty("if")
-    @JsonDeserialize(using = SchemaDeserializer.class)
     private Schema ifSchema;
 
     @JsonProperty("then")
-    @JsonDeserialize(using = SchemaDeserializer.class)
     private Schema thenSchema;
 
     @JsonProperty("else")
-    @JsonDeserialize(using = SchemaDeserializer.class)
     private Schema elseSchema;
 
     @JsonProperty("not")
-    @JsonDeserialize(using = SchemaDeserializer.class)
     private Schema notSchema;
 
     /**
@@ -84,13 +78,11 @@ public abstract sealed class Schema
     private List<Conditional> additionalConditionals;
 
     @JsonSetter("oneOf")
-    @JsonDeserialize(contentUsing = SchemaDeserializer.class)
     private void setOneOf(List<Schema> oneOf) {
         this.oneOf = oneOf == null ? null : List.of(List.copyOf(oneOf));
     }
 
     @JsonSetter("anyOf")
-    @JsonDeserialize(contentUsing = SchemaDeserializer.class)
     private void setAnyOf(List<Schema> anyOf) {
         this.anyOf = anyOf == null ? null : List.of(List.copyOf(anyOf));
     }
