@@ -17,15 +17,19 @@ class ArchitectureTest {
         static final ArchRule layering = layeredArchitecture()
                         .consideringOnlyDependenciesInLayers()
                         .layer("api").definedBy("io.github.gjuton.api..")
+                        .layer("extension").definedBy("io.github.gjuton.internal.extension..")
+                        .layer("jsonconversion").definedBy("io.github.gjuton.internal.jsonconversion..")
                         .layer("parser").definedBy("io.github.gjuton.internal.parser..")
                         .layer("generator").definedBy("io.github.gjuton.internal.generator..")
                         .layer("model").definedBy("io.github.gjuton.internal.model..")
                         .layer("output").definedBy("io.github.gjuton.internal.output..")
                         .layer("util").definedBy("io.github.gjuton.internal.util..")
                         .layer("errors").definedBy("io.github.gjuton.errors..")
-                        .whereLayer("parser").mayOnlyAccessLayers("model", "errors")
+                        .whereLayer("parser").mayOnlyAccessLayers("jsonconversion", "model", "errors")
                         .whereLayer("generator").mayOnlyAccessLayers("model", "errors", "util")
-                        .whereLayer("output").mayOnlyAccessLayers("errors")
+                        .whereLayer("output").mayOnlyAccessLayers("jsonconversion", "errors")
+                        .whereLayer("jsonconversion").mayOnlyAccessLayers("extension", "errors")
+                        .whereLayer("extension").mayNotAccessAnyLayer()
                         .whereLayer("model").mayNotAccessAnyLayer()
                         .whereLayer("util").mayNotAccessAnyLayer()
                         .whereLayer("errors").mayNotAccessAnyLayer();
@@ -39,12 +43,11 @@ class ArchitectureTest {
         // and reach into SchemaParser. Revisit whether there is a cleaner test seam — e.g. exposing
         // a minimal test-only factory — so the generator package boundary stays tight.
         @ArchTest
-        static final ArchRule jacksonOnlyInParserModelAndOutput = noClasses()
+        static final ArchRule jacksonOnlyInFlavourAndModel = noClasses()
                         .that().resideInAPackage("io.github.gjuton..")
                         .and().resideOutsideOfPackages(
-                                        "io.github.gjuton.internal.parser..",
-                                        "io.github.gjuton.internal.model..",
-                                        "io.github.gjuton.internal.output.."
+                                        "io.github.gjuton.internal.jackson2..",
+                                        "io.github.gjuton.internal.model.."
                         )
                         .and().haveSimpleNameNotEndingWith("Test")
                         .should().dependOnClassesThat().resideInAPackage("com.fasterxml.jackson..");

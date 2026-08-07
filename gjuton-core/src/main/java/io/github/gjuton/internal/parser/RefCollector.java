@@ -1,15 +1,7 @@
 package io.github.gjuton.internal.parser;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import io.github.gjuton.internal.model.ArraySchema;
-import io.github.gjuton.internal.model.ArraySchemaMixin;
-import io.github.gjuton.internal.model.NumericSchema;
-import io.github.gjuton.internal.model.NumericSchemaMixin;
-import io.github.gjuton.internal.model.ObjectSchema;
-import io.github.gjuton.internal.model.ObjectSchemaMixin;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import io.github.gjuton.internal.model.Schema;
-import io.github.gjuton.internal.model.SchemaMixin;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -30,15 +22,6 @@ import java.util.Map;
  */
 final class RefCollector {
 
-    // The schema model names no deserializer of its own, so the bindings it needs
-    // are attached here. SchemaParser's mapper carries the same set.
-    private static final ObjectMapper MAPPER = JsonMapper.builder()
-            .addMixIn(Schema.class, SchemaMixin.class)
-            .addMixIn(ObjectSchema.class, ObjectSchemaMixin.class)
-            .addMixIn(ArraySchema.class, ArraySchemaMixin.class)
-            .addMixIn(NumericSchema.class, NumericSchemaMixin.class)
-            .build();
-
     /**
      * What {@link #resolvePointer} answers when a document holds nothing at
      * the position a pointer names. Distinct from a JSON {@code null}, which
@@ -46,7 +29,10 @@ final class RefCollector {
      */
     private static final Object MISSING = new Object();
 
-    private RefCollector() {
+    private final JsonConverter converter;
+
+    private RefCollector(JsonConverter converter) {
+        this.converter = converter;
     }
 
     /**
@@ -65,7 +51,8 @@ final class RefCollector {
      * @throws IllegalArgumentException if a {@code $ref} names something that
      *     is not a schema, or cannot be resolved at all
      */
-    static Map<String, Schema> collect(Object rootNode, Schema rootSchema, URI retrievalUri) {
+    static Map<String, Schema> collect(Object rootNode, Schema rootSchema, URI retrievalUri, JsonConverter converter) {
+        var collector = new RefCollector(converter);
         var refs = new HashMap<String, Schema>();
         // Self-reference always resolves to the same root Schema instance so phase state
         // is shared between the root and any "#" ref.
@@ -75,7 +62,7 @@ final class RefCollector {
         // itself, besides "#".
         var entryIdentity = baseUriOf(rootNode, retrievalUri);
         var entryDocUri = entryIdentity != null ? entryIdentity.toString() : null;
-        walk(rootNode, rootNode, entryDocUri, retrievalUri, refs, new HashMap<>());
+        collector.walk(rootNode, rootNode, entryDocUri, retrievalUri, refs, new HashMap<>());
         return refs;
     }
 
@@ -90,7 +77,7 @@ final class RefCollector {
      * <p>Refs already present in {@code refs} are left as they are, which is
      * what stops a cycle from recursing forever.
      */
-    private static void walk(Object node, Object currentDoc, String currentDocUri, URI enclosingBase, Map<String, Schema> refs,
+    private void walk(Object node, Object currentDoc, String currentDocUri, URI enclosingBase, Map<String, Schema> refs,
             Map<URI, Object> loadedDocuments) {
         if (node instanceof Map<?, ?> objectNode) {
             var baseUri = baseUriOf(node, enclosingBase);
@@ -184,15 +171,15 @@ final class RefCollector {
      * @throws IllegalArgumentException if the pointer names nothing, or
      *     names something that is not a schema
      */
-    private static Schema resolveFragment(String pointer, Object document) {
+    private Schema resolveFragment(String pointer, Object document) {
         if (pointer.isEmpty()) {
-            return MAPPER.convertValue(document, Schema.class);
+            return converter.convert(document, Schema.class);
         }
         var target = resolvePointer(document, pointer);
         if (target == MISSING) {
             throw new IllegalArgumentException("Unresolved $ref fragment: #" + pointer);
         }
-        var schema = MAPPER.convertValue(target, Schema.class);
+        var schema = converter.convert(target, Schema.class);
         if (schema == null) {
             throw new IllegalArgumentException("$ref target is not a schema: #" + pointer);
         }
@@ -298,7 +285,7 @@ final class RefCollector {
      *
      * @throws java.io.UncheckedIOException if the document cannot be read
      */
-    private static Object loadExternalDocument(URI location, Map<URI, Object> loadedDocuments) {
+    private Object loadExternalDocument(URI location, Map<URI, Object> loadedDocuments) {
         var alreadyLoaded = loadedDocuments.get(location);
         if (alreadyLoaded != null) {
             return alreadyLoaded;
@@ -313,7 +300,7 @@ final class RefCollector {
                 var path = Path.of(location);
                 content = Files.readString(path);
             }
-            var document = MAPPER.readValue(content, Object.class);
+            var document = converter.readTree(content);
             SchemaNormalizer.normalize(document);
             var identity = baseUriOf(document, location);
             qualifyRefs(document, identity.toString());
