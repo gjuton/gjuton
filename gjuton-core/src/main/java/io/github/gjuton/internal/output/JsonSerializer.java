@@ -1,25 +1,21 @@
 package io.github.gjuton.internal.output;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.gjuton.errors.JsonBindingException;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 
 /**
  * Serializes the generator's in-memory value tree.
  */
 public final class JsonSerializer {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
-
     /**
      * Converts a value tree (maps, lists, scalars, nulls) to a compact JSON string.
+     *
+     * @throws JsonBindingException if the tree cannot be written
      */
     public static String serialize(Object value) {
-        try {
-            return MAPPER.writeValueAsString(value);
-        } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Failed to serialize generated value", e);
-        }
+        var converter = JsonConverters.get();
+        return converter.write(value);
     }
 
     /**
@@ -29,10 +25,7 @@ public final class JsonSerializer {
      * @throws JsonBindingException if the tree does not map onto {@code type}
      */
     public static <T> T convert(Object value, Class<T> type) {
-        try {
-            return MAPPER.convertValue(value, type);
-        } catch (IllegalArgumentException e) {
-            throw new JsonBindingException("Generated value does not map onto " + type.getName(), e);
-        }
+        var converter = JsonConverters.get();
+        return converter.convert(value, type);
     }
 }

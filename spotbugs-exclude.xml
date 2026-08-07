@@ -5,6 +5,13 @@
         <Method name="random"/>
         <Bug pattern="EI_EXPOSE_REP"/>
     </Match>
+    <!-- The mapper is configured by the extension that constructs the converter and
+         handed over for good; copying it would discard that configuration's point. -->
+    <Match>
+        <Class name="io.github.gjuton.internal.jackson2.conversion.Jackson2JsonConverter"/>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
     <!-- Schema is sealed and effectively immutable: fields are set only during
          Jackson deserialization (via @JsonSetter with List.copyOf) or Lombok
          builder construction (internal code, always passes safe lists). -->

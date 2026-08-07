@@ -1,17 +1,9 @@
 package io.github.gjuton.internal.parser;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import io.github.gjuton.internal.model.ArraySchema;
-import io.github.gjuton.internal.model.ArraySchemaMixin;
-import io.github.gjuton.internal.model.NumericSchema;
-import io.github.gjuton.internal.model.NumericSchemaMixin;
-import io.github.gjuton.internal.model.ObjectSchema;
-import io.github.gjuton.internal.model.ObjectSchemaMixin;
+import io.github.gjuton.errors.JsonBindingException;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.SchemaDocument;
-import io.github.gjuton.internal.model.SchemaMixin;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -24,15 +16,6 @@ import java.nio.file.Path;
  * any single draft version.
  */
 public final class SchemaParser {
-
-    // The schema model names no deserializer of its own, so the bindings it needs
-    // are attached here. RefCollector's mapper carries the same set.
-    private static final ObjectMapper MAPPER = JsonMapper.builder()
-            .addMixIn(Schema.class, SchemaMixin.class)
-            .addMixIn(ObjectSchema.class, ObjectSchemaMixin.class)
-            .addMixIn(ArraySchema.class, ArraySchemaMixin.class)
-            .addMixIn(NumericSchema.class, NumericSchemaMixin.class)
-            .build();
 
     private SchemaParser() {
     }
@@ -70,12 +53,13 @@ public final class SchemaParser {
 
     private static SchemaDocument doParse(String jsonSchema, URI retrievalUri) {
         try {
-            var rootNode = MAPPER.readValue(jsonSchema, Object.class);
+            var converter = JsonConverters.get();
+            var rootNode = converter.readTree(jsonSchema);
             SchemaNormalizer.normalize(rootNode);
-            var rootSchema = MAPPER.convertValue(rootNode, Schema.class);
-            var refs = RefCollector.collect(rootNode, rootSchema, retrievalUri);
+            var rootSchema = converter.convert(rootNode, Schema.class);
+            var refs = RefCollector.collect(rootNode, rootSchema, retrievalUri, converter);
             return new SchemaDocument(rootSchema, refs);
-        } catch (JsonProcessingException e) {
+        } catch (JsonBindingException e) {
             throw new IllegalArgumentException("Failed to parse JSON Schema", e);
         }
     }
