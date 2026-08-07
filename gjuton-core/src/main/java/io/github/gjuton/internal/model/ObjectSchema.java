@@ -3,7 +3,6 @@ package io.github.gjuton.internal.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +19,6 @@ import lombok.experimental.SuperBuilder;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public final class ObjectSchema extends Schema {
 
-    @JsonDeserialize(contentUsing = SchemaDeserializer.class)
     @Builder.Default
     private Map<String, Schema> properties = Map.of();
 
@@ -29,7 +27,6 @@ public final class ObjectSchema extends Schema {
      * pattern (via unanchored search, not full match) must additionally
      * conform to that pattern's schema.
      */
-    @JsonDeserialize(contentUsing = SchemaDeserializer.class)
     @Builder.Default
     private Map<String, Schema> patternProperties = Map.of();
 
@@ -50,7 +47,6 @@ public final class ObjectSchema extends Schema {
      * prevent properties that match a pattern — those are governed by the
      * pattern's schema, not by this keyword.
      */
-    @JsonDeserialize(using = BooleanOrSchemaDeserializer.class)
     private Object additionalProperties;
 
     /**
@@ -58,7 +54,6 @@ public final class ObjectSchema extends Schema {
      * a {@code List<String>} (keys-form) or a {@link Schema} (schema-form).
      */
     @Getter(lombok.AccessLevel.NONE)
-    @JsonDeserialize(using = DependenciesDeserializer.class)
     @Builder.Default
     private Map<String, Object> dependencies = Map.of();
 
@@ -74,7 +69,6 @@ public final class ObjectSchema extends Schema {
      * Draft 2019-09+ sub-schemas that apply when a given key is present.
      */
     @JsonProperty
-    @JsonDeserialize(contentUsing = SchemaDeserializer.class)
     @Getter(lombok.AccessLevel.NONE)
     @Builder.Default
     private Map<String, Schema> dependentSchemas = Map.of();

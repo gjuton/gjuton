@@ -2,8 +2,16 @@ package io.github.gjuton.internal.parser;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import io.github.gjuton.internal.model.ArraySchema;
+import io.github.gjuton.internal.model.ArraySchemaMixin;
+import io.github.gjuton.internal.model.NumericSchema;
+import io.github.gjuton.internal.model.NumericSchemaMixin;
+import io.github.gjuton.internal.model.ObjectSchema;
+import io.github.gjuton.internal.model.ObjectSchemaMixin;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.SchemaDocument;
+import io.github.gjuton.internal.model.SchemaMixin;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -17,7 +25,14 @@ import java.nio.file.Path;
  */
 public final class SchemaParser {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    // The schema model names no deserializer of its own, so the bindings it needs
+    // are attached here. RefCollector's mapper carries the same set.
+    private static final ObjectMapper MAPPER = JsonMapper.builder()
+            .addMixIn(Schema.class, SchemaMixin.class)
+            .addMixIn(ObjectSchema.class, ObjectSchemaMixin.class)
+            .addMixIn(ArraySchema.class, ArraySchemaMixin.class)
+            .addMixIn(NumericSchema.class, NumericSchemaMixin.class)
+            .build();
 
     private SchemaParser() {
     }
