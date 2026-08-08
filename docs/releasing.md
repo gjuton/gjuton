@@ -69,30 +69,36 @@ Assume the release is `0.0.2` and the POM currently reads `0.0.2-SNAPSHOT`.
 1. **Update the changelog.** In `CHANGELOG.md`, rename `## [Unreleased]` to
    `## [0.0.2] - <today's date>` and add a fresh empty `## [Unreleased]` above it.
    Confirm the entries describe what a user gets by upgrading.
-2. **Drop the snapshot suffix.** Set the version to the release version in both
-   POMs:
+2. **Swap in the new README, if there is one.** A `README-unreleased.md` in the
+   repo root means the current `README.md` describes the published version and
+   goes stale the moment this release lands. Diff the two, carry over anything
+   `README.md` gained since the replacement was written, set the version in it to
+   the one being released, then replace `README.md` with it and delete both
+   `README-unreleased.md` and the explanatory comment at its top.
+3. **Drop the snapshot suffix.** Set the version to the release version across
+   the reactor:
    ```bash
    mvn versions:set -DnewVersion=0.0.2 -DgenerateBackupPoms=false
    ```
-3. **Verify the build** locally: `mvn clean verify`.
-4. **Commit** the version and changelog: `git commit -am "chore: release 0.0.2"`.
-5. **Tag and push.** The tag name must be the version with a `v` prefix:
+4. **Verify the build** locally: `mvn clean verify`.
+5. **Commit** the version and changelog: `git commit -am "chore: release 0.0.2"`.
+6. **Tag and push.** The tag name must be the version with a `v` prefix:
    ```bash
    git tag v0.0.2
    git push origin master v0.0.2
    ```
    The tag push triggers `release.yml`, which builds, signs, and uploads to the
    Central Portal.
-6. **Publish on the Portal.** Sign in at <https://central.sonatype.com>, open the
+7. **Publish on the Portal.** Sign in at <https://central.sonatype.com>, open the
    pending deployment, inspect the staged artifacts, and click **Publish**. It
    syncs to Maven Central within a few minutes.
-7. **Bump to the next snapshot** so development continues off a snapshot version:
+8. **Bump to the next snapshot** so development continues off a snapshot version:
    ```bash
    mvn versions:set -DnewVersion=0.0.3-SNAPSHOT -DgenerateBackupPoms=false
    git commit -am "chore: bump to 0.0.3-SNAPSHOT"
    git push origin master
    ```
-8. **Write the GitHub Release.** Create a release for tag `v0.0.2` and paste the
+9. **Write the GitHub Release.** Create a release for tag `v0.0.2` and paste the
    `0.0.2` section of the changelog as the body.
 
 ## Breaking changes
