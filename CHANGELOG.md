@@ -14,10 +14,10 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 ### Changed
 
 - Gjuton is now split into `gjuton-core` plus a module per Jackson version:
-  `gjuton-jackson2` and `gjuton-jackson3`. Depend on the one
-  matching the jackson version you are using; `gjuton-jackson2` behaves as before, and
-  `gjuton-jackson3` behaves the same way but uses Jackson 3. On
-  its own `gjuton-core` cannot read or write JSON and says so.
+  `gjuton-jackson2` and `gjuton-jackson3`. The `io.github.gjuton:gjuton` artifact
+  is gone; depend instead on the one matching the jackson version you are using,
+  `gjuton-jackson2` behaving as before and `gjuton-jackson3` the same way but on
+  Jackson 3. On its own `gjuton-core` cannot read or write JSON and says so.
 
 ## [0.0.2] — 2026-08-06
 
