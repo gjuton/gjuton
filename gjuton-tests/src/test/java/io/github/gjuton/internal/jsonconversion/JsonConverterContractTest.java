@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.JsonBindingException;
+import io.github.gjuton.internal.extension.GjutonExtensions;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.math.BigInteger;
@@ -20,7 +21,7 @@ import org.junit.jupiter.api.Test;
  */
 class JsonConverterContractTest {
 
-    private static final JsonConverter CONVERTER = JsonConverters.get();
+    private static final JsonConverter CONVERTER = GjutonExtensions.locator().find(JsonConverter.class).orElseThrow();
     private static final SchemaParser PARSER = new SchemaParser(CONVERTER);
 
     record Bean(int a) {

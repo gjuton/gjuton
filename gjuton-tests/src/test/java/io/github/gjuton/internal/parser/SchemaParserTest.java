@@ -5,7 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sun.net.httpserver.HttpServer;
 import io.github.gjuton.api.Gjuton;
-import io.github.gjuton.internal.jsonconversion.JsonConverters;
+import io.github.gjuton.internal.extension.GjutonExtensions;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import io.github.gjuton.internal.model.ArraySchema;
 import io.github.gjuton.internal.model.NullSchema;
 import io.github.gjuton.internal.model.NumericSchema;
@@ -29,7 +30,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 class SchemaParserTest {
 
-    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
+    private static final SchemaParser PARSER = new SchemaParser(GjutonExtensions.locator().find(JsonConverter.class).orElseThrow());
 
     @Nested
     class RefResolution {
