@@ -122,16 +122,12 @@ graph TD
     api --> jsonconversion
     api --> extension
     api --> model
-    api --> errors
     parser --> jsonconversion
     parser --> model
-    parser --> errors
     generator --> model
     generator --> util
-    generator --> errors
     output --> jsonconversion
-    output --> errors
-    jsonconversion --> errors
 ```
 
-`extension`, `model`, `util`, and `errors` are leaves — they have no outgoing dependencies on other internal packages.
+`extension`, `model`, and `util` are leaves — they have no outgoing dependencies on other internal packages. `errors` is a
+leaf too, and is left out of the graph: every package may throw, so every package depends on it.
