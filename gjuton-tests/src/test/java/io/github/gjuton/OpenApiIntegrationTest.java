@@ -7,15 +7,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
+import com.networknt.schema.Error;
 import com.networknt.schema.InputFormat;
-import com.networknt.schema.JsonMetaSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.NonValidationKeyword;
-import com.networknt.schema.SchemaValidatorsConfig;
-import com.networknt.schema.SpecVersion.VersionFlag;
-import com.networknt.schema.ValidationMessage;
-import com.networknt.schema.oas.OpenApi30;
-import com.networknt.schema.oas.OpenApi31;
+import com.networknt.schema.SchemaRegistry;
+import com.networknt.schema.SchemaRegistryConfig;
+import com.networknt.schema.SpecificationVersion;
+import com.networknt.schema.dialect.Dialect;
+import com.networknt.schema.dialect.Dialects;
+import com.networknt.schema.dialect.OpenApi30;
+import com.networknt.schema.dialect.OpenApi31;
+import com.networknt.schema.keyword.NonValidationKeyword;
 import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
 import io.github.gjuton.internal.generator.GjutonMdc;
@@ -84,7 +85,7 @@ class OpenApiIntegrationTest {
     private static final ObjectMapper JSON = new ObjectMapper();
 
     private static final Map<Path, SpecDocument> DOCUMENTS = new ConcurrentHashMap<>();
-    private static final Map<VersionFlag, JsonSchemaFactory> VALIDATORS = new ConcurrentHashMap<>();
+    private static final Map<SpecificationVersion, SchemaRegistry> VALIDATORS = new ConcurrentHashMap<>();
 
     // Daemon threads so a runaway generation we cannot interrupt never blocks JVM exit.
     private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool(r -> {
@@ -97,7 +98,7 @@ class OpenApiIntegrationTest {
      * Everything needed to exercise one OpenAPI description: its JSON form, and a
      * validator configured for the OpenAPI dialect the description declares.
      */
-    private record SpecDocument(String json, JsonSchemaFactory validator) {}
+    private record SpecDocument(String json, SchemaRegistry validator) {}
 
     @AfterAll
     static void shutdownExecutor() {
@@ -158,8 +159,7 @@ class OpenApiIntegrationTest {
         var document = specDocument(spec);
         // The validator gets the very document Gjuton generates from, so they cannot disagree.
         var schemaDocument = schemaDocumentFor(document, pointer);
-        var config = SchemaValidatorsConfig.builder().preloadJsonSchema(false).build();
-        var validator = document.validator().getSchema(schemaDocument, config);
+        var validator = document.validator().getSchema(schemaDocument);
 
         for (var mode : GenerationMode.values()) {
             // when
@@ -169,7 +169,7 @@ class OpenApiIntegrationTest {
             for (int invocation = 1; invocation <= ITERATIONS; invocation++) {
                 var json = callWithTimeout(context + " generation at invocation " + invocation,
                         gjuton::generate, GENERATION_TIMEOUT_SECONDS);
-                Callable<Set<ValidationMessage>> validation = () -> validator.validate(json, InputFormat.JSON);
+                Callable<List<Error>> validation = () -> validator.validate(json, InputFormat.JSON);
                 var errors = callWithTimeout(context + " validation at invocation " + invocation,
                         validation, VALIDATION_TIMEOUT_SECONDS);
 
@@ -269,28 +269,27 @@ class OpenApiIntegrationTest {
      * dialects, or draft-04 for Swagger 2.0 descriptions. Keywords of the surrounding
      * description that are not schema keywords are accepted and ignored.
      */
-    private static JsonSchemaFactory validatorFor(JsonNode spec) {
-        JsonMetaSchema blueprint;
-        VersionFlag specification;
+    private static SchemaRegistry validatorFor(JsonNode spec) {
+        Dialect blueprint;
+        SpecificationVersion specification;
         if (spec.hasNonNull("swagger")) {
-            blueprint = JsonMetaSchema.getV4();
-            specification = VersionFlag.V4;
+            blueprint = Dialects.getDraft4();
+            specification = SpecificationVersion.DRAFT_4;
         } else if (spec.path("openapi").asText("3.0.0").startsWith("3.1")) {
             blueprint = OpenApi31.getInstance();
-            specification = VersionFlag.V202012;
+            specification = SpecificationVersion.DRAFT_2020_12;
         } else {
             blueprint = OpenApi30.getInstance();
-            specification = VersionFlag.V7;
+            specification = SpecificationVersion.DRAFT_7;
         }
-        return VALIDATORS.computeIfAbsent(specification, flag -> {
+        return VALIDATORS.computeIfAbsent(specification, version -> {
             // A whole API description, so its top-level keywords (openapi, paths, info, x-...)
             // are not schema keywords.
-            var dialect = JsonMetaSchema.builder(blueprint)
+            var dialect = Dialect.builder(blueprint)
                     .unknownKeywordFactory((keyword, context) -> new NonValidationKeyword(keyword))
                     .build();
-            return JsonSchemaFactory.getInstance(flag, builder -> builder
-                    .metaSchema(dialect)
-                    .defaultMetaSchemaIri(dialect.getIri()));
+            var config = SchemaRegistryConfig.builder().preloadSchema(false).build();
+            return SchemaRegistry.withDefaultDialect(dialect, builder -> builder.schemaRegistryConfig(config));
         });
     }
 

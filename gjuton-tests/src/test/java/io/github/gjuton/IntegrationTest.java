@@ -4,13 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.networknt.schema.Error;
 import com.networknt.schema.InputFormat;
-import com.networknt.schema.JsonSchema;
-import com.networknt.schema.JsonSchemaFactory;
-import com.networknt.schema.SchemaValidatorsConfig;
-import com.networknt.schema.SpecVersion.VersionFlag;
-import com.networknt.schema.SpecVersionDetector;
-import com.networknt.schema.ValidationMessage;
+import com.networknt.schema.Schema;
+import com.networknt.schema.SchemaRegistry;
+import com.networknt.schema.SchemaRegistryConfig;
+import com.networknt.schema.SpecificationVersion;
 import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
 import io.github.gjuton.internal.generator.GjutonMdc;
@@ -210,18 +209,25 @@ class IntegrationTest {
         return thread;
     });
 
-    private static final Map<VersionFlag, JsonSchemaFactory> FACTORIES = new EnumMap<>(VersionFlag.class);
+    private static final Map<SpecificationVersion, SchemaRegistry> REGISTRIES = new EnumMap<>(SpecificationVersion.class);
 
     /**
      * The validator each schema is checked against, keyed by the schema's path.
      * Compiling one costs far more than running it, and every invocation of a
      * schema is validated against the same one.
      */
-    private static final Map<Path, JsonSchema> VALIDATORS = new ConcurrentHashMap<>();
+    private static final Map<Path, Schema> VALIDATORS = new ConcurrentHashMap<>();
 
     static {
-        for (var flag : VersionFlag.values()) {
-            FACTORIES.put(flag, JsonSchemaFactory.getInstance(flag));
+        // Preload what can be resolved up front, so the shared validators do as
+        // little lazy initialisation as possible while several threads use them.
+        var config = SchemaRegistryConfig.builder().preloadSchema(true).build();
+        for (var version : SpecificationVersion.values()) {
+            REGISTRIES.put(version, SchemaRegistry.withDefaultDialect(version, builder -> builder
+                    .schemaRegistryConfig(config)
+                    // Off by default, and with it off nothing outside the classpath loads at
+                    // all — including the file: location every schema here is read from.
+                    .schemaLoader(loader -> loader.fetchRemoteResources(true))));
         }
     }
 
@@ -402,9 +408,9 @@ class IntegrationTest {
         }
     }
 
-    private static Set<ValidationMessage> validateOrFail(
-            JsonSchema validator, String json, String schemaName, int invocation) {
-        Callable<Set<ValidationMessage>> task = () -> validator.validate(json, InputFormat.JSON);
+    private static List<Error> validateOrFail(
+            Schema validator, String json, String schemaName, int invocation) {
+        Callable<List<Error>> task = () -> validator.validate(json, InputFormat.JSON);
         try {
             return callWithTimeout(task, VALIDATION_TIMEOUT_SECONDS);
         } catch (RuntimeException e) {
@@ -427,20 +433,17 @@ class IntegrationTest {
         }
     }
 
-    private static JsonSchema validatorFor(Path schemaPath, String schemaContent) throws IOException {
+    private static Schema validatorFor(Path schemaPath, String schemaContent) throws IOException {
         var cached = VALIDATORS.get(schemaPath);
         if (cached != null) {
             return cached;
         }
         var tree = MAPPER.readTree(schemaContent);
-        var version = SpecVersionDetector.detectOptionalVersion(tree, false)
-                .orElse(VersionFlag.V7);
-        var factory = FACTORIES.get(version);
-        // Preload what can be resolved up front, so the shared validator does as
-        // little lazy initialisation as possible while several threads use it.
-        var config = SchemaValidatorsConfig.builder().preloadJsonSchema(true).build();
+        var version = SpecificationVersion.fromSchemaNode(tree)
+                .orElse(SpecificationVersion.DRAFT_7);
+        var registry = REGISTRIES.get(version);
         var location = com.networknt.schema.SchemaLocation.of(schemaPath.toUri().toString());
-        var validator = factory.getSchema(location, config);
+        var validator = registry.getSchema(location);
         var raced = VALIDATORS.putIfAbsent(schemaPath, validator);
         return raced != null ? raced : validator;
     }
