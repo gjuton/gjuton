@@ -1,7 +1,7 @@
 package io.github.gjuton.internal.parser;
 
 import io.github.gjuton.errors.JsonBindingException;
-import io.github.gjuton.internal.jsonconversion.JsonConverters;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.SchemaDocument;
 import java.io.IOException;
@@ -17,7 +17,10 @@ import java.nio.file.Path;
  */
 public final class SchemaParser {
 
-    private SchemaParser() {
+    private final JsonConverter converter;
+
+    public SchemaParser(JsonConverter converter) {
+        this.converter = converter;
     }
 
     /**
@@ -27,7 +30,7 @@ public final class SchemaParser {
      * @throws IllegalArgumentException if the input is not valid JSON or
      *     contains an unresolvable {@code $ref}
      */
-    public static SchemaDocument parse(String jsonSchema) {
+    public SchemaDocument parse(String jsonSchema) {
         return doParse(jsonSchema, null);
     }
 
@@ -41,7 +44,7 @@ public final class SchemaParser {
      *     contains an unresolvable {@code $ref}
      * @throws UncheckedIOException if reading the file fails
      */
-    public static SchemaDocument parse(Path schemaFile) {
+    public SchemaDocument parse(Path schemaFile) {
         try {
             var jsonSchema = Files.readString(schemaFile);
             var absolutePath = schemaFile.toAbsolutePath();
@@ -51,13 +54,13 @@ public final class SchemaParser {
         }
     }
 
-    private static SchemaDocument doParse(String jsonSchema, URI retrievalUri) {
+    private SchemaDocument doParse(String jsonSchema, URI retrievalUri) {
         try {
-            var converter = JsonConverters.get();
             var rootNode = converter.readTree(jsonSchema);
             SchemaNormalizer.normalize(rootNode);
             var rootSchema = converter.convert(rootNode, Schema.class);
-            var refs = RefCollector.collect(rootNode, rootSchema, retrievalUri, converter);
+            var refCollector = new RefCollector(converter);
+            var refs = refCollector.collect(rootNode, rootSchema, retrievalUri);
             return new SchemaDocument(rootSchema, refs);
         } catch (JsonBindingException e) {
             throw new IllegalArgumentException("Failed to parse JSON Schema", e);

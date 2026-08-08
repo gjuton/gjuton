@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 class JsonConverterContractTest {
 
     private static final JsonConverter CONVERTER = JsonConverters.get();
+    private static final SchemaParser PARSER = new SchemaParser(CONVERTER);
 
     record Bean(int a) {
     }
@@ -107,7 +108,7 @@ class JsonConverterContractTest {
         var converted = CONVERTER.convert(tree, Schema.class);
 
         // then
-        var parsed = SchemaParser.parse(json).getRoot();
+        var parsed = PARSER.parse(json).getRoot();
         assertThat(converted).isEqualTo(parsed);
     }
 

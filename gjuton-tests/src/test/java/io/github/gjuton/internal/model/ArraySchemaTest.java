@@ -2,11 +2,14 @@ package io.github.gjuton.internal.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.parser.SchemaParser;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class ArraySchemaTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     @Nested
     class AreAdditionalItemsAllowed {
@@ -208,6 +211,6 @@ class ArraySchemaTest {
     }
 
     private static ArraySchema parseArray(String json) {
-        return (ArraySchema) SchemaParser.parse(json).getRoot();
+        return (ArraySchema) PARSER.parse(json).getRoot();
     }
 }

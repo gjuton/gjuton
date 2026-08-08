@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.sun.net.httpserver.HttpServer;
 import io.github.gjuton.api.Gjuton;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.ArraySchema;
 import io.github.gjuton.internal.model.NullSchema;
 import io.github.gjuton.internal.model.NumericSchema;
@@ -28,12 +29,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 class SchemaParserTest {
 
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
+
     @Nested
     class RefResolution {
 
         @Test
         void selfRefResolvesToRootSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -51,7 +54,7 @@ class SchemaParserTest {
 
         @Test
         void refInDefinitionsIsCollected() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -75,7 +78,7 @@ class SchemaParserTest {
 
         @Test
         void refIn$defsIsCollected() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -96,7 +99,7 @@ class SchemaParserTest {
 
         @Test
         void refNestedInsideArrayItemsIsCollected() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -122,7 +125,7 @@ class SchemaParserTest {
         void refInsideArrayElementIsCollected() {
             // $ref lives as an element of a JSON array (oneOf), not as a property
             // value. Exercises the array-recursion branch of collectRefs.
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "oneOf": [
                             {"$ref": "#/definitions/Tag"}
@@ -142,7 +145,7 @@ class SchemaParserTest {
 
         @Test
         void refNestedDeepInsideObjectPropertyIsCollected() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -173,7 +176,7 @@ class SchemaParserTest {
 
         @Test
         void multipleRefsToSameTargetStringResolveToSameSchemaInstance() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -199,7 +202,7 @@ class SchemaParserTest {
 
         @Test
         void distinctRefsAreEachCollected() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -226,7 +229,7 @@ class SchemaParserTest {
         @Test
         void unresolvedRefThrowsIllegalArgumentException() {
             // when / then
-            assertThatThrownBy(() -> SchemaParser.parse("""
+            assertThatThrownBy(() -> PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -245,7 +248,7 @@ class SchemaParserTest {
             // would never reach that branch.
 
             // when / then
-            assertThatThrownBy(() -> SchemaParser.parse("""
+            assertThatThrownBy(() -> PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -268,7 +271,7 @@ class SchemaParserTest {
         @Test
         void refOntoNonSchemaTargetThrowsNamingTheRef() {
             // when / then
-            assertThatThrownBy(() -> SchemaParser.parse("""
+            assertThatThrownBy(() -> PARSER.parse("""
                     {
                         "$ref": "#/definitions/x",
                         "definitions": {"x": null}
@@ -281,7 +284,7 @@ class SchemaParserTest {
         @Test
         void refInsideExamplePayloadIsNotResolved() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {"a": {"type": "string"}},
@@ -297,7 +300,7 @@ class SchemaParserTest {
         void refNestedInsideRefTargetIsCollected() {
             // The target sits under a container that is not a schema keyword, so it is
             // only reachable by following the ref that points at it.
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "$ref": "#/components/schemas/Order",
                         "components": {
@@ -326,7 +329,7 @@ class SchemaParserTest {
 
         @Test
         void refInsideDependenciesSubSchemaIsCollected() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {"a": {"type": "string"}},
@@ -361,7 +364,7 @@ class SchemaParserTest {
                 int port = server.getAddress().getPort();
 
                 // when
-                var document = SchemaParser.parse("""
+                var document = PARSER.parse("""
                         {
                             "type": "object",
                             "properties": {
@@ -391,7 +394,7 @@ class SchemaParserTest {
                 int port = server.getAddress().getPort();
 
                 // when
-                var document = SchemaParser.parse("""
+                var document = PARSER.parse("""
                         {
                             "type": "object",
                             "properties": {
@@ -411,7 +414,7 @@ class SchemaParserTest {
         @Test
         void relativeRefWithNoBaseDirThrowsIllegalArgumentException() {
             // when / then
-            assertThatThrownBy(() -> SchemaParser.parse("""
+            assertThatThrownBy(() -> PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -429,7 +432,7 @@ class SchemaParserTest {
             var schemaFile = testResourcePath("schemas/ref-external-file.json");
 
             // when
-            var document = SchemaParser.parse(schemaFile);
+            var document = PARSER.parse(schemaFile);
 
             // then
             var resolved = document.resolveRef("external/defs.json#/definitions/Address");
@@ -465,7 +468,7 @@ class SchemaParserTest {
                     """);
 
             // when
-            var document = SchemaParser.parse(schemaFile);
+            var document = PARSER.parse(schemaFile);
 
             // then
             var address = document.resolveRef("defs.json#/definitions/Address");
@@ -489,7 +492,7 @@ class SchemaParserTest {
                     """);
 
             // when
-            var document = SchemaParser.parse(schemaFile);
+            var document = PARSER.parse(schemaFile);
 
             // then
             var resolved = document.resolveRef("leaf.json");
@@ -532,7 +535,7 @@ class SchemaParserTest {
                     """);
 
             // when
-            var document = SchemaParser.parse(schemaFile);
+            var document = PARSER.parse(schemaFile);
 
             // then
             var order = document.resolveRef("defs.json#/definitions/Order");
@@ -757,7 +760,7 @@ class SchemaParserTest {
                         """.formatted(port));
 
                 // when
-                var document = SchemaParser.parse(schemaFile);
+                var document = PARSER.parse(schemaFile);
 
                 // then
                 assertThat(document.resolveRef("other.json")).isInstanceOf(StringSchema.class);
@@ -793,7 +796,7 @@ class SchemaParserTest {
                         """.formatted(port));
 
                 // when
-                var document = SchemaParser.parse(schemaFile);
+                var document = PARSER.parse(schemaFile);
 
                 // then
                 assertThat(document.resolveRef("other.json")).isInstanceOf(StringSchema.class);
@@ -838,7 +841,7 @@ class SchemaParserTest {
                     """);
 
             // when
-            var document = SchemaParser.parse(schemaFile);
+            var document = PARSER.parse(schemaFile);
 
             // then
             var zipcodeUri = tempDir.toUri().resolve("sub/zipcode.json");
@@ -883,7 +886,7 @@ class SchemaParserTest {
                     """);
 
             // when
-            var document = SchemaParser.parse(schemaFile);
+            var document = PARSER.parse(schemaFile);
 
             // then
             assertThat(document.resolveRef("target.json")).isInstanceOf(NumericSchema.class);
@@ -929,7 +932,7 @@ class SchemaParserTest {
                         """);
 
                 // when
-                var document = SchemaParser.parse(schemaFile);
+                var document = PARSER.parse(schemaFile);
 
                 // then
                 assertThat(document.resolveRef("http://localhost:%d/deep/target.json".formatted(port)))
@@ -944,7 +947,7 @@ class SchemaParserTest {
             // The host does not resolve, so any attempt to retrieve the document
             // named by the ref fails rather than finding it in the parse.
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "$id": "https://example.invalid/root.json",
                         "definitions": {
@@ -971,7 +974,7 @@ class SchemaParserTest {
             // The host does not resolve, so any attempt to retrieve the document
             // named by the ref fails rather than finding it in the parse.
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "$id": "https://example.invalid/root.json",
                         "type": "object",
@@ -1017,7 +1020,7 @@ class SchemaParserTest {
                 int port = server.getAddress().getPort();
 
                 // when
-                var document = SchemaParser.parse("""
+                var document = PARSER.parse("""
                         {
                             "properties": {
                                 "address": {
@@ -1072,7 +1075,7 @@ class SchemaParserTest {
                         """.formatted(port));
 
                 // when
-                var document = SchemaParser.parse(schemaFile);
+                var document = PARSER.parse(schemaFile);
 
                 // then
                 assertThat(document.resolveRef("other.json")).isInstanceOf(StringSchema.class);
@@ -1107,7 +1110,7 @@ class SchemaParserTest {
                     """);
 
             // when
-            var document = SchemaParser.parse(schemaFile);
+            var document = PARSER.parse(schemaFile);
 
             // then
             var kind = document.resolveRef("defs.json#/definitions/Kind");
@@ -1157,7 +1160,7 @@ class SchemaParserTest {
                     """);
 
             // when
-            var document = SchemaParser.parse(schemaFile);
+            var document = PARSER.parse(schemaFile);
 
             // then
             assertThat(document.resolveRef("target.json")).isInstanceOf(StringSchema.class);
@@ -1170,7 +1173,7 @@ class SchemaParserTest {
         @Test
         void typeArrayIsRewrittenToOneOf() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": ["string", "null"]}
                     """);
 
@@ -1186,7 +1189,7 @@ class SchemaParserTest {
         @Test
         void typeArrayPreservesConstraintsOnRelevantBranch() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": ["integer", "string"], "minLength": 3}
                     """);
 
@@ -1206,7 +1209,7 @@ class SchemaParserTest {
 
         @Test
         void aFormatGjutonDoesNotModelHasNoModelledConstant() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "string",
                         "format": "made-up"
@@ -1223,7 +1226,7 @@ class SchemaParserTest {
 
         @Test
         void formatIsRetainedAsWrittenEvenWhenNotModelled() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -1246,7 +1249,7 @@ class SchemaParserTest {
         @Test
         void numberTypeParsesAsNumericSchema() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "number"}
                     """);
 
@@ -1259,7 +1262,7 @@ class SchemaParserTest {
         @Test
         void integerTypePreservesTypeField() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer"}
                     """);
 
@@ -1271,7 +1274,7 @@ class SchemaParserTest {
         @Test
         void numberTypeParsesFractionalConstraints() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "number", "minimum": 1.5, "maximum": 10.5}
                     """);
 
@@ -1288,7 +1291,7 @@ class SchemaParserTest {
         @Test
         void dependentRequiredKeywordIsParsedDirectly() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -1310,7 +1313,7 @@ class SchemaParserTest {
         @Test
         void dependentSchemasKeywordIsParsedDirectly() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -1338,7 +1341,7 @@ class SchemaParserTest {
         @Test
         void draft7DependenciesSchemaFormIsNormalisedToDependentSchemas() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -1365,7 +1368,7 @@ class SchemaParserTest {
         @Test
         void draft7DependenciesArrayFormIsNormalisedToDependentRequired() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -1387,7 +1390,7 @@ class SchemaParserTest {
         @Test
         void draft7DependenciesMixedFormIsSplitCorrectly() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -1421,7 +1424,7 @@ class SchemaParserTest {
         @Test
         void ifThenElseSubSchemasAreParsedOntoTheBaseSchema() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -1451,7 +1454,7 @@ class SchemaParserTest {
         @Test
         void booleanSchemaFormsAreParsedForThenAndElse() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "if": {"properties": {"status": {"const": "ok"}}},
@@ -1472,7 +1475,7 @@ class SchemaParserTest {
             // so it stays untyped — the conditional fields must still be present.
 
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "if": {"properties": {"kind": {"const": "a"}}},
                         "then": {"required": ["x"]},
@@ -1495,7 +1498,7 @@ class SchemaParserTest {
         @Test
         void untypedSchemaWithPropertiesIsInferredAsObject() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "properties": {
                             "name": {"type": "string"}
@@ -1512,7 +1515,7 @@ class SchemaParserTest {
         @Test
         void untypedSchemaWithPatternIsInferredAsString() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"pattern": "^abc$"}
                     """);
 
@@ -1525,7 +1528,7 @@ class SchemaParserTest {
         @Test
         void untypedSchemaWithMinimumIsInferredAsNumber() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"minimum": 5}
                     """);
 
@@ -1538,7 +1541,7 @@ class SchemaParserTest {
         @Test
         void untypedSchemaWithItemsIsInferredAsArray() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"items": {"type": "string"}}
                     """);
 
@@ -1549,7 +1552,7 @@ class SchemaParserTest {
         @Test
         void schemaWithKeywordsFromMultipleTypesStaysUntyped() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"pattern": "^abc$", "minimum": 5}
                     """);
 
@@ -1560,7 +1563,7 @@ class SchemaParserTest {
         @Test
         void untypedSchemaNestedInsidePropertiesIsInferred() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -1579,7 +1582,7 @@ class SchemaParserTest {
         @Test
         void constPayloadResemblingASchemaIsNotWalkedForTypeInference() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "const": {"pattern": "^abc$"}
                     }
@@ -1593,7 +1596,7 @@ class SchemaParserTest {
         @Test
         void untypedSchemaNestedInsideOneOfBranchIsInferred() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "oneOf": [
                             {"properties": {"file": {"pattern": "\\\\.css$"}}}
@@ -1611,7 +1614,7 @@ class SchemaParserTest {
         @Test
         void schemaWithNoTypeImplyingKeywordsStaysUntyped() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "enum": ["a", "b"]
                     }
@@ -1624,7 +1627,7 @@ class SchemaParserTest {
         @Test
         void untypedRefTargetUnderNonKeywordContainerIsInferred() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "$ref": "#/components/schemas/Address",
                         "components": {
@@ -1647,7 +1650,7 @@ class SchemaParserTest {
         @Test
         void untypedSchemaNestedInsideRefTargetUnderNonKeywordContainerIsInferred() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "$ref": "#/components/schemas/Address",
                         "components": {
@@ -1672,7 +1675,7 @@ class SchemaParserTest {
         @Test
         void selfRecursiveRefTargetUnderNonKeywordContainerIsInferred() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "components": {
                             "schemas": {
@@ -1700,7 +1703,7 @@ class SchemaParserTest {
         @Test
         void constPayloadInsideRefTargetUnderNonKeywordContainerIsNotWalked() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "$ref": "#/components/schemas/Marker",
                         "components": {
@@ -1719,7 +1722,7 @@ class SchemaParserTest {
         @Test
         void enumPayloadInsideRefTargetUnderNonKeywordContainerIsNotWalked() {
             // when
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "$ref": "#/components/schemas/Marker",
                         "components": {

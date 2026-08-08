@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +15,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class AnyOfAllOfOneOfGeneratorTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     @Nested
     class AllOfOnly {
@@ -691,7 +694,7 @@ class AnyOfAllOfOneOfGeneratorTest {
             // Neither branch forbids the other's property (no
             // additionalProperties: false), so a naively-generated value
             // can satisfy both -- disambiguation must break the tie.
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "oneOf": [
                             {"type": "object", "properties": {"a": {"type": "string"}}},
@@ -718,7 +721,7 @@ class AnyOfAllOfOneOfGeneratorTest {
             // The zero-branches-valid case from issue #66: without
             // validation, the generator ignores the branch-specific
             // patterns entirely and produces an unconstrained string.
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "required": ["file"],
@@ -1151,7 +1154,7 @@ class AnyOfAllOfOneOfGeneratorTest {
 
         @Test
         void overMatchingCandidateRetriesUntilExactlyOneBranchMatches() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "oneOf": [
                             {"type": "integer", "minimum": 0, "maximum": 100},
@@ -1176,7 +1179,7 @@ class AnyOfAllOfOneOfGeneratorTest {
     }
 
     private static AnyOfAllOfOneOfGenerator generatorFor(String json) {
-        var document = SchemaParser.parse(json);
+        var document = PARSER.parse(json);
         return new AnyOfAllOfOneOfGenerator(
                 GeneratorContext.testContext(document, new Random(42)),
                 document.getRoot());
@@ -1187,7 +1190,7 @@ class AnyOfAllOfOneOfGeneratorTest {
 
         @Test
         void exhaustingBothBranchesThenRandomEventuallyStopsRegisteringAsNovel() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "oneOf": [
                             {"type": "string"},

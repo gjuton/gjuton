@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.ArraySchema;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.List;
@@ -13,6 +14,8 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class ArrayGeneratorTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     @Test
     void minItemsIsAlwaysRespected() {
@@ -549,7 +552,7 @@ class ArrayGeneratorTest {
     }
 
     private static ArrayGenerator arrayGenerator(String json) {
-        var document = SchemaParser.parse(json);
+        var document = PARSER.parse(json);
         return new ArrayGenerator(GeneratorContext.testContext(document, new Random(42)), (ArraySchema) document.getRoot());
     }
 
@@ -559,7 +562,7 @@ class ArrayGeneratorTest {
      * {@code contains} clauses, which no single schema document can express.
      */
     private static ArrayGenerator mergedArrayGenerator(String json) {
-        var document = SchemaParser.parse(json);
+        var document = PARSER.parse(json);
         var branches = document.getRoot().getAllOf();
         var merged = (ArraySchema) SchemaMerger.merge(branches);
         return new ArrayGenerator(GeneratorContext.testContext(document, new Random(42)), merged);

@@ -7,6 +7,8 @@ import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.generator.GeneratorConfig;
 import io.github.gjuton.internal.generator.JsonGenerator;
 import io.github.gjuton.internal.generator.ValueConstraints;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.SchemaDocument;
 import io.github.gjuton.internal.output.JsonSerializer;
 import io.github.gjuton.internal.parser.SchemaParser;
@@ -52,6 +54,7 @@ public final class Gjuton {
     private final Constraints constraints;
     private final JsonGenerator generator;
     private final SchemaDocument document;
+    private final JsonConverter converter;
 
     private Gjuton(
             String schema,
@@ -76,6 +79,7 @@ public final class Gjuton {
         this.softNestingDepth = softNestingDepth;
         this.hardNestingDepth = hardNestingDepth;
         this.constraints = constraints;
+        this.converter = JsonConverters.get();
         var config = new GeneratorConfig(
                 mode == GenerationMode.RANDOM,
                 generateAdditionalProperties,
@@ -130,7 +134,9 @@ public final class Gjuton {
         if (schema == null) {
             throw new IllegalArgumentException("schema must not be null");
         }
-        var document = SchemaParser.parse(schema);
+        var converter = JsonConverters.get();
+        var parser = new SchemaParser(converter);
+        var document = parser.parse(schema);
         return new Gjuton(
                 schema,
                 document,
@@ -161,7 +167,10 @@ public final class Gjuton {
             throw new IllegalArgumentException("schema must not be null");
         }
         var schemaString = Files.readString(schema.toPath());
-        var document = SchemaParser.parse(schema.toPath().toAbsolutePath());
+        var converter = JsonConverters.get();
+        var parser = new SchemaParser(converter);
+        var schemaPath = schema.toPath().toAbsolutePath();
+        var document = parser.parse(schemaPath);
         return new Gjuton(
                 schemaString,
                 document,
@@ -517,7 +526,7 @@ public final class Gjuton {
      */
     public String generate() {
         var generated = generator.generateRoot();
-        return JsonSerializer.serialize(generated);
+        return JsonSerializer.serialize(generated, converter);
     }
 
     /**
@@ -536,7 +545,7 @@ public final class Gjuton {
             throw new IllegalArgumentException("type must not be null");
         }
         var generated = generator.generateRoot();
-        return JsonSerializer.convert(generated, type);
+        return JsonSerializer.convert(generated, type, converter);
     }
 
     /**

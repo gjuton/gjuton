@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.ObjectSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.parser.SchemaParser;
@@ -16,6 +17,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class ObjectGeneratorTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     @Test
     void generatesObjectWithRequiredStringField() {
@@ -993,7 +996,7 @@ class ObjectGeneratorTest {
 
         @Test
         void includesRequiredFromDependentSchema() {
-            var depSchema = (ObjectSchema) SchemaParser.parse("""
+            var depSchema = (ObjectSchema) PARSER.parse("""
                     {"type": "object", "required": ["c"]}
                     """).getRoot();
 
@@ -1008,7 +1011,7 @@ class ObjectGeneratorTest {
 
         @Test
         void mergesDependentRequiredFromDependentSchemaWithExisting() {
-            var depSchema = (ObjectSchema) SchemaParser.parse("""
+            var depSchema = (ObjectSchema) PARSER.parse("""
                     {"type": "object", "dependentRequired": {"b": ["d"]}}
                     """).getRoot();
 
@@ -1023,7 +1026,7 @@ class ObjectGeneratorTest {
 
         @Test
         void includesDependentRequiredFromDependentSchema() {
-            var depSchema = (ObjectSchema) SchemaParser.parse("""
+            var depSchema = (ObjectSchema) PARSER.parse("""
                     {"type": "object", "dependentRequired": {"a": ["c"]}}
                     """).getRoot();
 
@@ -1038,12 +1041,12 @@ class ObjectGeneratorTest {
     }
 
     private static ObjectGenerator objectGenerator(String json) {
-        var document = SchemaParser.parse(json);
+        var document = PARSER.parse(json);
         return new ObjectGenerator(GeneratorContext.testContext(document, new Random(42)), (ObjectSchema) document.getRoot());
     }
 
     private static ObjectGenerator objectGeneratorWithAdditionalProperties(String json) {
-        var document = SchemaParser.parse(json);
+        var document = PARSER.parse(json);
         var config = new GeneratorConfig(false, true, 2, 4, Map.of(), Map.of(), Map.of(), ValueConstraints.forExhaustive());
         var context = new GeneratorContext(document, new Random(42), config);
         return new ObjectGenerator(context, (ObjectSchema) document.getRoot());
@@ -1054,7 +1057,7 @@ class ObjectGeneratorTest {
 
         @Test
         void focusStaysOnAPropertyUntilItStopsCommittingNewNoveltyThenMovesToTheNext() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {

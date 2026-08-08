@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.SchemaDocument;
 import io.github.gjuton.internal.parser.SchemaParser;
@@ -12,6 +13,8 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 class ConstGeneratorTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     private static final String CONST_SATISFYING_ONE_OF = """
             {
@@ -31,7 +34,7 @@ class ConstGeneratorTest {
 
     @Test
     void emitsConstWhenItSatisfiesCombiningKeyword() {
-        var root = SchemaParser.parse(CONST_SATISFYING_ONE_OF).getRoot();
+        var root = PARSER.parse(CONST_SATISFYING_ONE_OF).getRoot();
         var generator = new ConstGenerator(contextFor(root), root.getConstValue(), root);
 
         // when
@@ -43,7 +46,7 @@ class ConstGeneratorTest {
 
     @Test
     void throwsWhenConstViolatesCombiningKeyword() {
-        var root = SchemaParser.parse(CONST_VIOLATING_ONE_OF).getRoot();
+        var root = PARSER.parse(CONST_VIOLATING_ONE_OF).getRoot();
 
         // when / then
         assertThatThrownBy(() -> new ConstGenerator(contextFor(root), root.getConstValue(), root))
@@ -52,7 +55,7 @@ class ConstGeneratorTest {
 
     @Test
     void firstCallRegistersAsNovel() {
-        var root = SchemaParser.parse(CONST_SATISFYING_ONE_OF).getRoot();
+        var root = PARSER.parse(CONST_SATISFYING_ONE_OF).getRoot();
         var context = contextFor(root);
         var generator = new ConstGenerator(context, root.getConstValue(), root);
 
@@ -67,7 +70,7 @@ class ConstGeneratorTest {
 
     @Test
     void secondCallIsNotNovel() {
-        var root = SchemaParser.parse(CONST_SATISFYING_ONE_OF).getRoot();
+        var root = PARSER.parse(CONST_SATISFYING_ONE_OF).getRoot();
         var context = contextFor(root);
         var generator = new ConstGenerator(context, root.getConstValue(), root);
 

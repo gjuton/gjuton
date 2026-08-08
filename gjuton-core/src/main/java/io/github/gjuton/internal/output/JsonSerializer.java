@@ -1,7 +1,7 @@
 package io.github.gjuton.internal.output;
 
 import io.github.gjuton.errors.JsonBindingException;
-import io.github.gjuton.internal.jsonconversion.JsonConverters;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 
 /**
  * Serializes the generator's in-memory value tree.
@@ -13,8 +13,7 @@ public final class JsonSerializer {
      *
      * @throws JsonBindingException if the tree cannot be written
      */
-    public static String serialize(Object value) {
-        var converter = JsonConverters.get();
+    public static String serialize(Object value, JsonConverter converter) {
         return converter.write(value);
     }
 
@@ -24,8 +23,7 @@ public final class JsonSerializer {
      *
      * @throws JsonBindingException if the tree does not map onto {@code type}
      */
-    public static <T> T convert(Object value, Class<T> type) {
-        var converter = JsonConverters.get();
+    public static <T> T convert(Object value, Class<T> type, JsonConverter converter) {
         return converter.convert(value, type);
     }
 }
