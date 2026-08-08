@@ -13,6 +13,7 @@ mvnd clean verify -Pfast # inner-loop: skips checkstyle + spotbugs (~5s warm)
 mvn clean verify         # full build incl. style/static analysis (~14s) — pre-commit gate
 mvn clean compile        # compile only
 mvn test                 # run unit tests
+mvn test -Pmutation -pl gjuton-tests -am # pitest; run from the root, report in gjuton-tests/target/pit-reports
 ```
 
 Use `mvnd verify -Pfast` during work to keep the iteration loop tight.
