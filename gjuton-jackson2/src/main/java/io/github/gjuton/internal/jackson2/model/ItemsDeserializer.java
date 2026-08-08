@@ -1,9 +1,12 @@
-package io.github.gjuton.internal.model;
+package io.github.gjuton.internal.jackson2.model;
 
 import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.JsonDeserializer;
+import io.github.gjuton.internal.model.Schema;
+import io.github.gjuton.internal.model.UnsatisfiableSchema;
+import io.github.gjuton.internal.model.UntypedSchema;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;

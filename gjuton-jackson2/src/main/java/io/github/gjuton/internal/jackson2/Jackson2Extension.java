@@ -3,15 +3,15 @@ package io.github.gjuton.internal.jackson2;
 import io.github.gjuton.internal.extension.GjutonExtension;
 import io.github.gjuton.internal.extension.ServiceRegistry;
 import io.github.gjuton.internal.jackson2.conversion.Jackson2JsonConverter;
+import io.github.gjuton.internal.jackson2.model.ArraySchemaMixin;
+import io.github.gjuton.internal.jackson2.model.NumericSchemaMixin;
+import io.github.gjuton.internal.jackson2.model.ObjectSchemaMixin;
+import io.github.gjuton.internal.jackson2.model.SchemaMixin;
 import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import io.github.gjuton.internal.model.ArraySchema;
-import io.github.gjuton.internal.model.ArraySchemaMixin;
 import io.github.gjuton.internal.model.NumericSchema;
-import io.github.gjuton.internal.model.NumericSchemaMixin;
 import io.github.gjuton.internal.model.ObjectSchema;
-import io.github.gjuton.internal.model.ObjectSchemaMixin;
 import io.github.gjuton.internal.model.Schema;
-import io.github.gjuton.internal.model.SchemaMixin;
 
 /**
  * Converts JSON with Jackson 2.

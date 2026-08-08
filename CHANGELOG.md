@@ -11,6 +11,12 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Changed
+
+- Gjuton is now split into `gjuton-core` and `gjuton-jackson2`. Depend on
+  `gjuton-jackson2` to get the same behaviour as before; on its own
+  `gjuton-core` cannot read or write JSON and says so.
+
 ## [0.0.2] — 2026-08-06
 
 ### Added
