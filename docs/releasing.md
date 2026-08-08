@@ -100,6 +100,30 @@ Assume the release is `0.0.2` and the POM currently reads `0.0.2-SNAPSHOT`.
    ```
 9. **Write the GitHub Release.** Create a release for tag `v0.0.2` and paste the
    `0.0.2` section of the changelog as the body.
+9. **Tell each ticket which release it shipped in.** Someone who finds a ticket
+   for the bug they hit needs to know whether the version they run contains the
+   fix. Comment on every issue the release's PRs closed, once the artifact is
+   actually downloadable:
+   ```bash
+   gh api graphql -f query='
+   {
+     repository(owner:"gjuton", name:"gjuton") {
+       pullRequests(states:MERGED, first:50, orderBy:{field:UPDATED_AT, direction:DESC}) {
+         nodes { mergedAt closingIssuesReferences(first:20){nodes{number}} }
+       }
+     }
+   }' --jq '.data.repository.pullRequests.nodes[]
+             | select(.mergedAt >= "<previous tag date, ISO 8601>")
+             | .closingIssuesReferences.nodes[].number' | sort -u \
+     | xargs -I{} gh issue comment {} \
+         --body "Shipped in [v0.0.2](https://github.com/gjuton/gjuton/releases/tag/v0.0.2)."
+   ```
+   The query returns what the PRs *closed*, so a "relates to" or "caused by"
+   mention is left alone. Two things it cannot see, both needing a manual pass:
+   an issue closed by hand rather than by a PR keyword, and — because GitHub
+   links only the first issue unless the keyword is repeated — the second and
+   later issues in a body like `closes #184 #169`. Write
+   `closes #184, closes #169` to avoid the second.
 
 ## Breaking changes
 
