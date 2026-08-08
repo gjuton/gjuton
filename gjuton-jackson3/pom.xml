@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.github.gjuton</groupId>
+        <artifactId>gjuton-parent</artifactId>
+        <version>0.0.3-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>gjuton-jackson3</artifactId>
+
+    <name>Gjuton Jackson 3</name>
+    <description>Binds gjuton to Jackson 3. Add this to a project on tools.jackson.core:jackson-databind.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.github.gjuton</groupId>
+            <artifactId>gjuton-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <!-- The suite lives in gjuton-tests and runs there under Jackson 2; it is re-run
+             here to show that Jackson 3 answers the same. gjuton-tests' own dependencies
+             are test-scoped and so not inherited, which is what keeps its Jackson 2
+             extension out of this classpath — but it also means everything the suite
+             compiles against has to be named again below. -->
+        <dependency>
+            <groupId>io.github.gjuton</groupId>
+            <artifactId>gjuton-tests</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit-junit5</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- The schema validator the suite asserts with takes a Jackson 2 JsonNode, so
+             Jackson 2 is on this classpath as a test tool. No gjuton extension for it is
+             present, so gjuton itself still runs on Jackson 3 alone. -->
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>ch.qos.logback</groupId>
+            <artifactId>logback-classic</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>${lombok.version}</version>
+            <scope>provided</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <testResources>
+            <!-- The schema corpus is read as files rather than as classpath streams, so it
+                 is copied from gjuton-tests' sources instead of taken from its test-jar. -->
+            <testResource>
+                <directory>${project.basedir}/../gjuton-tests/src/test/resources</directory>
+            </testResource>
+        </testResources>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- Surefire only discovers tests compiled in the module it runs, so the
+                         suite coming from gjuton-tests has to be pointed at explicitly. -->
+                    <dependenciesToScan>
+                        <dependency>io.github.gjuton:gjuton-tests</dependency>
+                    </dependenciesToScan>
+                    <!-- Layering is a property of the sources, not of the Jackson version, and
+                         is already checked in gjuton-tests. It cannot be rechecked from here
+                         anyway: ArchUnit recognises test classes by their output directory, so
+                         a suite arriving as a jar is scanned as if it were production code. -->
+                    <excludes>
+                        <exclude>**/ArchitectureTest.java</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

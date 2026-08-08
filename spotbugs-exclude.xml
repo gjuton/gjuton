@@ -8,7 +8,10 @@
     <!-- The mapper is configured by the extension that constructs the converter and
          handed over for good; copying it would discard that configuration's point. -->
     <Match>
-        <Class name="io.github.gjuton.internal.jackson2.conversion.Jackson2JsonConverter"/>
+        <Or>
+            <Class name="io.github.gjuton.internal.jackson2.conversion.Jackson2JsonConverter"/>
+            <Class name="io.github.gjuton.internal.jackson3.conversion.Jackson3JsonConverter"/>
+        </Or>
         <Method name="&lt;init&gt;"/>
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>

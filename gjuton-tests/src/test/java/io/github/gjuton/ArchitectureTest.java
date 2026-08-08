@@ -47,6 +47,7 @@ class ArchitectureTest {
                         .that().resideInAPackage("io.github.gjuton..")
                         .and().resideOutsideOfPackages(
                                         "io.github.gjuton.internal.jackson2..",
+                                        "io.github.gjuton.internal.jackson3..",
                                         "io.github.gjuton.internal.model.."
                         )
                         .and().haveSimpleNameNotEndingWith("Test")
