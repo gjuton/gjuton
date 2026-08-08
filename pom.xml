@@ -32,6 +32,7 @@
 
     <modules>
         <module>gjuton-core</module>
+        <module>gjuton-tests</module>
     </modules>
 
     <scm child.scm.connection.inherit.append.path="false"
