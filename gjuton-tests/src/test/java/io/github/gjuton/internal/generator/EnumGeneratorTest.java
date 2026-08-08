@@ -6,7 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
-import io.github.gjuton.internal.jsonconversion.JsonConverters;
+import io.github.gjuton.internal.extension.GjutonExtensions;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.UntypedSchema;
 import io.github.gjuton.internal.parser.SchemaParser;
@@ -17,7 +18,7 @@ import org.junit.jupiter.api.Test;
 
 class EnumGeneratorTest {
 
-    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
+    private static final SchemaParser PARSER = new SchemaParser(GjutonExtensions.locator().find(JsonConverter.class).orElseThrow());
 
     private static Schema enumSchema(List<Object> values) {
         return UntypedSchema.builder().enumValues(values).build();

@@ -2,7 +2,8 @@ package io.github.gjuton.internal.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.gjuton.internal.jsonconversion.JsonConverters;
+import io.github.gjuton.internal.extension.GjutonExtensions;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.Map;
 import java.util.Random;
@@ -11,7 +12,7 @@ import org.junit.jupiter.api.Test;
 
 class RefGeneratorTest {
 
-    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
+    private static final SchemaParser PARSER = new SchemaParser(GjutonExtensions.locator().find(JsonConverter.class).orElseThrow());
 
     @Test
     @SuppressWarnings("unchecked")

@@ -17,8 +17,8 @@ public interface GjutonExtension {
     String name();
 
     /**
-     * Registers everything this extension provides. Called once, while
-     * gjuton starts up, before any service is looked up.
+     * Registers everything this extension provides. Called once, before
+     * any service is looked up.
      */
     void init(ServiceRegistry registry);
 }

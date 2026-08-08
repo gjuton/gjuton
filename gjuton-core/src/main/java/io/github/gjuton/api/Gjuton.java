@@ -4,11 +4,11 @@ import static io.github.gjuton.internal.util.FunctionalUtil.coalesce;
 
 import io.github.gjuton.errors.JsonBindingException;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.extension.GjutonExtensions;
 import io.github.gjuton.internal.generator.GeneratorConfig;
 import io.github.gjuton.internal.generator.JsonGenerator;
 import io.github.gjuton.internal.generator.ValueConstraints;
 import io.github.gjuton.internal.jsonconversion.JsonConverter;
-import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.SchemaDocument;
 import io.github.gjuton.internal.output.JsonSerializer;
 import io.github.gjuton.internal.parser.SchemaParser;
@@ -79,7 +79,7 @@ public final class Gjuton {
         this.softNestingDepth = softNestingDepth;
         this.hardNestingDepth = hardNestingDepth;
         this.constraints = constraints;
-        this.converter = JsonConverters.get();
+        this.converter = jsonConverter();
         var config = new GeneratorConfig(
                 mode == GenerationMode.RANDOM,
                 generateAdditionalProperties,
@@ -90,6 +90,20 @@ public final class Gjuton {
                 toValueSuppliers(formatOverrides),
                 toValueConstraints(mode, constraints));
         this.generator = new JsonGenerator(seed, document, config);
+    }
+
+    /**
+     * The JSON conversion this classpath provides. The same instance every
+     * call.
+     *
+     * @throws IllegalStateException if nothing on the classpath provides JSON
+     *     conversion; the message names the artifacts that do
+     */
+    private static JsonConverter jsonConverter() {
+        var locator = GjutonExtensions.locator();
+        return locator.find(JsonConverter.class)
+                .orElseThrow(() -> new IllegalStateException("No gjuton extension on the classpath provides JSON conversion. Add the artifact matching "
+                        + "the Jackson version in use: io.github.gjuton:gjuton-jackson2 for Jackson 2, io.github.gjuton:gjuton-jackson3 for Jackson 3."));
     }
 
     /**
@@ -134,7 +148,7 @@ public final class Gjuton {
         if (schema == null) {
             throw new IllegalArgumentException("schema must not be null");
         }
-        var converter = JsonConverters.get();
+        var converter = jsonConverter();
         var parser = new SchemaParser(converter);
         var document = parser.parse(schema);
         return new Gjuton(
@@ -167,7 +181,7 @@ public final class Gjuton {
             throw new IllegalArgumentException("schema must not be null");
         }
         var schemaString = Files.readString(schema.toPath());
-        var converter = JsonConverters.get();
+        var converter = jsonConverter();
         var parser = new SchemaParser(converter);
         var schemaPath = schema.toPath().toAbsolutePath();
         var document = parser.parse(schemaPath);

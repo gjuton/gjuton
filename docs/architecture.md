@@ -101,8 +101,8 @@ api            — entry point; may access all layers
 parser         — may only access jsonconversion, model and errors
 generator      — may only access model, errors, and util
 output         — may only access jsonconversion and errors
-jsonconversion — may only access extension and errors
-extension      — leaf; no dependencies on other internal packages
+jsonconversion — may only access errors
+extension      — leaf; no dependencies on other internal packages; only `api` may access it
 model          — leaf; no dependencies on other internal packages
 util           — leaf; no dependencies on other internal packages
 errors         — leaf; no dependencies on other packages
@@ -119,6 +119,8 @@ graph TD
     api --> parser
     api --> generator
     api --> output
+    api --> jsonconversion
+    api --> extension
     api --> model
     api --> errors
     parser --> jsonconversion
@@ -129,7 +131,6 @@ graph TD
     generator --> errors
     output --> jsonconversion
     output --> errors
-    jsonconversion --> extension
     jsonconversion --> errors
 ```
 

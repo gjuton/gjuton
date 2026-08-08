@@ -2,7 +2,8 @@ package io.github.gjuton.internal.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.gjuton.internal.jsonconversion.JsonConverters;
+import io.github.gjuton.internal.extension.GjutonExtensions;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import io.github.gjuton.internal.model.ObjectSchema;
 import io.github.gjuton.internal.model.SchemaDocument;
 import io.github.gjuton.internal.parser.SchemaParser;
@@ -16,7 +17,7 @@ import org.junit.jupiter.api.Timeout;
 
 class SchemaValidatorTest {
 
-    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
+    private static final SchemaParser PARSER = new SchemaParser(GjutonExtensions.locator().find(JsonConverter.class).orElseThrow());
 
     @Nested
     class StringSchemaValidation {

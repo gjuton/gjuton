@@ -4,10 +4,10 @@ import java.util.HashMap;
 import java.util.ServiceLoader;
 
 /**
- * The extensions this classpath provides, started up once per JVM.
+ * The extensions this classpath provides.
  *
- * <p>A classpath cannot change while it runs, so what the extensions
- * offer is resolved on first use and holds for the life of the JVM.
+ * <p>A classpath cannot change while it runs, so every lookup sees the
+ * same services.
  */
 public final class GjutonExtensions {
 

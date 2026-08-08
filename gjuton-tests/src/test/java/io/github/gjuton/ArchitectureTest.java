@@ -28,8 +28,9 @@ class ArchitectureTest {
                         .whereLayer("parser").mayOnlyAccessLayers("jsonconversion", "model", "errors")
                         .whereLayer("generator").mayOnlyAccessLayers("model", "errors", "util")
                         .whereLayer("output").mayOnlyAccessLayers("jsonconversion", "errors")
-                        .whereLayer("jsonconversion").mayOnlyAccessLayers("extension", "errors")
+                        .whereLayer("jsonconversion").mayNotAccessAnyLayer()
                         .whereLayer("extension").mayNotAccessAnyLayer()
+                        .whereLayer("extension").mayOnlyBeAccessedByLayers("api")
                         .whereLayer("model").mayNotAccessAnyLayer()
                         .whereLayer("util").mayNotAccessAnyLayer()
                         .whereLayer("errors").mayNotAccessAnyLayer();
