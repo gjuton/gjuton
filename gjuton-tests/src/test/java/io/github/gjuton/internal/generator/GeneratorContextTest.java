@@ -32,7 +32,7 @@ class GeneratorContextTest {
         }
 
         @Test
-        void scoreIsOneAfterARunThatRegisteredANovelVisit() {
+        void scoreIsOneAfterRunThatRegisteredNovelVisit() {
             var context = TestContexts.withSeed(1);
             var generator = fakeGenerator();
 
@@ -104,7 +104,7 @@ class GeneratorContextTest {
         }
 
         @Test
-        void rollbackUndoesARegisteredVisitAndTheNoveltyItCaused() {
+        void rollbackUndoesRegisteredVisitAndTheNoveltyItCaused() {
             var context = TestContexts.withSeed(1);
             var generator = fakeGenerator();
 
@@ -207,7 +207,7 @@ class GeneratorContextTest {
         }
 
         @Test
-        void scoreIsOneAfterARunThatRegisteredANovelVisit() {
+        void scoreIsOneAfterRunThatRegisteredNovelVisit() {
             var context = TestContexts.withSeed(1);
             var generator = fakeGenerator();
 
@@ -258,10 +258,9 @@ class GeneratorContextTest {
         }
 
         @Test
-        void aRunThatDoesNotVisitTheGeneratorLeavesItsScoreUnaffected() {
+        void runThatDoesNotVisitTheGeneratorLeavesItsScoreUnaffected() {
             var context = TestContexts.withSeed(1);
             var first = fakeGenerator();
-            var second = fakeGenerator();
 
             // when
             context.startRun();
@@ -269,6 +268,7 @@ class GeneratorContextTest {
             context.completeRun();
 
             // then
+            var second = fakeGenerator();
             assertThat(context.noveltyScore(second)).isEmpty();
         }
 

@@ -7,7 +7,6 @@ import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.extension.GjutonExtensions;
 import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import io.github.gjuton.internal.model.ObjectSchema;
-import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.ArrayList;
 import java.util.List;
@@ -894,7 +893,7 @@ class ObjectGeneratorTest {
     }
 
     @Test
-    void dependentSchemaMergedPropertyEventuallyProducesANonEmptyValue() {
+    void dependentSchemaMergedPropertyEventuallyProducesNonEmptyValue() {
         // "toggle" is declared both in the base schema and in the schema
         // "trigger" pulls in via dependentSchemas, so resolving it merges the
         // two on every generate() call. If that merge isn't memoized, the
@@ -925,7 +924,7 @@ class ObjectGeneratorTest {
     }
 
     @Test
-    void patternPropertyMergedPropertyEventuallyProducesANonEmptyValue() {
+    void patternPropertyMergedPropertyEventuallyProducesNonEmptyValue() {
         // "toggle" is declared in properties and also matched by a
         // patternProperties regex, so resolveFieldSchema merges the two on
         // every generate() call — same identity-instability risk as the
@@ -1057,7 +1056,7 @@ class ObjectGeneratorTest {
     class FocusNovelty {
 
         @Test
-        void focusStaysOnAPropertyUntilItStopsCommittingNewNoveltyThenMovesToTheNext() {
+        void focusStaysOnOnePropertyUntilItStopsCommittingNewNoveltyThenMovesToTheNext() {
             var document = PARSER.parse("""
                     {
                         "type": "object",

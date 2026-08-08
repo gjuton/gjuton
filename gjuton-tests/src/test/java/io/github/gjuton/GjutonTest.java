@@ -553,7 +553,7 @@ class GjutonTest {
         }
 
         @Test
-        void overrideByFormatAppliesToAFormatGjutonDoesNotModel() {
+        void overrideByFormatAppliesToFormatGjutonDoesNotModel() {
             // when
             var gen = Gjuton.of(TWO_FORMATS_SCHEMA).withSeed(1L)
                     .withOverrideByFormat("iban", () -> "SE3550000000054910000003");
@@ -636,7 +636,7 @@ class GjutonTest {
         }
 
         @Test
-        void overridesAreDeterministicForAFixedSeed() {
+        void overridesAreDeterministicForFixedSeed() {
             // when
             Supplier<Gjuton> generator = () -> Gjuton.of(TWO_FORMATS_SCHEMA).withSeed(7L)
                     .withOverrideByFormat("iban", () -> "fixed-iban");
@@ -866,7 +866,7 @@ class GjutonTest {
     class RunId {
 
         @Test
-        void suppliesARunIdForTheDurationOfGenerationWhenTheCallerHasNone() {
+        void suppliesRunIdForTheDurationOfGenerationWhenTheCallerHasNone() {
             // given
             var observed = new ArrayList<String>();
             var gen = Gjuton.of(OBJECT_SCHEMA)
@@ -931,7 +931,7 @@ class GjutonTest {
         }
 
         @Test
-        void generatesASeedForARunGivenNone() {
+        void generatesSeedForRunGivenNone() {
             // given
             var observed = new ArrayList<String>();
             var gen = Gjuton.of(OBJECT_SCHEMA)
@@ -1056,7 +1056,7 @@ class GjutonTest {
                 }""";
 
         @Test
-        void aChainOfDefinitionsGeneratesEveryLevelItSpans() {
+        void chainOfDefinitionsGeneratesEveryLevelItSpans() {
             // when
             var json = Gjuton.of(REF_CHAIN_FIVE_LEVELS).withSeed(1L).generate();
             var root = parse(json);
@@ -1067,7 +1067,7 @@ class GjutonTest {
         }
 
         @Test
-        void aChainOfDefinitionsMatchesTheEquivalentInlineSchema() {
+        void chainOfDefinitionsMatchesTheEquivalentInlineSchema() {
             // when
             var factored = Gjuton.of(REF_CHAIN_FIVE_LEVELS).withSeed(1L).generate();
             var inline = Gjuton.of(INLINE_FIVE_LEVELS).withSeed(1L).generate();
@@ -1079,7 +1079,7 @@ class GjutonTest {
         }
 
         @Test
-        void tenDefinitionsEachAddingALevelGenerateToFullDepthUnderTheDeepPreset() {
+        void tenDefinitionsEachAddingOneLevelGenerateToFullDepthUnderTheDeepPreset() {
             // when
             var gen = Gjuton.of(chainOfDefinitions(10)).withNestingLimitsDeep().withSeed(1L);
             var node = parse(gen.generate());
@@ -1104,7 +1104,7 @@ class GjutonTest {
         }
 
         @Test
-        void aRequiredChainDeeperThanTheHardLimitReportsTheNestingLimit() {
+        void requiredChainDeeperThanTheHardLimitReportsTheNestingLimit() {
             // when — the shallow preset's hard limit is the cheapest one to exceed
             var gen = Gjuton.of(chainOfDefinitions(GeneratorConfig.SHALLOW_HARD_NESTING_DEPTH + 1))
                     .withNestingLimitsShallow()
@@ -1118,7 +1118,7 @@ class GjutonTest {
         }
 
         @Test
-        void aRecursiveOptionalSchemaCollapsesAtTheSoftLimit() {
+        void recursiveOptionalSchemaCollapsesAtTheSoftLimit() {
             // when
             int depth = maxNestingDepth(Gjuton.of(RECURSIVE_SCHEMA).withSeed(9L));
 
@@ -1127,7 +1127,7 @@ class GjutonTest {
         }
 
         @Test
-        void aLongFiniteAllOfInheritanceChainGeneratesEveryPropertyItInherits() {
+        void longFiniteAllOfInheritanceChainGeneratesEveryPropertyItInherits() {
             // given seven definitions inheriting from each other through allOf,
             // none of which adds a value level
             var gen = Gjuton.of("""
@@ -1153,7 +1153,7 @@ class GjutonTest {
         }
 
         @Test
-        void aLongFiniteChainOfBranchReferencesGenerates() {
+        void longFiniteChainOfBranchReferencesGenerates() {
             // given six definitions each reaching the next through a single
             // oneOf branch, none of which adds a value level
             var gen = Gjuton.of("""
@@ -1177,7 +1177,7 @@ class GjutonTest {
         }
 
         @Test
-        void aSelfReferencingAdditionalPropertiesFillTerminates() {
+        void selfReferencingAdditionalPropertiesFillTerminates() {
             // given a schema whose every property must itself be one of these
             // objects, and which must have at least one property
             var gen = Gjuton.of("""
@@ -1202,7 +1202,7 @@ class GjutonTest {
         }
 
         @Test
-        void anOptionalSelfReferenceGeneratesAFiniteDocument() {
+        void anOptionalSelfReferenceGeneratesFiniteDocument() {
             // when
             var values = generate(Gjuton.of(OPTIONAL_SELF_REFERENCE).withSeed(1L), 20);
 
@@ -1212,7 +1212,7 @@ class GjutonTest {
         }
 
         @Test
-        void anOptionalSelfReferenceForcedInByMinPropertiesGeneratesAFiniteDocument() {
+        void anOptionalSelfReferenceForcedInByMinPropertiesGeneratesFiniteDocument() {
             // given a definition whose only self-referencing property is
             // optional, but which must carry at least one property, so
             // generation selects an optional property even at its smallest
@@ -1227,7 +1227,7 @@ class GjutonTest {
         }
 
         @Test
-        void aRecursiveSchemaBottomingOutThroughAnEmptyArrayGenerates() {
+        void recursiveSchemaBottomingOutThroughAnEmptyArrayGenerates() {
             // given a required property whose array may be empty
             var gen = Gjuton.of("""
                     {
@@ -1264,7 +1264,7 @@ class GjutonTest {
         }
 
         @Test
-        void aBranchLeadingOutOfTheCycleBottomsOutEveryValue() throws IOException {
+        void branchLeadingOutOfTheCycleBottomsOutEveryValue() throws IOException {
             // given one branch re-enters the definition, the other does not
             var schema = GjutonTest.class.getResourceAsStream("/schemas/recursive-required-oneof-escape.json");
 
@@ -1317,6 +1317,7 @@ class GjutonTest {
             return node.getNodeType().toString();
         }
     }
+
     /**
      * A {@code oneOf} or {@code anyOf} branch that is nothing but a
      * {@code $ref} constrains the value through the definition it names,
@@ -1349,7 +1350,7 @@ class GjutonTest {
 
         @ParameterizedTest
         @ValueSource(strings = {"oneOf", "anyOf"})
-        void aBranchThatIsOnlyAReferenceIsHonoured(String keyword) {
+        void branchThatIsOnlyReferenceIsHonoured(String keyword) {
             // when
             var schema = SINGLE_REF_BRANCH.formatted(keyword);
             var json = Gjuton.of(schema).withSeed(1L).generate();
@@ -1360,7 +1361,7 @@ class GjutonTest {
         }
 
         @Test
-        void aBranchReferenceConflictingWithTheParentIsDroppedFromItsGroup() {
+        void branchReferenceConflictingWithTheParentIsDroppedFromItsGroup() {
             // given a group where only the second branch can be an object
             var gen = Gjuton.of("""
                     {
@@ -1401,7 +1402,7 @@ class GjutonTest {
         }
 
         @Test
-        void aGroupWhoseEveryBranchReferenceConflictsWithTheParentFails() {
+        void groupWhoseEveryBranchReferenceConflictsWithTheParentFails() {
             // given
             var schema = """
                     {
@@ -1480,7 +1481,7 @@ class GjutonTest {
         }
 
         @Test
-        void locatesAFailureAtTheDocumentRoot() {
+        void locatesFailureAtTheDocumentRoot() {
             // given
             var gen = Gjuton.of("""
                     {"type": "string", "format": "uri", "pattern": "^https://fixed\\\\.example/only$"}

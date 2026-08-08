@@ -166,7 +166,12 @@ class NumericGeneratorTest {
         @Test
         void multipleOfWithBoundsCoversBoundaryMultiples() {
             var generator = new NumericGenerator(withSeed(42),
-                    NumericSchema.builder().type("integer").minimum(BigDecimal.valueOf(-20)).maximum(BigDecimal.valueOf(20)).multipleOf(BigDecimal.valueOf(7)).build());
+                    NumericSchema.builder()
+                            .type("integer")
+                            .minimum(BigDecimal.valueOf(-20))
+                            .maximum(BigDecimal.valueOf(20))
+                            .multipleOf(BigDecimal.valueOf(7))
+                            .build());
 
             // when
             List<Number> values = LongStream.range(0, 20)
@@ -181,7 +186,12 @@ class NumericGeneratorTest {
         @Test
         void multipleOfWithBoundsAllValuesValid() {
             var generator = new NumericGenerator(withSeed(42),
-                    NumericSchema.builder().type("integer").minimum(BigDecimal.valueOf(-20)).maximum(BigDecimal.valueOf(20)).multipleOf(BigDecimal.valueOf(7)).build());
+                    NumericSchema.builder()
+                            .type("integer")
+                            .minimum(BigDecimal.valueOf(-20))
+                            .maximum(BigDecimal.valueOf(20))
+                            .multipleOf(BigDecimal.valueOf(7))
+                            .build());
 
             // when
             List<Number> values = LongStream.range(0, 100)
@@ -195,7 +205,12 @@ class NumericGeneratorTest {
         @Test
         void multipleOfWithExclusiveBounds() {
             var generator = new NumericGenerator(withSeed(42),
-                    NumericSchema.builder().type("integer").exclusiveMinimum(BigDecimal.valueOf(-15)).exclusiveMaximum(BigDecimal.valueOf(15)).multipleOf(BigDecimal.valueOf(7)).build());
+                    NumericSchema.builder()
+                            .type("integer")
+                            .exclusiveMinimum(BigDecimal.valueOf(-15))
+                            .exclusiveMaximum(BigDecimal.valueOf(15))
+                            .multipleOf(BigDecimal.valueOf(7))
+                            .build());
 
             // when
             List<Number> values = LongStream.range(0, 100)
@@ -226,7 +241,12 @@ class NumericGeneratorTest {
         void minimumAndExclusiveMinimumTakeTighterBound() {
             // Both inclusive and exclusive lower bounds set — effective floor is max(0, 10+1) = 11.
             var generator = new NumericGenerator(withSeed(42),
-                    NumericSchema.builder().type("integer").minimum(BigDecimal.valueOf(0)).exclusiveMinimum(BigDecimal.valueOf(10)).maximum(BigDecimal.valueOf(20)).build());
+                    NumericSchema.builder()
+                            .type("integer")
+                            .minimum(BigDecimal.valueOf(0))
+                            .exclusiveMinimum(BigDecimal.valueOf(10))
+                            .maximum(BigDecimal.valueOf(20))
+                            .build());
 
             // when
             List<Number> values = LongStream.range(0, 100)
@@ -242,7 +262,12 @@ class NumericGeneratorTest {
         void maximumAndExclusiveMaximumTakeTighterBound() {
             // Both inclusive and exclusive upper bounds set — effective ceiling is min(20, 10-1) = 9.
             var generator = new NumericGenerator(withSeed(42),
-                    NumericSchema.builder().type("integer").minimum(BigDecimal.valueOf(0)).maximum(BigDecimal.valueOf(20)).exclusiveMaximum(BigDecimal.valueOf(10)).build());
+                    NumericSchema.builder()
+                            .type("integer")
+                            .minimum(BigDecimal.valueOf(0))
+                            .maximum(BigDecimal.valueOf(20))
+                            .exclusiveMaximum(BigDecimal.valueOf(10))
+                            .build());
 
             // when
             List<Number> values = LongStream.range(0, 100)
@@ -389,7 +414,12 @@ class NumericGeneratorTest {
             // once. High counts (>50 in 1000 iterations) for both 0 and 20 prove the RANDOM
             // phase itself reaches the highest valid multiple, not just the MAX phase.
             var generator = new NumericGenerator(withSeed(42),
-                    NumericSchema.builder().type("integer").minimum(BigDecimal.valueOf(0)).maximum(BigDecimal.valueOf(20)).multipleOf(BigDecimal.valueOf(5)).build());
+                    NumericSchema.builder()
+                            .type("integer")
+                            .minimum(BigDecimal.valueOf(0))
+                            .maximum(BigDecimal.valueOf(20))
+                            .multipleOf(BigDecimal.valueOf(5))
+                            .build());
 
             // when
             var counts = LongStream.range(0, 1000)

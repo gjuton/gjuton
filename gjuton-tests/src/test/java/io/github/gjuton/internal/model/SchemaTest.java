@@ -23,7 +23,7 @@ class SchemaTest {
     }
 
     @Test
-    void getConditionalsReturnsOwnIfThenElseAsASingleEntry() {
+    void getConditionalsReturnsOwnIfThenElseAsSingleEntry() {
         var schema = parse("""
                 {
                     "if": {"properties": {"status": {"const": "ok"}}},

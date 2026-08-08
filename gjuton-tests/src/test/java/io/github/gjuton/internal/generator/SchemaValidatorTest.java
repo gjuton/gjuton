@@ -948,7 +948,7 @@ class SchemaValidatorTest {
         }
 
         @Test
-        void locatesAViolationNestedInAProperty() {
+        void locatesViolationNestedInProperty() {
             var document = PARSER.parse("""
                     {"type": "object", "properties": {"n": {"type": "integer", "minimum": 5}}}
                     """);
@@ -961,7 +961,7 @@ class SchemaValidatorTest {
         }
 
         @Test
-        void locatesAViolationNestedInAnItem() {
+        void locatesViolationNestedInAnItem() {
             var document = PARSER.parse("""
                     {"type": "array", "items": {"type": "string"}}
                     """);
@@ -991,7 +991,7 @@ class SchemaValidatorTest {
         }
 
         @Test
-        void reportsAnAmbiguousOneOfAsACountRatherThanPerBranch() {
+        void reportsAnAmbiguousOneOfAsCountRatherThanPerBranch() {
             var document = PARSER.parse("""
                     {"oneOf": [{"type": "object"}, {"type": "object"}]}
                     """);

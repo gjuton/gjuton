@@ -185,7 +185,7 @@ class ArrayGeneratorTest {
     }
 
     @Test
-    void everyContainsClauseGetsAMatchingElement() {
+    void everyContainsClauseGetsMatchingElement() {
         var generator = mergedArrayGenerator("""
                 {
                     "type": "array",
@@ -491,7 +491,7 @@ class ArrayGeneratorTest {
     }
 
     @Test
-    void uniqueItemsThrowsWhenPrefixItemsForceADuplicateConst() {
+    void uniqueItemsThrowsWhenPrefixItemsForceDuplicateConst() {
         var generator = arrayGenerator("""
                 {
                     "type": "array",
