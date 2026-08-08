@@ -2,11 +2,14 @@ package io.github.gjuton.internal.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class SchemaTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     @Test
     void getConditionalsIsEmptyWhenSchemaDeclaresNoConditional() {
@@ -58,6 +61,6 @@ class SchemaTest {
     }
 
     private static Schema parse(String json) {
-        return SchemaParser.parse(json).getRoot();
+        return PARSER.parse(json).getRoot();
     }
 }

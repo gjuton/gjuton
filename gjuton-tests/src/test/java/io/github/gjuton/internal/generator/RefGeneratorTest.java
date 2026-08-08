@@ -2,6 +2,7 @@ package io.github.gjuton.internal.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.Map;
 import java.util.Random;
@@ -9,6 +10,8 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class RefGeneratorTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     @Test
     @SuppressWarnings("unchecked")
@@ -159,7 +162,7 @@ class RefGeneratorTest {
                     "additionalProperties": false
                 }
                 """.formatted(props);
-        var document = SchemaParser.parse(schema);
+        var document = PARSER.parse(schema);
         var gen = new JsonGenerator(42L, document, GeneratorConfig.defaultExhaustive());
 
         // when
@@ -172,7 +175,7 @@ class RefGeneratorTest {
     }
 
     private static RefGenerator refGenerator(String json, String ref) {
-        var document = SchemaParser.parse(json);
+        var document = PARSER.parse(json);
         return new RefGenerator(GeneratorContext.testContext(document, new Random(42)), ref);
     }
 }

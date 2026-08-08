@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.UntypedSchema;
 import io.github.gjuton.internal.parser.SchemaParser;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class EnumGeneratorTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     private static Schema enumSchema(List<Object> values) {
         return UntypedSchema.builder().enumValues(values).build();
@@ -76,7 +79,7 @@ class EnumGeneratorTest {
 
     @Test
     void throwsWhenNoEnumValueSatisfiesCombiningKeyword() {
-        var root = SchemaParser.parse("""
+        var root = PARSER.parse("""
                 {
                     "type": "integer",
                     "enum": [10, 20],

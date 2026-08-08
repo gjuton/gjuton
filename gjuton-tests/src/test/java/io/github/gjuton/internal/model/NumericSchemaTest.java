@@ -2,12 +2,15 @@ package io.github.gjuton.internal.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class NumericSchemaTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     @Nested
     class ExclusiveBounds {
@@ -74,7 +77,7 @@ class NumericSchemaTest {
         @Test
         void booleanFormIsResolvedInNestedSchemas() {
             // when
-            var root = (ObjectSchema) SchemaParser.parse("""
+            var root = (ObjectSchema) PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {
@@ -102,6 +105,6 @@ class NumericSchemaTest {
     }
 
     private static NumericSchema parseNumeric(String json) {
-        return (NumericSchema) SchemaParser.parse(json).getRoot();
+        return (NumericSchema) PARSER.parse(json).getRoot();
     }
 }

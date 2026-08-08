@@ -15,6 +15,13 @@
         <Method name="&lt;init&gt;"/>
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
+    <!-- The parser holds the converter it was handed; a converter is a shared
+         service, not state to copy. -->
+    <Match>
+        <Class name="io.github.gjuton.internal.parser.SchemaParser"/>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
     <!-- Schema is sealed and effectively immutable: fields are set only during
          Jackson deserialization (via @JsonSetter with List.copyOf) or Lombok
          builder construction (internal code, always passes safe lists). -->

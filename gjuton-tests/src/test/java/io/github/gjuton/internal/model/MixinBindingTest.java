@@ -2,6 +2,7 @@ package io.github.gjuton.internal.model;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,8 +16,10 @@ import org.junit.jupiter.api.Test;
  */
 class MixinBindingTest {
 
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
+
     private static <T extends Schema> T parse(String json, Class<T> type) {
-        var document = SchemaParser.parse(json);
+        var document = PARSER.parse(json);
         return type.cast(document.getRoot());
     }
 
@@ -367,7 +370,7 @@ class MixinBindingTest {
     @Test
     void refTargetBindsThroughTheRefResolversOwnMapper() {
         // when
-        var document = SchemaParser.parse("""
+        var document = PARSER.parse("""
                 {
                     "$ref": "#/definitions/Bounded",
                     "definitions": {

@@ -2,6 +2,7 @@ package io.github.gjuton.internal.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.NullSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.SchemaDocument;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class GeneratorContextTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     @Nested
     class NoveltyTracking {
@@ -395,7 +398,7 @@ class GeneratorContextTest {
         }
 
         private static Schema parse(String json) {
-            return SchemaParser.parse(json).getRoot();
+            return PARSER.parse(json).getRoot();
         }
     }
 

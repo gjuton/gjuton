@@ -2,6 +2,7 @@ package io.github.gjuton.internal.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.ObjectSchema;
 import io.github.gjuton.internal.model.SchemaDocument;
 import io.github.gjuton.internal.parser.SchemaParser;
@@ -15,12 +16,14 @@ import org.junit.jupiter.api.Timeout;
 
 class SchemaValidatorTest {
 
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
+
     @Nested
     class StringSchemaValidation {
 
         @Test
         void stringValueSatisfiesStringSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string"}
                     """);
 
@@ -33,7 +36,7 @@ class SchemaValidatorTest {
 
         @Test
         void nonStringValueFailsStringSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string"}
                     """);
 
@@ -46,7 +49,7 @@ class SchemaValidatorTest {
 
         @Test
         void stringWithinLengthBoundsSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string", "minLength": 2, "maxLength": 4}
                     """);
 
@@ -59,7 +62,7 @@ class SchemaValidatorTest {
 
         @Test
         void stringShorterThanMinLengthFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string", "minLength": 2}
                     """);
 
@@ -72,7 +75,7 @@ class SchemaValidatorTest {
 
         @Test
         void stringLongerThanMaxLengthFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string", "maxLength": 2}
                     """);
 
@@ -85,7 +88,7 @@ class SchemaValidatorTest {
 
         @Test
         void stringMatchingPatternSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string", "pattern": "\\\\.css$"}
                     """);
 
@@ -98,7 +101,7 @@ class SchemaValidatorTest {
 
         @Test
         void stringNotMatchingPatternFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string", "pattern": "\\\\.css$"}
                     """);
 
@@ -115,7 +118,7 @@ class SchemaValidatorTest {
 
         @Test
         void numberWithinRangeSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer", "minimum": 1, "maximum": 10}
                     """);
 
@@ -128,7 +131,7 @@ class SchemaValidatorTest {
 
         @Test
         void numberBelowMinimumFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer", "minimum": 1}
                     """);
 
@@ -141,7 +144,7 @@ class SchemaValidatorTest {
 
         @Test
         void numberAboveMaximumFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer", "maximum": 10}
                     """);
 
@@ -154,7 +157,7 @@ class SchemaValidatorTest {
 
         @Test
         void numberEqualToExclusiveMinimumFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer", "exclusiveMinimum": 5}
                     """);
 
@@ -167,7 +170,7 @@ class SchemaValidatorTest {
 
         @Test
         void numberEqualToExclusiveMaximumFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer", "exclusiveMaximum": 5}
                     """);
 
@@ -180,7 +183,7 @@ class SchemaValidatorTest {
 
         @Test
         void numberNotMultipleOfFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer", "multipleOf": 5}
                     """);
 
@@ -193,7 +196,7 @@ class SchemaValidatorTest {
 
         @Test
         void nonIntegerValueFailsIntegerSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer"}
                     """);
 
@@ -210,7 +213,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueMatchingConstSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"const": "fixed"}
                     """);
 
@@ -223,7 +226,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueNotMatchingConstFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"const": "fixed"}
                     """);
 
@@ -236,7 +239,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueInEnumSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"enum": ["a", "b"]}
                     """);
 
@@ -249,7 +252,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueNotInEnumFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"enum": ["a", "b"]}
                     """);
 
@@ -266,7 +269,7 @@ class SchemaValidatorTest {
 
         @Test
         void objectWithValidPropertiesSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}
                     """);
 
@@ -279,7 +282,7 @@ class SchemaValidatorTest {
 
         @Test
         void objectMissingRequiredPropertyFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]}
                     """);
 
@@ -292,7 +295,7 @@ class SchemaValidatorTest {
 
         @Test
         void objectWithPropertyViolatingItsSchemaFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "object", "properties": {"name": {"type": "string", "minLength": 3}}}
                     """);
 
@@ -305,7 +308,7 @@ class SchemaValidatorTest {
 
         @Test
         void objectWithDisallowedAdditionalPropertyFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "object", "properties": {"name": {"type": "string"}}, "additionalProperties": false}
                     """);
 
@@ -318,7 +321,7 @@ class SchemaValidatorTest {
 
         @Test
         void objectWithinPropertyCountBoundsSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "object", "minProperties": 1, "maxProperties": 2}
                     """);
 
@@ -331,7 +334,7 @@ class SchemaValidatorTest {
 
         @Test
         void objectWithTooFewPropertiesFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "object", "minProperties": 2}
                     """);
 
@@ -348,7 +351,7 @@ class SchemaValidatorTest {
 
         @Test
         void arrayWithValidItemsSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "items": {"type": "string"}}
                     """);
 
@@ -361,7 +364,7 @@ class SchemaValidatorTest {
 
         @Test
         void arrayWithInvalidItemFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "items": {"type": "string"}}
                     """);
 
@@ -374,7 +377,7 @@ class SchemaValidatorTest {
 
         @Test
         void arrayWithinLengthBoundsSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "minItems": 1, "maxItems": 2}
                     """);
 
@@ -387,7 +390,7 @@ class SchemaValidatorTest {
 
         @Test
         void arrayShorterThanMinItemsFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "minItems": 2}
                     """);
 
@@ -400,7 +403,7 @@ class SchemaValidatorTest {
 
         @Test
         void arrayViolatingPrefixItemSchemaFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "prefixItems": [{"type": "string"}, {"type": "integer"}]}
                     """);
 
@@ -413,7 +416,7 @@ class SchemaValidatorTest {
 
         @Test
         void arrayNotContainingRequiredElementFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "contains": {"type": "integer"}}
                     """);
 
@@ -426,7 +429,7 @@ class SchemaValidatorTest {
 
         @Test
         void arrayContainingRequiredElementSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "contains": {"type": "integer"}}
                     """);
 
@@ -439,7 +442,7 @@ class SchemaValidatorTest {
 
         @Test
         void arraySatisfyingOnlyOneOfSeveralContainsClausesFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "allOf": [{"contains": {"const": "A"}}, {"contains": {"const": "B"}}]}
                     """);
             var merged = SchemaMerger.merge(document.getRoot().getAllOf());
@@ -453,7 +456,7 @@ class SchemaValidatorTest {
 
         @Test
         void arraySatisfyingEveryContainsClauseSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "allOf": [{"contains": {"const": "A"}}, {"contains": {"const": "B"}}]}
                     """);
             var merged = SchemaMerger.merge(document.getRoot().getAllOf());
@@ -467,7 +470,7 @@ class SchemaValidatorTest {
 
         @Test
         void arrayWithDuplicateElementsFailsUniqueItemsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "uniqueItems": true}
                     """);
 
@@ -480,7 +483,7 @@ class SchemaValidatorTest {
 
         @Test
         void arrayWithDistinctElementsSatisfiesUniqueItemsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "uniqueItems": true}
                     """);
 
@@ -497,7 +500,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueSatisfyingRefTargetSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {"tag": {"$ref": "#/definitions/Tag"}},
@@ -516,7 +519,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueViolatingRefTargetFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {"tag": {"$ref": "#/definitions/Tag"}},
@@ -536,7 +539,7 @@ class SchemaValidatorTest {
         @Test
         @Timeout(5)
         void cyclicSelfReferencingSchemaDoesNotInfiniteLoop() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"$ref": "#"}
                     """);
             var validator = createValidator(document);
@@ -554,7 +557,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueSatisfyingAllAllOfBranchesSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"allOf": [{"type": "string", "minLength": 2}, {"type": "string", "maxLength": 5}]}
                     """);
 
@@ -567,7 +570,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueViolatingOneAllOfBranchFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"allOf": [{"type": "string", "minLength": 2}, {"type": "string", "maxLength": 5}]}
                     """);
 
@@ -580,7 +583,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueSatisfyingAtLeastOneBranchPerAnyOfClauseSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"anyOf": [{"type": "string", "minLength": 5}, {"type": "string", "pattern": "^a"}]}
                     """);
 
@@ -593,7 +596,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueSatisfyingNoBranchOfAnyOfClauseFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"anyOf": [{"type": "string", "minLength": 5}, {"type": "string", "pattern": "^z"}]}
                     """);
 
@@ -606,7 +609,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueSatisfyingExactlyOneBranchPerOneOfClauseSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"oneOf": [{"pattern": "\\\\.css$"}, {"pattern": "\\\\.js$"}]}
                     """);
 
@@ -619,7 +622,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueSatisfyingZeroBranchesOfOneOfClauseFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"oneOf": [{"pattern": "\\\\.css$"}, {"pattern": "\\\\.js$"}]}
                     """);
 
@@ -632,7 +635,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueSatisfyingMultipleBranchesOfOneOfClauseFailsSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"oneOf": [{"type": "object", "properties": {"a": {"type": "string"}}},
                                {"type": "object", "properties": {"b": {"type": "string"}}}]}
                     """);
@@ -649,10 +652,10 @@ class SchemaValidatorTest {
 
         @Test
         void multiGroupOneOfRequiresExactlyOneMatchPerGroup() {
-            var a = SchemaParser.parse("""
+            var a = PARSER.parse("""
                     {"oneOf": [{"pattern": "\\\\.css$"}, {"pattern": "\\\\.js$"}]}
                     """).getRoot();
-            var b = SchemaParser.parse("""
+            var b = PARSER.parse("""
                     {"oneOf": [{"pattern": "^src/"}, {"pattern": "^lib/"}]}
                     """).getRoot();
             var merged = SchemaMerger.merge(List.of(a, b));
@@ -672,10 +675,10 @@ class SchemaValidatorTest {
 
         @Test
         void multiGroupAnyOfRequiresAtLeastOneMatchPerGroup() {
-            var a = SchemaParser.parse("""
+            var a = PARSER.parse("""
                     {"anyOf": [{"pattern": "^a"}, {"pattern": "^b"}]}
                     """).getRoot();
-            var b = SchemaParser.parse("""
+            var b = PARSER.parse("""
                     {"anyOf": [{"pattern": "x$"}, {"pattern": "y$"}]}
                     """).getRoot();
             var merged = SchemaMerger.merge(List.of(a, b));
@@ -695,7 +698,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueSatisfyingExactlyOneOfTwoDiscriminatedBranchesSatisfiesSchema() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"oneOf": [{"type": "object", "properties": {"a": {"type": "string"}}, "additionalProperties": false},
                                {"type": "object", "properties": {"b": {"type": "string"}}, "additionalProperties": false}]}
                     """);
@@ -724,7 +727,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueMatchingIfAndThenSatisfiesSchema() {
-            var document = SchemaParser.parse(IF_THEN_ELSE);
+            var document = PARSER.parse(IF_THEN_ELSE);
 
             // when
             var result = createValidator(document)
@@ -736,7 +739,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueMatchingIfButViolatingThenFailsSchema() {
-            var document = SchemaParser.parse(IF_THEN_ELSE);
+            var document = PARSER.parse(IF_THEN_ELSE);
 
             // when
             var result = createValidator(document)
@@ -748,7 +751,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueFailingIfAndSatisfyingElseSatisfiesSchema() {
-            var document = SchemaParser.parse(IF_THEN_ELSE);
+            var document = PARSER.parse(IF_THEN_ELSE);
 
             // when
             var result = createValidator(document)
@@ -760,7 +763,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueFailingIfAndViolatingElseFailsSchema() {
-            var document = SchemaParser.parse(IF_THEN_ELSE);
+            var document = PARSER.parse(IF_THEN_ELSE);
 
             // when
             var result = createValidator(document)
@@ -773,7 +776,7 @@ class SchemaValidatorTest {
         @Test
         void missingThenLeavesTheMatchingBranchUnconstrained() {
             // if + else only: a value that matches if has no extra constraint.
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {"status": {"type": "string"}},
@@ -793,7 +796,7 @@ class SchemaValidatorTest {
         @Test
         void missingElseLeavesTheNonMatchingBranchUnconstrained() {
             // if + then only: a value that fails if has no extra constraint.
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {
                         "type": "object",
                         "properties": {"status": {"type": "string"}},
@@ -820,7 +823,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueMatchingNotSubschemaFailsSchema() {
-            var document = SchemaParser.parse(INTEGER_NOT_ZERO);
+            var document = PARSER.parse(INTEGER_NOT_ZERO);
 
             // when
             var result = createValidator(document).satisfies(0, document.getRoot());
@@ -831,7 +834,7 @@ class SchemaValidatorTest {
 
         @Test
         void valueNotMatchingNotSubschemaSatisfiesSchema() {
-            var document = SchemaParser.parse(INTEGER_NOT_ZERO);
+            var document = PARSER.parse(INTEGER_NOT_ZERO);
 
             // when
             var result = createValidator(document).satisfies(1, document.getRoot());
@@ -844,7 +847,7 @@ class SchemaValidatorTest {
         void numericValueMatchingNotConstFailsAcrossNumericTypes() {
             // The value's Java numeric type (BigDecimal) differs from the const's
             // (Integer); they are still the same JSON number and must be rejected.
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer", "not": {"const": 1}}
                     """);
 
@@ -857,7 +860,7 @@ class SchemaValidatorTest {
 
         @Test
         void bareNotRejectsForbiddenType() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"not": {"type": "string"}}
                     """);
 
@@ -870,7 +873,7 @@ class SchemaValidatorTest {
 
         @Test
         void bareNotAcceptsOtherTypes() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"not": {"type": "string"}}
                     """);
 
@@ -887,7 +890,7 @@ class SchemaValidatorTest {
 
         @Test
         void overriddenValueSatisfiesSchemaItWouldOtherwiseViolate() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "integer"}
                     """);
 
@@ -901,7 +904,7 @@ class SchemaValidatorTest {
 
         @Test
         void overriddenValueNestedInObjectIsExempt() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "object", "properties": {"n": {"type": "integer"}}, "required": ["n"]}
                     """);
             var value = Map.of("n", new OverriddenValue("not-a-number"));
@@ -919,7 +922,7 @@ class SchemaValidatorTest {
 
         @Test
         void satisfyingValueHasNoViolation() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string", "minLength": 2}
                     """);
 
@@ -932,7 +935,7 @@ class SchemaValidatorTest {
 
         @Test
         void namesTheConstraintAndTheOffendingValue() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string", "maxLength": 2}
                     """);
 
@@ -945,7 +948,7 @@ class SchemaValidatorTest {
 
         @Test
         void locatesAViolationNestedInAProperty() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "object", "properties": {"n": {"type": "integer", "minimum": 5}}}
                     """);
 
@@ -958,7 +961,7 @@ class SchemaValidatorTest {
 
         @Test
         void locatesAViolationNestedInAnItem() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "array", "items": {"type": "string"}}
                     """);
 
@@ -971,7 +974,7 @@ class SchemaValidatorTest {
 
         @Test
         void reportsWhyEveryOneOfBranchRejectedTheValue() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"oneOf": [
                         {"type": "object", "required": ["a"]},
                         {"type": "object", "required": ["b"]}
@@ -988,7 +991,7 @@ class SchemaValidatorTest {
 
         @Test
         void reportsAnAmbiguousOneOfAsACountRatherThanPerBranch() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"oneOf": [{"type": "object"}, {"type": "object"}]}
                     """);
 
@@ -1001,7 +1004,7 @@ class SchemaValidatorTest {
 
         @Test
         void countsTheBranchesItDidNotReportOnRatherThanDroppingThem() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"oneOf": [
                         {"type": "object", "required": ["a"]},
                         {"type": "object", "required": ["b"]},
@@ -1020,7 +1023,7 @@ class SchemaValidatorTest {
 
         @Test
         void abbreviatesAnOversizedValue() {
-            var document = SchemaParser.parse("""
+            var document = PARSER.parse("""
                     {"type": "string", "pattern": "^a$"}
                     """);
 

@@ -31,7 +31,7 @@ final class RefCollector {
 
     private final JsonConverter converter;
 
-    private RefCollector(JsonConverter converter) {
+    RefCollector(JsonConverter converter) {
         this.converter = converter;
     }
 
@@ -51,8 +51,7 @@ final class RefCollector {
      * @throws IllegalArgumentException if a {@code $ref} names something that
      *     is not a schema, or cannot be resolved at all
      */
-    static Map<String, Schema> collect(Object rootNode, Schema rootSchema, URI retrievalUri, JsonConverter converter) {
-        var collector = new RefCollector(converter);
+    Map<String, Schema> collect(Object rootNode, Schema rootSchema, URI retrievalUri) {
         var refs = new HashMap<String, Schema>();
         // Self-reference always resolves to the same root Schema instance so phase state
         // is shared between the root and any "#" ref.
@@ -62,7 +61,7 @@ final class RefCollector {
         // itself, besides "#".
         var entryIdentity = baseUriOf(rootNode, retrievalUri);
         var entryDocUri = entryIdentity != null ? entryIdentity.toString() : null;
-        collector.walk(rootNode, rootNode, entryDocUri, retrievalUri, refs, new HashMap<>());
+        walk(rootNode, rootNode, entryDocUri, retrievalUri, refs, new HashMap<>());
         return refs;
     }
 

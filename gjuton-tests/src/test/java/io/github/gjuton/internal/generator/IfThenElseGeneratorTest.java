@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.SchemaDocument;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.Map;
@@ -13,6 +14,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class IfThenElseGeneratorTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     private static final String STATUS_CONDITIONAL = """
             {
@@ -27,7 +30,7 @@ class IfThenElseGeneratorTest {
 
     @Test
     void everyGeneratedValueSatisfiesTheSchema() {
-        var document = SchemaParser.parse(STATUS_CONDITIONAL);
+        var document = PARSER.parse(STATUS_CONDITIONAL);
         var validator = new SchemaValidator(GeneratorContext.testContext(document, new Random(42)));
         var generator = generatorFor(document);
 
@@ -41,7 +44,7 @@ class IfThenElseGeneratorTest {
     @Test
     @SuppressWarnings("unchecked")
     void bothBranchesAreExercised() {
-        var document = SchemaParser.parse(STATUS_CONDITIONAL);
+        var document = PARSER.parse(STATUS_CONDITIONAL);
         var generator = generatorFor(document);
 
         // when
@@ -58,7 +61,7 @@ class IfThenElseGeneratorTest {
     @Test
     @SuppressWarnings("unchecked")
     void thenBranchIsHonouredOnFirstGeneration() {
-        var document = SchemaParser.parse(STATUS_CONDITIONAL);
+        var document = PARSER.parse(STATUS_CONDITIONAL);
         var generator = generatorFor(document);
 
         // when -- the exhaustive phase honours the then branch first
@@ -72,7 +75,7 @@ class IfThenElseGeneratorTest {
     @Test
     void missingElseLeavesTheFailingBranchUnconstrained() {
         // if + then only: a value that fails if is valid with no extra keys.
-        var document = SchemaParser.parse("""
+        var document = PARSER.parse("""
                 {
                     "type": "object",
                     "required": ["status"],
@@ -94,7 +97,7 @@ class IfThenElseGeneratorTest {
     @Test
     void missingThenLeavesTheMatchingBranchUnconstrained() {
         // if + else only.
-        var document = SchemaParser.parse("""
+        var document = PARSER.parse("""
                 {
                     "type": "object",
                     "required": ["status"],
@@ -117,7 +120,7 @@ class IfThenElseGeneratorTest {
     void conditionalInsideAllOfBranchIsHonoured() {
         // The conditional lives inside an allOf branch, not at the top level,
         // so it reaches the generator only if SchemaMerger carries it through.
-        var document = SchemaParser.parse("""
+        var document = PARSER.parse("""
                 {
                     "type": "object",
                     "required": ["status"],
@@ -145,7 +148,7 @@ class IfThenElseGeneratorTest {
     @Test
     void dispatchedViaJsonGenerator() {
         // Proves buildDelegate routes an if/then/else schema to this generator.
-        var document = SchemaParser.parse(STATUS_CONDITIONAL);
+        var document = PARSER.parse(STATUS_CONDITIONAL);
         var context = GeneratorContext.testContext(document, new Random(42));
         var validator = new SchemaValidator(context);
         var generator = new JsonGenerator(document.getRoot(), context);
@@ -161,7 +164,7 @@ class IfThenElseGeneratorTest {
     void minimalModeWithBothBranchesUnsatisfiableThrowsCleanException() {
         // Both then+parent and else+parent conflict with the parent's own "x" constraint,
         // so the schema is genuinely unsatisfiable regardless of mode.
-        var document = SchemaParser.parse("""
+        var document = PARSER.parse("""
                 {
                     "type": "object",
                     "properties": {"x": {"const": 5}},
@@ -190,7 +193,7 @@ class IfThenElseGeneratorTest {
 
         @Test
         void noveltyIndexTracksTheBranchActuallyPickedNotThePhase() {
-            var document = SchemaParser.parse(STATUS_CONDITIONAL);
+            var document = PARSER.parse(STATUS_CONDITIONAL);
             var context = GeneratorContext.testContext(document, new Random(42));
             var generator = new IfThenElseGenerator(context, document.getRoot());
 

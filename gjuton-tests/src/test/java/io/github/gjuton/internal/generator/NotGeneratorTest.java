@@ -2,6 +2,7 @@ package io.github.gjuton.internal.generator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.SchemaDocument;
 import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.Map;
@@ -9,6 +10,8 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 class NotGeneratorTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     private static final String NOT_NULL = """
             {
@@ -18,7 +21,7 @@ class NotGeneratorTest {
 
     @Test
     void firstCallRegistersAsNovel() {
-        var document = SchemaParser.parse(NOT_NULL);
+        var document = PARSER.parse(NOT_NULL);
         var context = GeneratorContext.testContext(document, new Random(42));
         var generator = new NotGenerator(context, document.getRoot());
 
@@ -33,7 +36,7 @@ class NotGeneratorTest {
 
     @Test
     void secondCallIsNotNovel() {
-        var document = SchemaParser.parse(NOT_NULL);
+        var document = PARSER.parse(NOT_NULL);
         var context = GeneratorContext.testContext(document, new Random(42));
         var generator = new NotGenerator(context, document.getRoot());
 

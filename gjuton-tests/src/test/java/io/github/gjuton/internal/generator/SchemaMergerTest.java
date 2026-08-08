@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.jsonconversion.JsonConverters;
 import io.github.gjuton.internal.model.ArraySchema;
 import io.github.gjuton.internal.model.NumericSchema;
 import io.github.gjuton.internal.model.ObjectSchema;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class SchemaMergerTest {
+
+    private static final SchemaParser PARSER = new SchemaParser(JsonConverters.get());
 
     @Nested
     class StringMerges {
@@ -1585,6 +1588,6 @@ class SchemaMergerTest {
     }
 
     private static Schema readSchema(String json) {
-        return SchemaParser.parse(json).getRoot();
+        return PARSER.parse(json).getRoot();
     }
 }
