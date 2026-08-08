@@ -59,7 +59,7 @@
         <archunit.version>1.4.2</archunit.version>
         <spotbugs.version>4.9.8.3</spotbugs.version>
         <checkstyle.version>3.6.0</checkstyle.version>
-        <networknt.version>1.5.6</networknt.version>
+        <networknt.version>2.0.4</networknt.version>
         <assertj.version>3.27.7</assertj.version>
         <lombok.version>1.18.46</lombok.version>
         <rgxgen.version>2.0</rgxgen.version>
