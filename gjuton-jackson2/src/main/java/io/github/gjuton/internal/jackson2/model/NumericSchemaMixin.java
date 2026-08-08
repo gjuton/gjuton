@@ -1,6 +1,7 @@
-package io.github.gjuton.internal.model;
+package io.github.gjuton.internal.jackson2.model;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import io.github.gjuton.internal.model.NumericSchema;
 
 /**
  * Supplies {@link NumericSchema}'s deserializer bindings. Naming a
