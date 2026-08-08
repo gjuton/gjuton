@@ -4,9 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.gjuton.internal.extension.GjutonExtensions;
 import io.github.gjuton.internal.jsonconversion.JsonConverter;
-import io.github.gjuton.internal.model.SchemaDocument;
 import io.github.gjuton.internal.parser.SchemaParser;
-import java.util.Map;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
 

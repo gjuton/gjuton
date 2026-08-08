@@ -78,7 +78,7 @@ class SchemaParserTest {
         }
 
         @Test
-        void refIn$defsIsCollected() {
+        void refInDefsIsCollected() {
             var document = PARSER.parse("""
                     {
                         "type": "object",
@@ -944,7 +944,7 @@ class SchemaParserTest {
         }
 
         @Test
-        void aRefNamingTheDocumentsOwnIdIsResolvedWithinIt() {
+        void refNamingTheDocumentsOwnIdIsResolvedWithinIt() {
             // The host does not resolve, so any attempt to retrieve the document
             // named by the ref fails rather than finding it in the parse.
             // when
@@ -971,7 +971,7 @@ class SchemaParserTest {
         }
 
         @Test
-        void aRefNamingTheDocumentsOwnIdWithoutAFragmentNamesTheDocumentItself() {
+        void refNamingTheDocumentsOwnIdWithoutFragmentNamesTheDocumentItself() {
             // The host does not resolve, so any attempt to retrieve the document
             // named by the ref fails rather than finding it in the parse.
             // when
@@ -993,7 +993,7 @@ class SchemaParserTest {
         }
 
         @Test
-        void aDocumentNamedBySeveralRefsIsRetrievedOnce() throws IOException {
+        void documentNamedBySeveralRefsIsRetrievedOnce() throws IOException {
             var fetches = new AtomicInteger();
             var defs = """
                     {
@@ -1086,7 +1086,7 @@ class SchemaParserTest {
         }
 
         @Test
-        void aRefShapedValueInsideAnExternalDocumentsDataIsLeftAlone(@TempDir Path tempDir) throws IOException {
+        void refShapedValueInsideAnExternalDocumentsDataIsLeftAlone(@TempDir Path tempDir) throws IOException {
             Files.writeString(tempDir.resolve("defs.json"), """
                     {
                         "definitions": {
@@ -1119,7 +1119,7 @@ class SchemaParserTest {
         }
 
         @Test
-        void nestedIdsComposeSoARefResolvesAgainstAllOfThemInTurn(@TempDir Path tempDir) throws IOException {
+        void nestedIdsComposeSoRefResolvesAgainstAllOfThemInTurn(@TempDir Path tempDir) throws IOException {
             var oneDir = Files.createDirectory(tempDir.resolve("one"));
             var twoDir = Files.createDirectory(oneDir.resolve("two"));
             Files.writeString(twoDir.resolve("target.json"), """
@@ -1209,7 +1209,7 @@ class SchemaParserTest {
     class TypeParsing {
 
         @Test
-        void aFormatGjutonDoesNotModelHasNoModelledConstant() {
+        void formatGjutonDoesNotModelHasNoModelledConstant() {
             var document = PARSER.parse("""
                     {
                         "type": "string",
@@ -1581,7 +1581,7 @@ class SchemaParserTest {
         }
 
         @Test
-        void constPayloadResemblingASchemaIsNotWalkedForTypeInference() {
+        void constPayloadResemblingSchemaIsNotWalkedForTypeInference() {
             // when
             var document = PARSER.parse("""
                     {

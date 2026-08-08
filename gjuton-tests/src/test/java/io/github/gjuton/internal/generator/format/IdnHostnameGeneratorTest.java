@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 class IdnHostnameGeneratorTest {
 
     @Test
-    void producesHostnamesContainingADot() {
+    void producesHostnamesContainingDot() {
         var schema = StringSchema.builder().rawFormat("idn-hostname").build();
         var generator = new IdnHostnameGenerator(withSeed(42), schema);
 

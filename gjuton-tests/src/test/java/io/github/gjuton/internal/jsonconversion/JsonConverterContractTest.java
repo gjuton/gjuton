@@ -133,7 +133,7 @@ class JsonConverterContractTest {
     }
 
     @Test
-    void convertOntoATypeTheTreeDoesNotMapOntoFails() {
+    void convertOntoTypeTheTreeDoesNotMapOntoFails() {
         // given
         var tree = List.of(1, 2);
 
@@ -143,7 +143,7 @@ class JsonConverterContractTest {
     }
 
     @Test
-    void convertOntoATypeThatDoesNotDeclareThePropertyFails() {
+    void convertOntoTypeThatDoesNotDeclareThePropertyFails() {
         // given
         var tree = Map.of("a", 1, "unknown", 2);
 
@@ -153,7 +153,7 @@ class JsonConverterContractTest {
     }
 
     @Test
-    void convertIgnoresASchemaKeywordNoModelClassDeclares() {
+    void convertIgnoresSchemaKeywordNoModelClassDeclares() {
         // when
         var tree = CONVERTER.readTree("""
                 {

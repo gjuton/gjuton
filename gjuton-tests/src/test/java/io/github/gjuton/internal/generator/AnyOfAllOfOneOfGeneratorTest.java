@@ -971,7 +971,7 @@ class AnyOfAllOfOneOfGeneratorTest {
         }
 
         @Test
-        void twoGroupsMergedTogetherEventuallyProducesANonEmptyValue() {
+        void twoGroupsMergedTogetherEventuallyProducesNonEmptyValue() {
             // With both oneOf and anyOf present, the branch picked from each
             // group is merged into one schema on every generate() call. If
             // that merge isn't memoized, the merged schema is a fresh
