@@ -13,7 +13,7 @@ mvnd clean verify -Pfast # inner-loop: skips checkstyle + spotbugs (~5s warm)
 mvn clean verify         # full build incl. style/static analysis (~14s) — pre-commit gate
 mvn clean compile        # compile only
 mvn test                 # run unit tests
-mvn test -Pmutation -pl gjuton-tests -am # pitest; run from the root, report in gjuton-tests/target/pit-reports
+mvn test -Pmutation -pl gjuton-jackson2 -am # pitest; run from the root, report in gjuton-jackson2/target/pit-reports
 ```
 
 Use `mvnd verify -Pfast` during work to keep the iteration loop tight.
@@ -37,9 +37,9 @@ package layering with its allowed-dependency rules are documented in:
 ## Testing
 
 The shared test suite lives in the `gjuton-tests` module, whichever module the
-code under test sits in. It runs there against Jackson 2, and `gjuton-jackson3`
-re-runs it against Jackson 3. No test there may name a Jackson type; one that
-has to lives in `gjuton-jackson2` instead.
+code under test sits in. That module only compiles it; `gjuton-jackson2` and
+`gjuton-jackson3` each run it against their own Jackson. No test there may name
+a Jackson type; one that has to lives in `gjuton-jackson2` instead.
 
 Integration tests are parameterized and driven by schema files in
 `gjuton-tests/src/test/resources/schemas/`. Adding a schema file is all that's
