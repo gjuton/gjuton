@@ -4,22 +4,22 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
 import io.github.gjuton.errors.JsonBindingException;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.extension.GjutonExtensions;
 import io.github.gjuton.internal.generator.GeneratorConfig;
 import io.github.gjuton.internal.generator.GjutonMdc;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import java.io.File;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Supplier;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
@@ -30,7 +30,7 @@ import org.slf4j.MDC;
 
 class GjutonTest {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final JsonConverter JSON = GjutonExtensions.locator().find(JsonConverter.class).orElseThrow();
 
     private static final String INT_SCHEMA = """
             { "type": "integer", "minimum": 5, "maximum": 100 }""";
@@ -194,8 +194,8 @@ class GjutonTest {
     private static List<String> allFieldNames(Gjuton gen, int iterations) {
         var names = new ArrayList<String>();
         for (int i = 0; i < iterations; i++) {
-            var node = parse(gen.generate());
-            node.fieldNames().forEachRemaining(names::add);
+            var node = (Map<?, ?>) parse(gen.generate());
+            node.keySet().forEach(name -> names.add((String) name));
         }
         return names;
     }
@@ -208,17 +208,39 @@ class GjutonTest {
         return max;
     }
 
-    private static int nestingDepth(JsonNode node) {
-        var child = node.get("child");
+    private static int nestingDepth(Object node) {
+        var child = at(node, "child");
         return child == null ? 0 : 1 + nestingDepth(child);
     }
 
-    private static JsonNode parse(String json) {
-        try {
-            return MAPPER.readTree(json);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    /**
+     * The generated document as nested {@link java.util.Map}s and
+     * {@link List}s, with scalars as their Java equivalents.
+     */
+    private static Object parse(String json) {
+        return JSON.readTree(json);
+    }
+
+    /**
+     * The value {@code path} names in {@code node}, where a step is a
+     * property name in an object or an index in an array, and {@code null}
+     * where the document holds no such value.
+     */
+    private static Object at(Object node, Object... path) {
+        var value = node;
+        for (var step : path) {
+            if (value == null) {
+                return null;
+            }
+            if (step instanceof Integer index) {
+                var array = (List<?>) value;
+                value = array.get(index);
+            } else {
+                var object = (Map<?, ?>) value;
+                value = object.get(step);
+            }
         }
+        return value;
     }
 
     @Nested
@@ -252,7 +274,7 @@ class GjutonTest {
                     .withOverrideByPath("$.role", () -> "admin");
 
             // then
-            assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("admin");
+            assertThat(at(parse(gen.generate()), "role")).isEqualTo("admin");
         }
 
         @Test
@@ -263,9 +285,9 @@ class GjutonTest {
                     .withOverrideByPath("$.role", () -> "user-" + counter[0]++);
 
             // then
-            assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("user-0");
-            assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("user-1");
-            assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("user-2");
+            assertThat(at(parse(gen.generate()), "role")).isEqualTo("user-0");
+            assertThat(at(parse(gen.generate()), "role")).isEqualTo("user-1");
+            assertThat(at(parse(gen.generate()), "role")).isEqualTo("user-2");
         }
 
         @Test
@@ -275,9 +297,9 @@ class GjutonTest {
                     .withOverrideByPath("$.a", () -> new Point(3, 4));
 
             // then
-            var a = parse(gen.generate()).get("a");
-            assertThat(a.get("x").asInt()).isEqualTo(3);
-            assertThat(a.get("y").asInt()).isEqualTo(4);
+            var a = at(parse(gen.generate()), "a");
+            assertThat(at(a, "x")).isEqualTo(3);
+            assertThat(at(a, "y")).isEqualTo(4);
         }
 
         @Test
@@ -287,7 +309,7 @@ class GjutonTest {
                     .withOverrideByPath("$.a.b", () -> "fixed");
 
             // then
-            assertThat(parse(gen.generate()).get("a").get("b").asText()).isEqualTo("fixed");
+            assertThat(at(parse(gen.generate()), "a", "b")).isEqualTo("fixed");
         }
 
         @Test
@@ -297,7 +319,7 @@ class GjutonTest {
                     .withOverrideByPath("$[0]", () -> 999);
 
             // then
-            assertThat(parse(gen.generate()).get(0).asInt()).isEqualTo(999);
+            assertThat(at(parse(gen.generate()), 0)).isEqualTo(999);
         }
 
         @Test
@@ -308,8 +330,8 @@ class GjutonTest {
 
             // then
             var root = parse(gen.generate());
-            assertThat(root.isArray()).isTrue();
-            assertThat(root.get(0).asText()).isEqualTo("replaced");
+            assertThat(root).isInstanceOf(List.class);
+            assertThat(at(root, 0)).isEqualTo("replaced");
         }
 
         @Test
@@ -327,7 +349,7 @@ class GjutonTest {
                     .withOverrideByPath("$.x", () -> "supplied");
 
             // then
-            assertThat(parse(gen.generate()).get("x").asText()).isEqualTo("supplied");
+            assertThat(at(parse(gen.generate()), "x")).isEqualTo("supplied");
         }
 
         @Test
@@ -345,7 +367,7 @@ class GjutonTest {
                     .withOverrideByPath("$.x", () -> "supplied");
 
             // then
-            assertThat(parse(gen.generate()).get("x").asText()).isEqualTo("supplied");
+            assertThat(at(parse(gen.generate()), "x")).isEqualTo("supplied");
         }
 
         @Test
@@ -362,7 +384,7 @@ class GjutonTest {
                     .withOverrideByPath("$.n", () -> "not-a-number");
 
             // then the override survives validation and appears verbatim
-            assertThat(parse(gen.generate()).get("n").asText()).isEqualTo("not-a-number");
+            assertThat(at(parse(gen.generate()), "n")).isEqualTo("not-a-number");
         }
 
         @Test
@@ -388,7 +410,7 @@ class GjutonTest {
                     .withOverrideByPath("$.role", () -> "second");
 
             // then
-            assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("second");
+            assertThat(at(parse(gen.generate()), "role")).isEqualTo("second");
         }
 
         @Test
@@ -437,8 +459,8 @@ class GjutonTest {
 
             // then
             var root = parse(gen.generate());
-            assertThat(root.get("id").asText()).isEqualTo("fixed-id");
-            assertThat(root.get("child").get("id").asText()).isEqualTo("fixed-id");
+            assertThat(at(root, "id")).isEqualTo("fixed-id");
+            assertThat(at(root, "child", "id")).isEqualTo("fixed-id");
         }
 
         @Test
@@ -465,13 +487,13 @@ class GjutonTest {
 
             // then — both positions share the same value within one generate() call
             var root = parse(gen.generate());
-            assertThat(root.get("id").asText()).isEqualTo("id-0");
-            assertThat(root.get("child").get("id").asText()).isEqualTo("id-0");
+            assertThat(at(root, "id")).isEqualTo("id-0");
+            assertThat(at(root, "child", "id")).isEqualTo("id-0");
 
             // and a second generate() call gets a fresh value
             var root2 = parse(gen.generate());
-            assertThat(root2.get("id").asText()).isEqualTo("id-1");
-            assertThat(root2.get("child").get("id").asText()).isEqualTo("id-1");
+            assertThat(at(root2, "id")).isEqualTo("id-1");
+            assertThat(at(root2, "child", "id")).isEqualTo("id-1");
         }
 
         @Test
@@ -482,7 +504,7 @@ class GjutonTest {
                     .withOverrideByPath("$.role", () -> "by-path");
 
             // then
-            assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("by-path");
+            assertThat(at(parse(gen.generate()), "role")).isEqualTo("by-path");
         }
 
         @Test
@@ -511,7 +533,7 @@ class GjutonTest {
                     .withOverrideByName("role", () -> "second");
 
             // then
-            assertThat(parse(gen.generate()).get("role").asText()).isEqualTo("second");
+            assertThat(at(parse(gen.generate()), "role")).isEqualTo("second");
         }
 
         @Test
@@ -547,9 +569,9 @@ class GjutonTest {
 
             // then — only the date-times are replaced
             var root = parse(gen.generate());
-            assertThat(root.get("createdAt").asText()).isEqualTo("2024-01-01T00:00:00Z");
-            assertThat(root.get("updatedAt").asText()).isEqualTo("2024-01-01T00:00:00Z");
-            assertThat(root.get("label").asText()).isNotEqualTo("2024-01-01T00:00:00Z");
+            assertThat(at(root, "createdAt")).isEqualTo("2024-01-01T00:00:00Z");
+            assertThat(at(root, "updatedAt")).isEqualTo("2024-01-01T00:00:00Z");
+            assertThat(at(root, "label")).isNotEqualTo("2024-01-01T00:00:00Z");
         }
 
         @Test
@@ -559,7 +581,7 @@ class GjutonTest {
                     .withOverrideByFormat("iban", () -> "SE3550000000054910000003");
 
             // then
-            assertThat(parse(gen.generate()).get("account").asText()).isEqualTo("SE3550000000054910000003");
+            assertThat(at(parse(gen.generate()), "account")).isEqualTo("SE3550000000054910000003");
         }
 
         @Test
@@ -571,7 +593,7 @@ class GjutonTest {
 
             // then
             var root = parse(gen.generate());
-            assertThat(List.of(root.get("createdAt").asText(), root.get("updatedAt").asText()))
+            assertThat(List.of(at(root, "createdAt"), at(root, "updatedAt")))
                     .containsExactlyInAnyOrder("at-0", "at-1");
         }
 
@@ -586,7 +608,7 @@ class GjutonTest {
                     .withOverrideByFormat("iban", () -> "SE35");
 
             // then
-            assertThat(parse(gen.generate()).get("a").asText()).isEqualTo("SE35");
+            assertThat(at(parse(gen.generate()), "a")).isEqualTo("SE35");
         }
 
         @Test
@@ -597,7 +619,7 @@ class GjutonTest {
                     .withOverrideByFormat("iban", () -> "second");
 
             // then
-            assertThat(parse(gen.generate()).get("account").asText()).isEqualTo("second");
+            assertThat(at(parse(gen.generate()), "account")).isEqualTo("second");
         }
 
         @Test
@@ -630,9 +652,9 @@ class GjutonTest {
 
             // then
             var root = parse(gen.generate());
-            assertThat(root.get("byPath").asText()).isEqualTo("path");
-            assertThat(root.get("byName").asText()).isEqualTo("name");
-            assertThat(root.get("byFormat").asText()).isEqualTo("format");
+            assertThat(at(root, "byPath")).isEqualTo("path");
+            assertThat(at(root, "byName")).isEqualTo("name");
+            assertThat(at(root, "byFormat")).isEqualTo("format");
         }
 
         @Test
@@ -701,7 +723,7 @@ class GjutonTest {
             var fromTyped = typedGen.generate(Bean.class);
 
             // then
-            assertThat(fromTyped.a()).isEqualTo(fromString.get("a").asInt());
+            assertThat(fromTyped.a()).isEqualTo(at(fromString, "a"));
         }
     }
 
@@ -1062,8 +1084,8 @@ class GjutonTest {
             var root = parse(json);
 
             // then
-            var leaf = root.get("l1").get("l2").get("l3").get("l4").get("leaf");
-            assertThat(leaf.isTextual()).isTrue();
+            var leaf = at(root, "l1", "l2", "l3", "l4", "leaf");
+            assertThat(leaf).isInstanceOf(String.class);
         }
 
         @Test
@@ -1086,10 +1108,10 @@ class GjutonTest {
 
             // then
             for (int level = 1; level <= 10; level++) {
-                node = node.get("l" + level);
+                node = at(node, "l" + level);
                 assertThat(node).as("level l%d", level).isNotNull();
             }
-            assertThat(node.get("leaf").isTextual()).isTrue();
+            assertThat(at(node, "leaf")).isInstanceOf(String.class);
         }
 
         @Test
@@ -1100,7 +1122,7 @@ class GjutonTest {
             var root = parse(json);
 
             // then
-            assertThat(root.get(0).get(0).get(0).isInt()).isTrue();
+            assertThat(at(root, 0, 0, 0)).isInstanceOf(Integer.class);
         }
 
         @Test
@@ -1148,8 +1170,8 @@ class GjutonTest {
             var generated = parse(gen.generate());
 
             // then
-            assertThat(generated.get("p1").isTextual()).isTrue();
-            assertThat(generated.get("p7").isTextual()).isTrue();
+            assertThat(at(generated, "p1")).isInstanceOf(String.class);
+            assertThat(at(generated, "p7")).isInstanceOf(String.class);
         }
 
         @Test
@@ -1173,7 +1195,7 @@ class GjutonTest {
             var generated = parse(gen.generate());
 
             // then
-            assertThat(generated.get("leaf").isTextual()).isTrue();
+            assertThat(at(generated, "leaf")).isInstanceOf(String.class);
         }
 
         @Test
@@ -1207,8 +1229,11 @@ class GjutonTest {
             var values = generate(Gjuton.of(OPTIONAL_SELF_REFERENCE).withSeed(1L), 20);
 
             // then — every run bottoms out, and the recursion is still explored
-            assertThat(values).allSatisfy(value -> assertThat(parse(value).isObject()).isTrue());
-            assertThat(values).anySatisfy(value -> assertThat(parse(value).has("next")).isTrue());
+            assertThat(values).allSatisfy(value -> assertThat(parse(value)).isInstanceOf(Map.class));
+            assertThat(values).anySatisfy(value -> {
+                var root = (Map<?, ?>) parse(value);
+                assertThat(root.containsKey("next")).isTrue();
+            });
         }
 
         @Test
@@ -1222,8 +1247,14 @@ class GjutonTest {
             var values = generate(Gjuton.of(schema).withSeed(1L), 20);
 
             // then
-            assertThat(values).allSatisfy(value -> assertThat(parse(value).size()).isGreaterThanOrEqualTo(1));
-            assertThat(values).anySatisfy(value -> assertThat(parse(value).has("next")).isTrue());
+            assertThat(values).allSatisfy(value -> {
+                var root = (Map<?, ?>) parse(value);
+                assertThat(root.size()).isGreaterThanOrEqualTo(1);
+            });
+            assertThat(values).anySatisfy(value -> {
+                var root = (Map<?, ?>) parse(value);
+                assertThat(root.containsKey("next")).isTrue();
+            });
         }
 
         @Test
@@ -1247,7 +1278,7 @@ class GjutonTest {
             var values = generate(gen, 20);
 
             // then
-            assertThat(values).allSatisfy(value -> assertThat(parse(value).get("children").isArray()).isTrue());
+            assertThat(values).allSatisfy(value -> assertThat(at(parse(value), "children")).isInstanceOf(List.class));
         }
 
         @ParameterizedTest
@@ -1264,9 +1295,26 @@ class GjutonTest {
         }
 
         @Test
-        void branchLeadingOutOfTheCycleBottomsOutEveryValue() throws IOException {
+        void branchLeadingOutOfTheCycleBottomsOutEveryValue() {
             // given one branch re-enters the definition, the other does not
-            var schema = GjutonTest.class.getResourceAsStream("/schemas/recursive-required-oneof-escape.json");
+            var schema = """
+                    {
+                      "$ref": "#/$defs/Tree",
+                      "$defs": {
+                        "Tree": {
+                          "type": "object",
+                          "required": ["node"],
+                          "properties": {
+                            "node": {
+                              "oneOf": [
+                                { "$ref": "#/$defs/Tree" },
+                                { "type": "string" }
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }""";
 
             // when
             var values = generate(Gjuton.of(schema).withSeed(1L), 20);
@@ -1274,11 +1322,11 @@ class GjutonTest {
             // then — however deep the recursive branch is taken, the escape
             // branch ends it
             assertThat(values).allSatisfy(value -> {
-                var node = parse(value).get("node");
-                while (node.isObject()) {
-                    node = node.get("node");
+                var node = at(parse(value), "node");
+                while (node instanceof Map) {
+                    node = at(node, "node");
                 }
-                assertThat(node.isTextual()).isTrue();
+                assertThat(node).isInstanceOf(String.class);
             });
         }
 
@@ -1303,18 +1351,22 @@ class GjutonTest {
          * The structure of {@code node} with its scalar values erased, so two
          * documents can be compared on shape alone.
          */
-        private static String shape(JsonNode node) {
-            if (node.isObject()) {
+        private static String shape(Object node) {
+            if (node instanceof Map<?, ?> object) {
                 var fields = new ArrayList<String>();
-                node.fields().forEachRemaining(entry -> fields.add(entry.getKey() + ":" + shape(entry.getValue())));
+                object.forEach((key, value) -> fields.add(key + ":" + shape(value)));
                 return "{" + String.join(",", fields) + "}";
             }
-            if (node.isArray()) {
+            if (node instanceof List<?> array) {
                 var elements = new ArrayList<String>();
-                node.forEach(element -> elements.add(shape(element)));
+                array.forEach(element -> elements.add(shape(element)));
                 return "[" + String.join(",", elements) + "]";
             }
-            return node.getNodeType().toString();
+            // Every number is one kind: how wide a value happens to be is not shape.
+            if (node instanceof Number) {
+                return "NUMBER";
+            }
+            return node == null ? "NULL" : node.getClass().getSimpleName();
         }
     }
 
@@ -1357,7 +1409,7 @@ class GjutonTest {
             var root = parse(json);
 
             // then
-            assertThat(root.get("name").isTextual()).isTrue();
+            assertThat(at(root, "name")).isInstanceOf(String.class);
         }
 
         @Test
@@ -1392,13 +1444,13 @@ class GjutonTest {
                     }""").withSeed(1L);
 
             // when
-            var generated = new ArrayList<JsonNode>();
+            var generated = new ArrayList<>();
             for (int i = 0; i < 5; i++) {
                 generated.add(parse(gen.generate()));
             }
 
             // then
-            assertThat(generated).allMatch(value -> value.get("name").isTextual());
+            assertThat(generated).allMatch(value -> at(value, "name") instanceof String);
         }
 
         @Test
