@@ -44,11 +44,6 @@
             <artifactId>junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>com.tngtech.archunit</groupId>
-            <artifactId>archunit-junit5</artifactId>
-            <scope>test</scope>
-        </dependency>
         <!-- The 3.x line of the schema validator, which is the 2.x the suite compiles
              against with Jackson 3 substituted in. The suite names none of the methods
              that differ, so the same test-jar runs against either. -->
@@ -94,10 +89,9 @@
                     <dependenciesToScan>
                         <dependency>io.github.gjuton:gjuton-tests</dependency>
                     </dependenciesToScan>
-                    <!-- Layering is a property of the sources, not of the Jackson version, and
-                         is already checked in gjuton-tests. It cannot be rechecked from here
-                         anyway: ArchUnit recognises test classes by their output directory, so
-                         a suite arriving as a jar is scanned as if it were production code. -->
+                    <!-- ArchUnit tells test classes from production ones by their output
+                         directory, so the layering rules only hold where the suite is
+                         compiled. They run in gjuton-tests and nowhere else. -->
                     <excludes>
                         <exclude>**/ArchitectureTest.java</exclude>
                     </excludes>

@@ -48,11 +48,7 @@ class ArchitectureTest {
     @ArchTest
     static final ArchRule jacksonOnlyInFlavourAndModel = noClasses()
             .that().resideInAPackage("io.github.gjuton..")
-            .and().resideOutsideOfPackages(
-                    "io.github.gjuton.internal.jackson2..",
-                    "io.github.gjuton.internal.jackson3..",
-                    "io.github.gjuton.internal.model.."
-            )
+            .and().resideOutsideOfPackage("io.github.gjuton.internal.model..")
             .and().haveSimpleNameNotEndingWith("Test")
             .should().dependOnClassesThat().resideInAPackage("com.fasterxml.jackson..");
 

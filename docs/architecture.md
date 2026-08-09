@@ -22,13 +22,13 @@ graph TD
     jackson2[gjuton-jackson2] --> core[gjuton-core]
     jackson3[gjuton-jackson3] --> core
     tests[gjuton-tests] -. test .-> core
-    tests -. test .-> jackson2
+    jackson2 -. test .-> tests
     jackson3 -. test .-> tests
 ```
 
-`gjuton-tests` holds the shared test suite and is not published. It runs the suite against Jackson 2; `gjuton-jackson3`
-re-runs the same suite against Jackson 3. Test-scoped dependencies are not inherited, which is what keeps each flavour
-off the other's classpath.
+`gjuton-tests` holds the shared test suite and is not published. It compiles the suite and runs only the architecture
+rules itself; each flavour runs the suite against its own Jackson. Neither flavour depends on the other, so the two runs
+go in parallel. Test-scoped dependencies are not inherited, which is what keeps each flavour off the other's classpath.
 
 Because one compiled suite runs under both, no test class in `gjuton-tests` may name a Jackson type — an ArchUnit rule
 enforces it; those that must, such as the YAML-reading OpenAPI tests, live in `gjuton-jackson2`. Each flavour asserts
