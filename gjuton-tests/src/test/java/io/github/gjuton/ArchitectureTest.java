@@ -4,11 +4,13 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
+import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.library.dependencies.SliceRule;
+import org.junit.jupiter.api.Test;
 
 @AnalyzeClasses(packages = "io.github.gjuton", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
@@ -53,6 +55,22 @@ class ArchitectureTest {
             )
             .and().haveSimpleNameNotEndingWith("Test")
             .should().dependOnClassesThat().resideInAPackage("com.fasterxml.jackson..");
+
+    // The suite in this module is compiled once and re-run by every flavour, so it may not
+    // name a Jackson major. The rules above import production classes only, hence the
+    // separate import here.
+    @Test
+    void suiteNamesNoJacksonMajor() {
+        // when
+        var classes = new ClassFileImporter().importPackages("io.github.gjuton");
+
+        // then
+        noClasses()
+                .that().resideInAPackage("io.github.gjuton..")
+                .and().haveSimpleNameEndingWith("Test")
+                .should().dependOnClassesThat().resideInAnyPackage("com.fasterxml.jackson..", "tools.jackson..")
+                .check(classes);
+    }
 
     @ArchTest
     static final ArchRule rgxgenOnlyInGenerator = noClasses()

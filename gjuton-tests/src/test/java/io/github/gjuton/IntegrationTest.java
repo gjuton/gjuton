@@ -3,7 +3,6 @@ package io.github.gjuton;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.Error;
 import com.networknt.schema.InputFormat;
 import com.networknt.schema.Schema;
@@ -12,7 +11,9 @@ import com.networknt.schema.SchemaRegistryConfig;
 import com.networknt.schema.SpecificationVersion;
 import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
+import io.github.gjuton.internal.extension.GjutonExtensions;
 import io.github.gjuton.internal.generator.GjutonMdc;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
@@ -188,7 +189,7 @@ class IntegrationTest {
     );
 
     private static final long DEFAULT_SEED = 42L;
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final JsonConverter JSON = GjutonExtensions.locator().find(JsonConverter.class).orElseThrow();
 
     // Building a generator resolves remote $refs over the network, so this is far
     // more generous than the others: single fetches have been observed to take
@@ -433,14 +434,19 @@ class IntegrationTest {
         }
     }
 
-    private static Schema validatorFor(Path schemaPath, String schemaContent) throws IOException {
+    private static Schema validatorFor(Path schemaPath, String schemaContent) {
         var cached = VALIDATORS.get(schemaPath);
         if (cached != null) {
             return cached;
         }
-        var tree = MAPPER.readTree(schemaContent);
-        var version = SpecificationVersion.fromSchemaNode(tree)
-                .orElse(SpecificationVersion.DRAFT_7);
+        // SpecificationVersion.fromSchemaNode would do this, but it takes a Jackson node,
+        // and the suite has to stay free of any one Jackson major to run under both.
+        var tree = JSON.readTree(schemaContent);
+        var dialectId = tree instanceof Map<?, ?> schema ? schema.get("$schema") : null;
+        var version = SpecificationVersion.DRAFT_7;
+        if (dialectId instanceof String id) {
+            version = SpecificationVersion.fromDialectId(id).orElse(SpecificationVersion.DRAFT_7);
+        }
         var registry = REGISTRIES.get(version);
         var location = com.networknt.schema.SchemaLocation.of(schemaPath.toUri().toString());
         var validator = registry.getSchema(location);

@@ -36,9 +36,10 @@ package layering with its allowed-dependency rules are documented in:
 
 ## Testing
 
-The whole test suite lives in the `gjuton-tests` module, whichever module the
+The shared test suite lives in the `gjuton-tests` module, whichever module the
 code under test sits in. It runs there against Jackson 2, and `gjuton-jackson3`
-re-runs it against Jackson 3.
+re-runs it against Jackson 3. No test there may name a Jackson type; one that
+has to lives in `gjuton-jackson2` instead.
 
 Integration tests are parameterized and driven by schema files in
 `gjuton-tests/src/test/resources/schemas/`. Adding a schema file is all that's

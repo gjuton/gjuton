@@ -3,24 +3,27 @@ package io.github.gjuton;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.gjuton.api.Constraints;
 import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.extension.GjutonExtensions;
+import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.Year;
 import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Consumer;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class GjutonConstraintsTest {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final JsonConverter JSON = GjutonExtensions.locator().find(JsonConverter.class).orElseThrow();
     private static final int SAMPLES = 100;
 
     @Test
@@ -32,7 +35,7 @@ class GjutonConstraintsTest {
                 .withSeed(1L);
 
         // then
-        forEachValue(gen, node -> assertThat(node.longValue()).isBetween(0L, 10L));
+        forEachValue(gen, node -> assertThat(((Number) node).longValue()).isBetween(0L, 10L));
     }
 
     @Test
@@ -44,7 +47,7 @@ class GjutonConstraintsTest {
                 .withSeed(1L);
 
         // then: schema floor of 5 still wins, constraint ceiling of 10 applies
-        forEachValue(gen, node -> assertThat(node.longValue()).isBetween(5L, 10L));
+        forEachValue(gen, node -> assertThat(((Number) node).longValue()).isBetween(5L, 10L));
     }
 
     @Test
@@ -56,7 +59,7 @@ class GjutonConstraintsTest {
                 .withSeed(1L);
 
         // then
-        forEachValue(gen, node -> assertThat(node.doubleValue()).isBetween(0.0, 1.0));
+        forEachValue(gen, node -> assertThat(((Number) node).doubleValue()).isBetween(0.0, 1.0));
     }
 
     @Test
@@ -84,7 +87,7 @@ class GjutonConstraintsTest {
         var minDate = LocalDate.ofInstant(min, ZoneOffset.UTC);
         var maxDate = LocalDate.ofInstant(max, ZoneOffset.UTC);
         forEachValue(gen, node -> {
-            var date = LocalDate.parse(node.asText());
+            var date = LocalDate.parse((String) node);
             assertThat(date).isBetween(minDate, maxDate);
         });
     }
@@ -101,7 +104,7 @@ class GjutonConstraintsTest {
 
         // then
         forEachValue(gen, node -> {
-            var instant = OffsetDateTime.parse(node.asText()).toInstant();
+            var instant = OffsetDateTime.parse((String) node).toInstant();
             assertThat(instant).isBetween(min, max);
         });
     }
@@ -115,7 +118,7 @@ class GjutonConstraintsTest {
                 .withSeed(1L);
 
         // then
-        forEachValue(gen, node -> assertThat(node.asText().length()).isBetween(2, 4));
+        forEachValue(gen, node -> assertThat(((String) node).length()).isBetween(2, 4));
     }
 
     @Test
@@ -138,7 +141,7 @@ class GjutonConstraintsTest {
                 .withSeed(1L);
 
         // then
-        forEachValue(gen, node -> assertThat(node.asText()).matches("[ABC]{5}"));
+        forEachValue(gen, node -> assertThat((String) node).matches("[ABC]{5}"));
     }
 
     @Test
@@ -150,7 +153,7 @@ class GjutonConstraintsTest {
                 .withSeed(1L);
 
         // then
-        forEachValue(gen, node -> assertThat(node.size()).isBetween(2, 3));
+        forEachValue(gen, node -> assertThat(((List<?>) node).size()).isBetween(2, 3));
     }
 
     @Nested
@@ -165,7 +168,7 @@ class GjutonConstraintsTest {
 
             // when
             forEachValue(gen, node -> {
-                var date = LocalDate.parse(node.asText());
+                var date = LocalDate.parse((String) node);
                 assertThat(date.getYear()).isBetween(thisYear - 1, thisYear + 1);
             });
         }
@@ -179,7 +182,7 @@ class GjutonConstraintsTest {
 
             // when
             forEachValue(gen, node -> {
-                var instant = OffsetDateTime.parse(node.asText()).toInstant();
+                var instant = OffsetDateTime.parse((String) node).toInstant();
                 var year = instant.atOffset(ZoneOffset.UTC).getYear();
                 assertThat(year).isBetween(thisYear - 1, thisYear + 1);
             });
@@ -197,7 +200,7 @@ class GjutonConstraintsTest {
             boolean sawPost2050 = false;
             for (int i = 0; i < SAMPLES; i++) {
                 var node = parse(gen.generate());
-                var date = LocalDate.parse(node.asText());
+                var date = LocalDate.parse((String) node);
                 if (date.getYear() < 2000) {
                     sawPre2000 = true;
                 }
@@ -218,7 +221,7 @@ class GjutonConstraintsTest {
 
             // when / then
             forEachValue(gen, node ->
-                    assertThat(node.longValue()).isBetween(-1_000_000L, 1_000_000L));
+                    assertThat(((Number) node).longValue()).isBetween(-1_000_000L, 1_000_000L));
         }
 
         @Test
@@ -232,7 +235,7 @@ class GjutonConstraintsTest {
             boolean sawWide = false;
             for (int i = 0; i < SAMPLES; i++) {
                 var node = parse(gen.generate());
-                if (Math.abs(node.longValue()) > 1_000_000) {
+                if (Math.abs(((Number) node).longValue()) > 1_000_000) {
                     sawWide = true;
                 }
             }
@@ -249,7 +252,7 @@ class GjutonConstraintsTest {
 
             // when / then
             forEachValue(gen, node ->
-                    assertThat(node.doubleValue()).isBetween(-1_000_000.0, 1_000_000.0));
+                    assertThat(((Number) node).doubleValue()).isBetween(-1_000_000.0, 1_000_000.0));
         }
 
         @Test
@@ -261,7 +264,7 @@ class GjutonConstraintsTest {
 
             // when / then
             forEachValue(gen, node ->
-                    assertThat(node.longValue()).isBetween(-10L, 10L));
+                    assertThat(((Number) node).longValue()).isBetween(-10L, 10L));
         }
     }
 
@@ -280,16 +283,16 @@ class GjutonConstraintsTest {
         // then: strings honour the length while integers range far past it
         boolean sawWideInteger = false;
         for (int i = 0; i < SAMPLES; i++) {
-            var node = parse(gen.generate());
-            assertThat(node.get("s").asText()).hasSize(3);
-            if (Math.abs(node.get("n").longValue()) > 1000) {
+            var node = (Map<?, ?>) parse(gen.generate());
+            assertThat((String) node.get("s")).hasSize(3);
+            if (Math.abs(((Number) node.get("n")).longValue()) > 1000) {
                 sawWideInteger = true;
             }
         }
         assertThat(sawWideInteger).isTrue();
     }
 
-    private static void forEachValue(Gjuton gen, java.util.function.Consumer<JsonNode> assertion) {
+    private static void forEachValue(Gjuton gen, Consumer<Object> assertion) {
         IntStream.range(0, SAMPLES).forEach(i -> {
             var json = gen.generate();
             var node = parse(json);
@@ -297,11 +300,7 @@ class GjutonConstraintsTest {
         });
     }
 
-    private static JsonNode parse(String json) {
-        try {
-            return MAPPER.readTree(json);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+    private static Object parse(String json) {
+        return JSON.readTree(json);
     }
 }

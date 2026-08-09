@@ -30,7 +30,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 class SchemaParserTest {
 
-    private static final SchemaParser PARSER = new SchemaParser(GjutonExtensions.locator().find(JsonConverter.class).orElseThrow());
+    private static final JsonConverter JSON = GjutonExtensions.locator().find(JsonConverter.class).orElseThrow();
+    private static final SchemaParser PARSER = new SchemaParser(JSON);
 
     @Nested
     class RefResolution {
@@ -586,12 +587,14 @@ class SchemaParserTest {
             var json = gen.generate();
 
             // then
-            var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
-            assertThat(tree.has("order")).isTrue();
-            assertThat(tree.get("order").has("id")).isTrue();
-            assertThat(tree.get("order").has("address")).isTrue();
-            assertThat(tree.get("order").get("address").has("street")).isTrue();
-            assertThat(tree.get("order").get("address").has("city")).isTrue();
+            var tree = (Map<?, ?>) JSON.readTree(json);
+            var order = (Map<?, ?>) tree.get("order");
+            assertThat(order).isNotNull();
+            assertThat(order.get("id")).isNotNull();
+            var address = (Map<?, ?>) order.get("address");
+            assertThat(address).isNotNull();
+            assertThat(address.get("street")).isNotNull();
+            assertThat(address.get("city")).isNotNull();
         }
 
         @Test
@@ -636,10 +639,12 @@ class SchemaParserTest {
             var json = gen.generate();
 
             // then
-            var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
-            var zip = tree.get("order").get("address").get("zip");
-            assertThat(zip.isTextual()).isTrue();
-            assertThat(zip.asText().length()).isBetween(5, 10);
+            var tree = (Map<?, ?>) JSON.readTree(json);
+            var order = (Map<?, ?>) tree.get("order");
+            var address = (Map<?, ?>) order.get("address");
+            var zip = address.get("zip");
+            assertThat(zip).isInstanceOf(String.class);
+            assertThat((String) zip).hasSizeBetween(5, 10);
         }
 
         @Test
@@ -685,9 +690,10 @@ class SchemaParserTest {
             var json = gen.generate();
 
             // then
-            var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
-            var externalName = tree.get("thing").get("name").asText();
-            var localName = tree.get("localName").asText();
+            var tree = (Map<?, ?>) JSON.readTree(json);
+            var thing = (Map<?, ?>) tree.get("thing");
+            var externalName = (String) thing.get("name");
+            var localName = (String) tree.get("localName");
             assertThat(externalName.length()).isBetween(10, 20);
             assertThat(localName.length()).isBetween(1, 3);
         }
@@ -726,9 +732,10 @@ class SchemaParserTest {
             var json = gen.generate();
 
             // then
-            var tree = new com.fasterxml.jackson.databind.ObjectMapper().readTree(json);
-            assertThat(tree.get("address").get("street").isTextual()).isTrue();
-            var zip = tree.get("address").get("zip").asText();
+            var tree = (Map<?, ?>) JSON.readTree(json);
+            var address = (Map<?, ?>) tree.get("address");
+            assertThat(address.get("street")).isInstanceOf(String.class);
+            var zip = (String) address.get("zip");
             assertThat(zip.length()).isBetween(5, 10);
         }
 

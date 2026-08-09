@@ -26,9 +26,14 @@ graph TD
     jackson3 -. test .-> tests
 ```
 
-`gjuton-tests` holds the whole test suite and is not published. It runs the suite against Jackson 2; `gjuton-jackson3`
+`gjuton-tests` holds the shared test suite and is not published. It runs the suite against Jackson 2; `gjuton-jackson3`
 re-runs the same suite against Jackson 3. Test-scoped dependencies are not inherited, which is what keeps each flavour
 off the other's classpath.
+
+Because one compiled suite runs under both, no test class in `gjuton-tests` may name a Jackson type — an ArchUnit rule
+enforces it; those that must, such as the YAML-reading OpenAPI tests, live in `gjuton-jackson2`. Each flavour asserts
+with a validator on its own Jackson: networknt `json-schema-validator` 2.x and 3.x are the same API over different
+majors.
 
 ## Pipeline
 
