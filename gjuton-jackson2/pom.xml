@@ -62,19 +62,4 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-
-    <build>
-        <testResources>
-            <testResource>
-                <directory>${project.basedir}/src/test/resources</directory>
-            </testResource>
-            <!-- One case in GjutonTest reads a schema out of the corpus gjuton-tests owns. -->
-            <testResource>
-                <directory>${project.basedir}/../gjuton-tests/src/test/resources</directory>
-                <includes>
-                    <include>schemas/recursive-required-oneof-escape.json</include>
-                </includes>
-            </testResource>
-        </testResources>
-    </build>
 </project>
