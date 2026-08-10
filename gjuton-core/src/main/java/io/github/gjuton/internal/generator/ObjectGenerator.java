@@ -7,6 +7,7 @@ import com.github.curiousoddman.rgxgen.RgxGen;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.model.ObjectSchema;
 import io.github.gjuton.internal.model.Schema;
+import io.github.gjuton.internal.model.StringSchema;
 import io.github.gjuton.internal.model.UnsatisfiableSchema;
 import io.github.gjuton.internal.model.UntypedSchema;
 import java.util.ArrayDeque;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
  */
 final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPhase, Map<String, Object>> {
 
-    private static final int PATTERN_NAME_RETRY_BUDGET = 20;
+    private static final int SYNTHESIZED_NAME_RETRY_BUDGET = 20;
 
     /**
      * How many synthesized properties may appear above the schema's named set
@@ -40,6 +41,8 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     private final List<String> requiredAndTransitiveRequired;
     private final Map<Pattern, Schema> compiledPatternProperties;
     private final Map<String, RgxGen> patternGenerators;
+
+    private final SchemaValidator validator;
 
     /**
      * The schema {@link #synthesizableSchema} falls back to when
@@ -78,6 +81,7 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
                         RgxGen::parse,
                         (a, b) -> a,
                         LinkedHashMap::new));
+        this.validator = new SchemaValidator(context);
         var allRequired = new LinkedHashSet<String>();
         for (var req : schema.getRequired()) {
             allRequired.addAll(computeImpliedProperties(req, schema.getDependentRequired(), schema.getDependentSchemas()));
@@ -242,6 +246,15 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
         }
     }
 
+    /**
+     * Whether {@code effectiveSchema} allows a property called {@code name}.
+     * True for every name when the schema constrains property names in no way.
+     */
+    private boolean isNameAllowed(ObjectSchema effectiveSchema, String name) {
+        var propertyNames = effectiveSchema.getPropertyNames();
+        return propertyNames == null || validator.satisfies(name, propertyNames);
+    }
+
     private Generator<?> fieldGenerator(String property) {
         return context.generatorFor(resolveFieldSchema(schema, property)).delegate();
     }
@@ -305,9 +318,22 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
      * Generates a JSON object containing the given properties, using
      * the effective schema for value generation and synthesizing
      * additional properties if needed to reach {@code targetCount}.
+     *
+     * @throws UnsatisfiableSchemaException if the effective schema's
+     *         {@code propertyNames} disallows one of the selected names
      */
     private Map<String, Object> generateSelected(Set<String> selected, int targetCount, int effectiveMin) {
         var effectiveSchema = resolveEffectiveSchema(selected);
+        // Against the effective schema, not the base one: a dependentSchemas
+        // entry can introduce a propertyNames that the very selection
+        // triggering it violates.
+        for (var property : selected) {
+            if (!isNameAllowed(effectiveSchema, property)) {
+                throw new UnsatisfiableSchemaException(
+                        "Property '" + property + "' has a name propertyNames does not allow",
+                        context.currentJsonPointer());
+            }
+        }
         var obj = new LinkedHashMap<String, Object>();
         for (var property : selected) {
             var segment = "." + property;
@@ -317,16 +343,9 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
         // Synthesize additional properties to reach targetCount
         var synthesizeSchema = synthesizableSchema();
         if (obj.size() < targetCount && synthesizeSchema != null) {
-            int i = 0;
-            while (obj.size() < targetCount) {
-                var name = "prop" + i++;
-                if (!obj.containsKey(name)) {
-                    var value = JsonGenerator.generateForPath(context, "." + name, () -> withMatchingPatternSchemas(synthesizeSchema, name));
-                    obj.put(name, value);
-                }
-            }
+            synthesizeProperties(obj, targetCount, effectiveSchema, synthesizeSchema);
         } else if (obj.size() < targetCount && !effectiveSchema.getPatternProperties().isEmpty()) {
-            synthesizeFromPatterns(obj, targetCount);
+            synthesizeFromPatterns(obj, targetCount, effectiveSchema);
         }
         if (obj.size() < effectiveMin) {
             throw new UnsatisfiableSchemaException(
@@ -410,19 +429,75 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     }
 
     /**
+     * Invents properties not named by the schema until {@code obj} holds
+     * {@code targetCount} of them, generating each value from
+     * {@code synthesizeSchema}. Names satisfy {@code effectiveSchema}'s
+     * {@code propertyNames} where it declares one.
+     *
+     * <p>Stops short of {@code targetCount} when no further admissible name
+     * can be produced; an object may still satisfy the schema with fewer
+     * properties, so it is the caller's {@code minProperties} check that
+     * decides whether falling short is fatal.
+     */
+    private void synthesizeProperties(Map<String, Object> obj, int targetCount, ObjectSchema effectiveSchema, Schema synthesizeSchema) {
+        Schema nameSchema = null;
+        var propertyNames = effectiveSchema.getPropertyNames();
+        if (propertyNames != null) {
+            try {
+                // A property name is a string whatever propertyNames says on its
+                // own, so the two constrain the name together.
+                nameSchema = context.mergedSchema(List.of(propertyNames, new StringSchema()));
+            } catch (UnsatisfiableSchemaException noNameIsString) {
+                log.trace("propertyNames admits no string, so no property can be named: {}", noNameIsString.getMessage());
+                return;
+            }
+        }
+        int nextOrdinal = 0;
+        while (obj.size() < targetCount) {
+            String name;
+            if (nameSchema == null) {
+                name = "prop" + nextOrdinal++;
+                if (obj.containsKey(name)) {
+                    continue;
+                }
+            } else {
+                String admissible = null;
+                for (int attempt = 0; attempt < SYNTHESIZED_NAME_RETRY_BUDGET && admissible == null; attempt++) {
+                    var candidate = context.generatorFor(nameSchema).generate();
+                    // Checked against the schema as written, not against nameSchema:
+                    // merging is lossy, so nameSchema can only be the laxer of the two.
+                    if (candidate instanceof String fresh && !obj.containsKey(fresh) && isNameAllowed(effectiveSchema, fresh)) {
+                        admissible = fresh;
+                    } else {
+                        log.trace("cannot use synthesized name '{}': {} of {} allowed attempts used",
+                                candidate, attempt + 1, SYNTHESIZED_NAME_RETRY_BUDGET);
+                    }
+                }
+                if (admissible == null) {
+                    return;
+                }
+                name = admissible;
+            }
+            var value = JsonGenerator.generateForPath(context, "." + name, () -> withMatchingPatternSchemas(synthesizeSchema, name));
+            obj.put(name, value);
+        }
+    }
+
+    /**
      * Synthesizes properties by generating names from {@code patternProperties}
      * regexes, for use when {@code additionalProperties} is {@code false} but
-     * patterns can still supply fresh names.
+     * patterns can still supply fresh names. A name {@code propertyNames}
+     * disallows costs an attempt and is not used.
      *
      * @throws UnsatisfiableSchemaException if distinct matching names cannot be
      *         generated within the retry budget
      */
-    private void synthesizeFromPatterns(Map<String, Object> obj, int targetCount) {
+    private void synthesizeFromPatterns(Map<String, Object> obj, int targetCount, ObjectSchema effectiveSchema) {
         var generators = new ArrayList<>(patternGenerators.values());
-        int collisions = 0;
+        int attempts = 0;
         int generatorIndex = 0;
         while (obj.size() < targetCount) {
-            if (collisions >= PATTERN_NAME_RETRY_BUDGET) {
+            if (attempts >= SYNTHESIZED_NAME_RETRY_BUDGET) {
                 throw new UnsatisfiableSchemaException(
                         "Could not synthesize enough distinct property names matching patternProperties to satisfy minProperties ("
                                 + schema.getMinProperties() + ")",
@@ -430,10 +505,10 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             }
             var name = generators.get(generatorIndex % generators.size()).generate(context.random());
             generatorIndex++;
-            if (obj.containsKey(name)) {
-                collisions++;
-                log.trace("synthesized name '{}' is already taken: {} of {} allowed collisions used",
-                        name, collisions, PATTERN_NAME_RETRY_BUDGET);
+            if (obj.containsKey(name) || !isNameAllowed(effectiveSchema, name)) {
+                attempts++;
+                log.trace("cannot use synthesized name '{}': {} of {} allowed attempts used",
+                        name, attempts, SYNTHESIZED_NAME_RETRY_BUDGET);
             } else {
                 var value = JsonGenerator.generateForPath(context, "." + name, () -> withMatchingPatternSchemas(new UntypedSchema(), name));
                 obj.put(name, value);
@@ -469,8 +544,9 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     }
 
     /**
-     * Returns the satisfiable optional properties, filtering out
-     * required properties and unsatisfiable schemas.
+     * Returns the satisfiable optional properties, filtering out required
+     * properties, unsatisfiable schemas, and properties that could only be
+     * placed under a name {@code propertyNames} disallows.
      */
     private List<String> satisfiableOptionalProperties() {
         var result = new ArrayList<String>();
@@ -480,6 +556,16 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             }
             if (schema.getProperties().get(property) instanceof UnsatisfiableSchema) {
                 log.trace("optional property '{}' can never be generated: its schema is false", property);
+                continue;
+            }
+            // The whole closure, not just the property: selecting it drags in
+            // everything it depends on, and one disallowed name there makes the
+            // property as a whole unplaceable.
+            var closure = computeImpliedProperties(property, schema.getDependentRequired(), schema.getDependentSchemas());
+            var disallowed = closure.stream().filter(name -> !isNameAllowed(schema, name)).findFirst();
+            if (disallowed.isPresent()) {
+                log.trace("optional property '{}' can never be generated: propertyNames disallows the name '{}'",
+                        property, disallowed.get());
                 continue;
             }
             result.add(property);

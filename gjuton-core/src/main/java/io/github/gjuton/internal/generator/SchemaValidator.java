@@ -211,6 +211,12 @@ final class SchemaValidator {
             return map.size() + " properties is above maxProperties " + schema.getMaxProperties();
         }
         for (var entry : map.entrySet()) {
+            if (schema.getPropertyNames() != null) {
+                var nested = violation(entry.getKey(), schema.getPropertyNames());
+                if (nested != null) {
+                    return "property name '" + entry.getKey() + "': " + nested;
+                }
+            }
             var propertySchema = schema.getProperties().get(entry.getKey());
             if (propertySchema != null) {
                 var nested = violation(entry.getValue(), propertySchema);
