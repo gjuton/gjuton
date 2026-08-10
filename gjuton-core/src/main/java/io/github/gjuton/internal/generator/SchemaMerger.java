@@ -326,6 +326,7 @@ final class SchemaMerger {
         return ObjectSchema.builder()
                 .properties(properties)
                 .patternProperties(patternProperties)
+                .propertyNames(mergeTwoSchemas(context, a.getPropertyNames(), b.getPropertyNames(), locations))
                 .required(required)
                 .additionalProperties(additionalProperties)
                 .minProperties(maxNullable(a.getMinProperties(), b.getMinProperties()))

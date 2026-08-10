@@ -429,6 +429,61 @@ class SchemaMergerTest {
         }
 
         @Test
+        void mergesPropertyNamesFromBothSides() {
+            var a = readSchema("""
+                    {
+                        "type": "object",
+                        "propertyNames": {"minLength": 2}
+                    }
+                    """);
+            var b = readSchema("""
+                    {
+                        "type": "object",
+                        "propertyNames": {"maxLength": 5}
+                    }
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged).isEqualTo(readSchema("""
+                    {
+                        "type": "object",
+                        "propertyNames": {"minLength": 2, "maxLength": 5}
+                    }
+                    """));
+        }
+
+        @Test
+        void keepsPropertyNamesDeclaredByOneSideOnly() {
+            var a = readSchema("""
+                    {
+                        "type": "object",
+                        "propertyNames": {"pattern": "^[a-z]+$"}
+                    }
+                    """);
+            var b = readSchema("""
+                    {
+                        "type": "object",
+                        "minProperties": 1
+                    }
+                    """);
+
+            // when
+            var merged = SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged).isEqualTo(readSchema("""
+                    {
+                        "type": "object",
+                        "propertyNames": {"pattern": "^[a-z]+$"},
+                        "minProperties": 1
+                    }
+                    """));
+        }
+
+        @Test
         void mergesDependentRequiredFromBothSides() {
             var a = readSchema("""
                     {

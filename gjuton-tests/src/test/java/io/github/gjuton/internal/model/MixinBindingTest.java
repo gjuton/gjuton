@@ -155,6 +155,20 @@ class MixinBindingTest {
     }
 
     @Test
+    void propertyNamesBindsThroughSchemaDeserializer() {
+        // when
+        var schema = parse("""
+                {
+                    "type": "object",
+                    "propertyNames": true
+                }
+                """, ObjectSchema.class);
+
+        // then
+        assertThat(schema.getPropertyNames()).isInstanceOf(UntypedSchema.class);
+    }
+
+    @Test
     void additionalPropertiesFalseBindsToBoolean() {
         // when
         var schema = parse("""

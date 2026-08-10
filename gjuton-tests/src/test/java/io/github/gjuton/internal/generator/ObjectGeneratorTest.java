@@ -950,6 +950,388 @@ class ObjectGeneratorTest {
     }
 
     @Nested
+    class PropertyNames {
+
+        @Test
+        void synthesizedNamesMatchThePropertyNamesPattern() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"pattern": "^[a-z]{3}$"},
+                        "minProperties": 1
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 20);
+
+            // then
+            assertThat(results).allSatisfy(obj -> {
+                assertThat(obj).isNotEmpty();
+                assertThat(obj.keySet()).allMatch(name -> name.matches("^[a-z]{3}$"));
+            });
+        }
+
+        @Test
+        void synthesizedNamesComeFromThePropertyNamesEnum() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"enum": ["alpha", "beta"]},
+                        "minProperties": 2
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 10);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj.keySet()).containsExactlyInAnyOrder("alpha", "beta"));
+        }
+
+        @Test
+        void synthesizedNamesAreStringsEvenWhenPropertyNamesAllowsOtherTypes() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"enum": ["ok", 5]},
+                        "minProperties": 1
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 10);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj.keySet()).containsExactly("ok"));
+        }
+
+        @Test
+        void requiredPropertyNameViolatingPropertyNamesThrows() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "properties": {"TooLong": {"type": "string"}},
+                        "required": ["TooLong"],
+                        "propertyNames": {"pattern": "^[a-z]{3}$"}
+                    }
+                    """);
+
+            // when / then
+            assertThatThrownBy(generator::generate)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("TooLong");
+        }
+
+        @Test
+        void optionalPropertyNameViolatingPropertyNamesIsOmitted() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "abc": {"type": "string"},
+                            "TooLong": {"type": "string"}
+                        },
+                        "additionalProperties": false,
+                        "propertyNames": {"pattern": "^[a-z]{3}$"}
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 10);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj).doesNotContainKey("TooLong"));
+        }
+
+        @Test
+        void synthesizedNamesRespectPropertyNamesLengthBounds() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"minLength": 4, "maxLength": 6},
+                        "minProperties": 2
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 20);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj.keySet())
+                    .allMatch(name -> name.length() >= 4 && name.length() <= 6));
+        }
+
+        @Test
+        void synthesizedNamesSatisfyThePropertyNamesAnyOf() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {
+                            "anyOf": [
+                                {"pattern": "^a[0-9]$"},
+                                {"pattern": "^b[0-9]$"}
+                            ]
+                        },
+                        "minProperties": 2
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 20);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj.keySet())
+                    .allMatch(name -> name.matches("^[ab][0-9]$")));
+        }
+
+        @Test
+        void synthesizedNameIsThePropertyNamesConst() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"const": "only"},
+                        "minProperties": 1
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 10);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj.keySet()).containsExactly("only"));
+        }
+
+        @Test
+        void propertyNamesTrueDoesNotBlockSynthesis() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": true,
+                        "minProperties": 2
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 10);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj).hasSizeGreaterThanOrEqualTo(2));
+        }
+
+        @Test
+        void namesSynthesizedFromPatternPropertiesAlsoSatisfyPropertyNames() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "patternProperties": {"^p[a-z]$": {"type": "string"}},
+                        "propertyNames": {"pattern": "^p[a-c]$"},
+                        "minProperties": 2
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 10);
+
+            // then
+            assertThat(results).allSatisfy(obj -> {
+                assertThat(obj).hasSizeGreaterThanOrEqualTo(2);
+                assertThat(obj.keySet()).allMatch(name -> name.matches("^p[a-c]$"));
+            });
+        }
+
+        @Test
+        void patternNamesThatPropertyNamesAlwaysRejectsThrows() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "patternProperties": {"^p[a-z]$": {"type": "string"}},
+                        "propertyNames": {"pattern": "^q$"},
+                        "minProperties": 1
+                    }
+                    """);
+
+            // when / then
+            assertThatThrownBy(generator::generate)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("minProperties");
+        }
+
+        @Test
+        void propertyNamesFromDependentSchemaConstrainsSynthesizedNames() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "properties": {"z1": {"type": "string"}},
+                        "required": ["z1"],
+                        "dependentSchemas": {
+                            "z1": {"propertyNames": {"pattern": "^z[0-9]$"}}
+                        },
+                        "additionalProperties": {"type": "string"},
+                        "minProperties": 3
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 10);
+
+            // then
+            assertThat(results).allSatisfy(obj -> {
+                assertThat(obj).hasSizeGreaterThanOrEqualTo(3);
+                assertThat(obj.keySet()).allMatch(name -> name.matches("^z[0-9]$"));
+            });
+        }
+
+        @Test
+        void dependentSchemaPropertyNamesRejectingItsOwnTriggerThrows() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "properties": {"abc": {"type": "string"}},
+                        "required": ["abc"],
+                        "dependentSchemas": {
+                            "abc": {"propertyNames": {"pattern": "^z[0-9]$"}}
+                        },
+                        "additionalProperties": {"type": "string"},
+                        "minProperties": 3
+                    }
+                    """);
+
+            // when / then
+            assertThatThrownBy(generator::generate)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("abc");
+        }
+
+        @Test
+        void optionalPropertyDraggingInDisallowedNameIsOmitted() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "abc": {"type": "string"},
+                            "TOOLONGNAME": {"type": "string"}
+                        },
+                        "dependentRequired": {"abc": ["TOOLONGNAME"]},
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"pattern": "^[a-z]{3}$"},
+                        "minProperties": 2
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 10);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj.keySet())
+                    .allMatch(name -> name.matches("^[a-z]{3}$")));
+        }
+
+        @Test
+        void anImpossibleNameOnlyFailsTheObjectThatDeclaresIt() {
+            // The parent is generatable without 'opt', so its own generation must
+            // not fail merely because 'opt' declares a name nothing can satisfy.
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "opt": {
+                                "type": "object",
+                                "properties": {"AB": {"type": "string"}},
+                                "required": ["AB"],
+                                "propertyNames": {"pattern": "^[a-z]$"}
+                            }
+                        }
+                    }
+                    """);
+
+            // when
+            var result = generator.generate();
+
+            // then
+            assertThat(result).isEmpty();
+        }
+
+        @Test
+        void propertyNamesAdmittingNoStringGeneratesAnEmptyObject() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"type": "integer"}
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 5);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj).isEmpty());
+        }
+
+        @Test
+        void propertyNamesAdmittingNoStringWithMinPropertiesThrows() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"type": "integer"},
+                        "minProperties": 1
+                    }
+                    """);
+
+            // when / then
+            assertThatThrownBy(generator::generate)
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("minProperties");
+        }
+
+        @Test
+        void finiteNameSpaceFillsWhatItCanBelowMaxProperties() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"enum": ["a", "b"]},
+                        "maxProperties": 4
+                    }
+                    """);
+
+            // when
+            var results = generate(generator, 10);
+
+            // then
+            assertThat(results).allSatisfy(obj -> assertThat(obj.keySet()).isSubsetOf("a", "b"));
+            assertThat(results).anyMatch(obj -> obj.size() == 2);
+        }
+
+        @Test
+        void moreNamesThanThePropertyNamesEnumAllowsThrows() {
+            var generator = objectGenerator("""
+                    {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "propertyNames": {"enum": ["only"]},
+                        "minProperties": 2
+                    }
+                    """);
+
+            // when / then
+            assertThatThrownBy(generator::generate)
+                    .isInstanceOf(UnsatisfiableSchemaException.class);
+        }
+    }
+
+    @Nested
     class ComputeImpliedProperties {
 
         @Test

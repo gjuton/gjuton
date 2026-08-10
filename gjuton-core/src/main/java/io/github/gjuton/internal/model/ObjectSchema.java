@@ -30,6 +30,12 @@ public final class ObjectSchema extends Schema {
     @Builder.Default
     private Map<String, Schema> patternProperties = Map.of();
 
+    /**
+     * Schema every property name must satisfy. Null when names are
+     * unconstrained.
+     */
+    private Schema propertyNames;
+
     @Builder.Default
     private List<String> required = List.of();
 

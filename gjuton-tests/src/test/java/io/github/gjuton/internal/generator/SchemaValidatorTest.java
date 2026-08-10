@@ -321,6 +321,45 @@ class SchemaValidatorTest {
         }
 
         @Test
+        void objectWithKeyViolatingPropertyNamesFailsSchema() {
+            var document = PARSER.parse("""
+                    {"type": "object", "propertyNames": {"pattern": "^[a-z]{3}$"}}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(Map.of("TOOLONG", 1), document.getRoot());
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void objectWithKeysSatisfyingPropertyNamesSatisfiesSchema() {
+            var document = PARSER.parse("""
+                    {"type": "object", "propertyNames": {"pattern": "^[a-z]{3}$"}}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(Map.of("abc", 1), document.getRoot());
+
+            // then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void objectWithKeyOutsidePropertyNamesEnumFailsSchema() {
+            var document = PARSER.parse("""
+                    {"type": "object", "propertyNames": {"enum": ["a", "b"]}}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(Map.of("c", 1), document.getRoot());
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
         void objectWithinPropertyCountBoundsSatisfiesSchema() {
             var document = PARSER.parse("""
                     {"type": "object", "minProperties": 1, "maxProperties": 2}

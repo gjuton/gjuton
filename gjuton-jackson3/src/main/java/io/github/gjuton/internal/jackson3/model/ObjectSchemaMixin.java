@@ -18,6 +18,9 @@ public abstract class ObjectSchemaMixin {
     @JsonDeserialize(contentUsing = SchemaDeserializer.class)
     private Map<String, Schema> patternProperties;
 
+    @JsonDeserialize(using = SchemaDeserializer.class)
+    private Schema propertyNames;
+
     @JsonDeserialize(using = BooleanOrSchemaDeserializer.class)
     private Object additionalProperties;
 

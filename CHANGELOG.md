@@ -11,6 +11,12 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Added
+
+- Support for `propertyNames`, which constrains what a property may be called.
+  Generated names now satisfy it, and a schema requiring a property whose name
+  it forbids says so instead of producing JSON its own schema rejects.
+
 ### Changed
 
 - Gjuton is now split into `gjuton-core` plus a module per Jackson version:
