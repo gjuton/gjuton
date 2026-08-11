@@ -1,0 +1,16 @@
+The JSON Schema test cases in this directory are sourced from the official
+JSON Schema Test Suite: https://github.com/json-schema-org/JSON-Schema-Test-Suite
+
+    JSON Schema Test Suite
+    Copyright (c) 2012 Julian Berman
+
+These files are licensed under the MIT License; see the LICENSE file in this
+directory, copied verbatim from the source repository.
+
+Pinned to upstream commit 15fe552d6cf76e29cc8165306fb6a72503fd360b.
+
+The files are used unmodified. Only a subset of the suite is vendored: the
+top-level `tests/<draft>/*.json` files for draft4, draft6, draft7, draft2019-09
+and draft2020-12. Dropped are the draft3, latest and v1 directories, every
+`optional/` subdirectory, and the `remotes/` directory, whose cases need a
+schema server on localhost:1234.

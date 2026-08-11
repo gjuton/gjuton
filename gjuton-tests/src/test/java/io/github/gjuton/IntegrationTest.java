@@ -233,8 +233,10 @@ class IntegrationTest {
     }
 
     @AfterAll
-    static void shutdownExecutor() {
+    static void afterAll() {
         EXECUTOR.shutdownNow();
+        // One compiled schema per corpus file, held until the JVM exits otherwise.
+        VALIDATORS.clear();
     }
 
     static List<Arguments> parameters() throws IOException, URISyntaxException {
