@@ -32,6 +32,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
@@ -80,8 +81,8 @@ class IntegrationTest {
             "azure-iot-edge-deployment-template-2.0.json", "azure-iot-edge-deployment-template-3.0.json",
             "azure-iot-edge-deployment-template-4.0.json", "bitrise.json", "cheatsheets.json", "cibuildwheel.json",
             "cinnamon-spice.info.json", "clang-format.json", "clangd.json", "clasp.json", "coffeelint.json",
-            "cryproj.52.schema.json", "cryproj.53.schema.json", "drone.json", "eslintrc.json",
-            "gematik-test-hcpis.json", "gematik-test-hcps.json", "github-pages-jekyll.json", "grunt-clean-task.json",
+            "compilerconfig.json", "cryproj.52.schema.json", "cryproj.53.schema.json", "drone.json", "eslintrc.json",
+            "feed.json", "gematik-test-hcpis.json", "gematik-test-hcps.json", "github-pages-jekyll.json", "grunt-clean-task.json",
             "grunt-copy-task.json", "grunt-cssmin-task.json", "grunt-jshint-task.json", "hammerkit.json",
             "jekyll.json", "jsbeautifyrc-nested.json", "minecraft-advancement.json", "minecraft-pack-mcmeta.json",
             "minecraft-texture-mcmeta.json", "mta.json", "mtaext.json", "partial-pdm.json", "partial-tox.json",
@@ -103,7 +104,6 @@ class IntegrationTest {
     private static final Set<String> NON_WORKING_SCHEMAS = Set.of(
             // Schema build fails: missing local $ref target file
             "base-04.json", // schema build: missing local ref target "path" (NoSuchFileException)
-            "feed.json", // schema build: missing local ref target "feed-1" (NoSuchFileException)
 
             // Schema build fails: unresolved $ref fragment
             "dss-2.0.0.json", // schema build: unresolved percent-encoded $ref fragment
@@ -127,7 +127,6 @@ class IntegrationTest {
             //    likely github-issue-forms)
             "bmml.json", // UnsatisfiableSchemaException at /meta
             "codeship-steps.json", // UnsatisfiableSchemaException at /0; regressed in #184, passed before it
-            "compilerconfig.json", // UnsatisfiableSchemaException at /0
             "flatpak-manifest.json", // UnsatisfiableSchemaException
             "foundryvtt-base-package-manifest.json", // UnsatisfiableSchemaException at /id (pattern+length)
             "gitea-issue-forms.json", // UnsatisfiableSchemaException at /body/0
@@ -176,17 +175,20 @@ class IntegrationTest {
             "mongodb-atlas-search-index-definition.json", // rgxgen PatternDoesNotMatchAnythingException
             "bukkit-plugin.json", // generates /main violating its own regex pattern
             "paper-plugin.json", // [$.main: does not match the regex pattern ^(?!io\.papermc\.)([a-zA-Z_$][a-zA-Z\d_$]*\.)*[a-zA-Z_$][a-zA-Z\d_$]*$]
-            "expo-50.0.0.json", // generates /expo/android/package violating its regex pattern
-            "expo-52.0.0.json", // generates /expo/android/package violating its regex pattern
-            "expo-53.0.0.json", // generates /expo/android/package violating its regex pattern
             "venvironment-schema-v1.0.0.json", // generates /application-models/0/file-path violating its regex pattern
             "venvironment-schema-v1.1.0.json", // generates file-path properties violating their regex patterns
             "venvironment-schema-v1.1.1.json", // generates file-path/type properties violating their regex patterns
-            "venvironment-schema-v2.0.0.json", // generates file-path/type properties violating their regex patterns
-            "venvironment-schema-v2.1.0.json", // generates file-path properties violating their regex patterns
-            "venvironment-schema-v2.2.0.json", // generates file-path properties violating their regex patterns
             "venvironment-schema-v4.2.0.json" // generates properties violating oneOf/regex constraints
     );
+
+    // The sets that are ignored for failing rather than for needing the network or
+    // for costing too much time, and so can be asserted to still fail.
+    private static final List<Set<String>> EXPECTED_TO_FAIL = List.of(
+            NON_WORKING_SCHEMAS, FAILS_IN_VALIDATION_LIBRARY, UNSUPPORTED_REGEX_GENERATION);
+
+    // Enough to reach the failures documented above: the latest of them appears on
+    // the ninth invocation.
+    private static final int FAILURE_ITERATIONS = 10;
 
     private static final long DEFAULT_SEED = 42L;
     private static final JsonConverter JSON = GjutonExtensions.locator().find(JsonConverter.class).orElseThrow();
@@ -306,6 +308,26 @@ class IntegrationTest {
                 .toList();
     }
 
+    /**
+     * The corpus schemas kept out of the run for failing rather than for needing
+     * the network or for costing too much time.
+     *
+     * @throws IllegalStateException if a name on one of those ignore lists has no
+     *     file in the corpus
+     */
+    static List<Path> schemasExpectedToFail() throws IOException, URISyntaxException {
+        var expected = EXPECTED_TO_FAIL.stream().flatMap(Set::stream).collect(Collectors.toSet());
+        var paths = allSchemas().stream()
+                .map(SchemaEntry::path)
+                .filter(p -> expected.contains(p.getFileName().toString()))
+                .sorted()
+                .toList();
+        if (paths.size() != expected.size()) {
+            throw new IllegalStateException("ignore lists name " + expected.size() + " schemas but the corpus holds " + paths.size() + " of them");
+        }
+        return paths;
+    }
+
     static List<Arguments> schemaFilesAndModes() throws IOException, URISyntaxException {
         return schemaEntries().stream()
                 .flatMap(entry -> Stream.of(GenerationMode.values())
@@ -314,11 +336,29 @@ class IntegrationTest {
     }
 
     /**
-     * The {@code .json} schema files under every {@link #SCHEMA_LOCATIONS} resource
-     * directory, the fixtures every parameterized integration test runs against,
-     * each paired with the iteration counts configured for its location.
+     * The corpus schemas every parameterized integration test runs against: the
+     * ones no ignore list keeps out of the run.
      */
     private static List<SchemaEntry> schemaEntries() throws IOException, URISyntaxException {
+        return allSchemas().stream()
+                .filter(entry -> {
+                    var name = entry.path().getFileName().toString();
+                    return !SLOW_SCHEMAS.contains(name)
+                            && !SCHEMAS_THAT_NEED_NETWORK_NON_WORKING.contains(name)
+                            && !SCHEMAS_THAT_NEED_NETWORK_WORKING.contains(name)
+                            && !NON_WORKING_SCHEMAS.contains(name)
+                            && !FAILS_IN_VALIDATION_LIBRARY.contains(name)
+                            && !UNSUPPORTED_REGEX_GENERATION.contains(name);
+                })
+                .toList();
+    }
+
+    /**
+     * Every {@code .json} schema file under the {@link #SCHEMA_LOCATIONS} resource
+     * directories, including the ones the ignore lists keep out of the run, each
+     * paired with the iteration counts configured for its location.
+     */
+    private static List<SchemaEntry> allSchemas() throws IOException, URISyntaxException {
         var entries = new ArrayList<SchemaEntry>();
         for (var location : SCHEMA_LOCATIONS) {
             var resource = IntegrationTest.class.getClassLoader().getResource(location.resourcePath());
@@ -326,12 +366,6 @@ class IntegrationTest {
             try (Stream<Path> files = Files.list(dir)) {
                 files.filter(p -> !Files.isDirectory(p))
                         .filter(p -> p.toString().endsWith(".json"))
-                        .filter(p -> !SLOW_SCHEMAS.contains(p.getFileName().toString()))
-                        .filter(p -> !SCHEMAS_THAT_NEED_NETWORK_NON_WORKING.contains(p.getFileName().toString()))
-                        .filter(p -> !SCHEMAS_THAT_NEED_NETWORK_WORKING.contains(p.getFileName().toString()))
-                        .filter(p -> !NON_WORKING_SCHEMAS.contains(p.getFileName().toString()))
-                        .filter(p -> !FAILS_IN_VALIDATION_LIBRARY.contains(p.getFileName().toString()))
-                        .filter(p -> !UNSUPPORTED_REGEX_GENERATION.contains(p.getFileName().toString()))
                         .forEach(p -> entries.add(new SchemaEntry(p, location.iterations(), location.noveltyIterations())));
             }
         }
@@ -409,6 +443,33 @@ class IntegrationTest {
                     .as("%s invocation=%d", schemaName, i)
                     .isEqualTo(second.generate());
         }
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @MethodSource("schemasExpectedToFail")
+    void ignoredSchemaStillFails(Path schemaPath) throws IOException {
+        try {
+            // The default seed, not the resolved one, so the answer does not move with -Dtest.seed.
+            var validator = validatorFor(schemaPath, Files.readString(schemaPath));
+            for (var mode : GenerationMode.values()) {
+                var gjuton = callWithTimeout(() -> Gjuton.of(schemaPath.toFile()).withSeed(DEFAULT_SEED).withGenerationMode(mode), BUILD_TIMEOUT_SECONDS);
+                for (int i = 1; i <= FAILURE_ITERATIONS; i++) {
+                    // when
+                    var json = callWithTimeout(gjuton::generate, GENERATION_TIMEOUT_SECONDS);
+
+                    // then
+                    var errors = callWithTimeout(() -> validator.validate(json, InputFormat.JSON), VALIDATION_TIMEOUT_SECONDS);
+                    if (!errors.isEmpty()) {
+                        return;
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            // Throwing or timing out is a failure too, and as common a reason to be
+            // on an ignore list as an invalid value.
+            return;
+        }
+        fail("%s is on an ignore list but now passes; remove it".formatted(schemaPath.getFileName()));
     }
 
     private static List<Error> validateOrFail(
