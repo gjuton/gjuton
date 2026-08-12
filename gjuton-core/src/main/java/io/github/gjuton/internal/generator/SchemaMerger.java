@@ -19,6 +19,7 @@ import io.github.gjuton.internal.util.MathUtil;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -230,15 +231,17 @@ final class SchemaMerger {
 
     /**
      * Carries every {@code if}/{@code then}/{@code else} conditional from
-     * both sides through the merge. Each conditional must hold independently
-     * in the merged schema, the same as {@code allOf} branches.
+     * both sides through the merge, keeping one copy of a conditional both
+     * carry. Each is satisfied on a side of its own, so two copies can be put
+     * on opposite sides — a combination no value satisfies.
      */
     private static void mergeConditional(Schema.SchemaBuilder<?, ?> builder, Schema a, Schema b) {
-        var conditionals = concat(a.getConditionals(), b.getConditionals());
+        var combined = concat(a.getConditionals(), b.getConditionals());
+        var distinct = List.copyOf(new LinkedHashSet<>(combined));
         builder.ifSchema(null)
                 .thenSchema(null)
                 .elseSchema(null)
-                .additionalConditionals(conditionals.isEmpty() ? null : conditionals);
+                .additionalConditionals(distinct.isEmpty() ? null : distinct);
     }
 
     /**

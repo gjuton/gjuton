@@ -115,15 +115,9 @@ class IntegrationTest {
             // Known gjuton bugs already traced for some of these:
             //  - format generator (uri/regex) ignores the schema's `pattern` when generating
             //    candidates, then retries blindly against it (specif-1.0/1.1, foundryvtt-base-package-manifest)
-            //  - IfThenElseGenerator merges all allOf if/then branches instead of trying one at
-            //    a time, when if/then is used as a type-discriminated union (bmml, gitea-issue-forms,
-            //    likely github-issue-forms)
-            "bmml.json", // UnsatisfiableSchemaException at /meta
             "codeship-steps.json", // UnsatisfiableSchemaException at /0; regressed in #184, passed before it
             "flatpak-manifest.json", // UnsatisfiableSchemaException
             "foundryvtt-base-package-manifest.json", // UnsatisfiableSchemaException at /id (pattern+length)
-            "gitea-issue-forms.json", // UnsatisfiableSchemaException at /body/0
-            "github-issue-forms.json", // UnsatisfiableSchemaException at /body/0
             "pnpm-workspace.json", // UnsatisfiableSchemaException at /catalog
             "popxf-1.0.json", // UnsatisfiableSchemaException, and generates values violating property-name regex patterns
             // All renovate variants fail in RANDOM mode only, within the first few invocations,

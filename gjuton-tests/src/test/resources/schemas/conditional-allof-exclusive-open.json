@@ -1,0 +1,21 @@
+{
+    "type": "object",
+    "required": ["shape"],
+    "properties": {
+        "shape": {"enum": ["circle", "square", "triangle"]}
+    },
+    "allOf": [
+        {
+            "if": {"properties": {"shape": {"const": "circle"}}},
+            "then": {"required": ["radius"], "properties": {"radius": {"type": "number"}}}
+        },
+        {
+            "if": {"properties": {"shape": {"const": "square"}}},
+            "then": {"required": ["side"], "properties": {"side": {"type": "number"}}}
+        },
+        {
+            "if": {"properties": {"shape": {"const": "triangle"}}},
+            "then": {"required": ["base", "height"], "properties": {"base": {"type": "number"}, "height": {"type": "number"}}}
+        }
+    ]
+}

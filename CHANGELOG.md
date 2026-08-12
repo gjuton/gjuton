@@ -31,6 +31,15 @@ section is promoted to a version at release time (see `docs/releasing.md`).
   `gjuton-jackson2` behaving as before and `gjuton-jackson3` the same way but on
   Jackson 3. On its own `gjuton-core` cannot read or write JSON and says so.
 
+### Fixed
+
+- A schema whose `allOf` holds one `if`/`then` per value of a discriminator
+  property now generates, instead of being reported as unsatisfiable. Each
+  conditional is satisfied on its own side rather than every `then` having to
+  hold at once, so the variants may exclude one another, and a conditional
+  reached through several paths in the schema is enforced once rather than once
+  per path.
+
 ## [0.0.2] — 2026-08-06
 
 ### Added

@@ -1,0 +1,63 @@
+{
+    "type": "object",
+    "required": ["kind"],
+    "properties": {
+        "kind": {"enum": ["email", "sms", "push", "webhook", "slack", "pager"]}
+    },
+    "allOf": [
+        {
+            "if": {"properties": {"kind": {"const": "email"}}},
+            "then": {
+                "type": "object",
+                "required": ["kind", "address"],
+                "properties": {"kind": {}, "address": {"type": "string"}},
+                "additionalProperties": false
+            }
+        },
+        {
+            "if": {"properties": {"kind": {"const": "sms"}}},
+            "then": {
+                "type": "object",
+                "required": ["kind", "msisdn"],
+                "properties": {"kind": {}, "msisdn": {"type": "string"}},
+                "additionalProperties": false
+            }
+        },
+        {
+            "if": {"properties": {"kind": {"const": "push"}}},
+            "then": {
+                "type": "object",
+                "required": ["kind", "deviceToken"],
+                "properties": {"kind": {}, "deviceToken": {"type": "string"}},
+                "additionalProperties": false
+            }
+        },
+        {
+            "if": {"properties": {"kind": {"const": "webhook"}}},
+            "then": {
+                "type": "object",
+                "required": ["kind", "url"],
+                "properties": {"kind": {}, "url": {"type": "string"}},
+                "additionalProperties": false
+            }
+        },
+        {
+            "if": {"properties": {"kind": {"const": "slack"}}},
+            "then": {
+                "type": "object",
+                "required": ["kind", "channel"],
+                "properties": {"kind": {}, "channel": {"type": "string"}},
+                "additionalProperties": false
+            }
+        },
+        {
+            "if": {"properties": {"kind": {"const": "pager"}}},
+            "then": {
+                "type": "object",
+                "required": ["kind", "escalationPolicy"],
+                "properties": {"kind": {}, "escalationPolicy": {"type": "string"}},
+                "additionalProperties": false
+            }
+        }
+    ]
+}
