@@ -1,6 +1,5 @@
 package io.github.gjuton.api;
 
-import static io.github.gjuton.internal.util.FunctionalUtil.coalesce;
 
 import io.github.gjuton.errors.JsonBindingException;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
@@ -80,6 +79,19 @@ public final class Gjuton {
         this.hardNestingDepth = hardNestingDepth;
         this.constraints = constraints;
         this.converter = jsonConverter();
+        var base = mode == GenerationMode.RANDOM
+                ? ValueConstraints.forRandom()
+                : ValueConstraints.forExhaustive();
+        var callerConstraints = new ValueConstraints(
+                constraints.stringMinLength,
+                constraints.stringMaxLength,
+                constraints.numberMin,
+                constraints.numberMax,
+                constraints.dateMin,
+                constraints.dateMax,
+                constraints.alphabet,
+                constraints.arrayMinLength,
+                constraints.arrayMaxLength);
         var config = new GeneratorConfig(
                 mode == GenerationMode.RANDOM,
                 generateAdditionalProperties,
@@ -88,7 +100,8 @@ public final class Gjuton {
                 toValueSuppliers(overrides),
                 toValueSuppliers(nameOverrides),
                 toValueSuppliers(formatOverrides),
-                toValueConstraints(mode, constraints));
+                base.overlaidWith(callerConstraints),
+                callerConstraints);
         this.generator = new JsonGenerator(seed, document, config);
     }
 
@@ -116,27 +129,6 @@ public final class Gjuton {
                 .collect(Collectors.toUnmodifiableMap(
                         Map.Entry::getKey,
                         e -> e.getValue()::produce));
-    }
-
-    /**
-     * Overlays the caller's {@link Constraints} onto the mode-appropriate
-     * defaults. Each non-null constraint field replaces the corresponding
-     * default; unset fields keep the mode default.
-     */
-    private static ValueConstraints toValueConstraints(GenerationMode mode, Constraints c) {
-        var base = mode == GenerationMode.RANDOM
-                ? ValueConstraints.forRandom()
-                : ValueConstraints.forExhaustive();
-        return new ValueConstraints(
-                coalesce(c.stringMinLength, base.stringMinLength()),
-                coalesce(c.stringMaxLength, base.stringMaxLength()),
-                coalesce(c.numberMin, base.numberMin()),
-                coalesce(c.numberMax, base.numberMax()),
-                coalesce(c.dateMin, base.dateMin()),
-                coalesce(c.dateMax, base.dateMax()),
-                coalesce(c.alphabet, base.alphabet()),
-                coalesce(c.arrayMinLength, base.arrayMinLength()),
-                coalesce(c.arrayMaxLength, base.arrayMaxLength()));
     }
 
     /**

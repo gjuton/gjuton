@@ -55,13 +55,6 @@ class IntegrationTest {
             new SchemaLocation("schemas/schemastore", 10, 1000)
     );
 
-    // Excluded for time, not correctness: these generate valid JSON, but one value
-    // costs enough that it trips GENERATION_TIMEOUT_SECONDS once the suite runs them
-    // in parallel. A schema that generates wrong output belongs in one of the sets below.
-    private static final Set<String> SLOW_SCHEMAS = Set.of(
-            "sigmacv.json" // ~225ms/value single-threaded; huge values from sentinel maxItems/maxLength (#168)
-    );
-
     // Schemas that cannot be built without reaching the network. Ignored because
     // they would cause a hassle in CI or when running in a sandbox. When tested
     // these schemas fail the test.
@@ -343,8 +336,7 @@ class IntegrationTest {
         return allSchemas().stream()
                 .filter(entry -> {
                     var name = entry.path().getFileName().toString();
-                    return !SLOW_SCHEMAS.contains(name)
-                            && !SCHEMAS_THAT_NEED_NETWORK_NON_WORKING.contains(name)
+                    return !SCHEMAS_THAT_NEED_NETWORK_NON_WORKING.contains(name)
                             && !SCHEMAS_THAT_NEED_NETWORK_WORKING.contains(name)
                             && !NON_WORKING_SCHEMAS.contains(name)
                             && !FAILS_IN_VALIDATION_LIBRARY.contains(name)

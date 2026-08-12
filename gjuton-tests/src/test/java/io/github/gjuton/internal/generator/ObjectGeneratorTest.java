@@ -1429,7 +1429,7 @@ class ObjectGeneratorTest {
 
     private static ObjectGenerator objectGeneratorWithAdditionalProperties(String json) {
         var document = PARSER.parse(json);
-        var config = new GeneratorConfig(false, true, 2, 4, Map.of(), Map.of(), Map.of(), ValueConstraints.forExhaustive());
+        var config = new GeneratorConfig(false, true, 2, 4, Map.of(), Map.of(), Map.of(), ValueConstraints.forExhaustive(), ValueConstraints.none());
         var context = new GeneratorContext(document, new Random(42), config);
         return new ObjectGenerator(context, (ObjectSchema) document.getRoot());
     }

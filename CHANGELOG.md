@@ -19,6 +19,12 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ### Changed
 
+- Generated strings and arrays now stay within a default size ceiling instead of
+  taking a schema's bound literally, so a schema using a very large `maxLength`
+  or `maxItems` to mean "unbounded" no longer produces multi-megabyte values or
+  runs out of memory. `Constraints.stringLength`/`arrayLength` still override it,
+  and a `minLength`/`minItems` above the default is still generated in full, which
+  gjuton reports in the log.
 - Gjuton is now split into `gjuton-core` plus a module per Jackson version:
   `gjuton-jackson2` and `gjuton-jackson3`. The `io.github.gjuton:gjuton` artifact
   is gone; depend instead on the one matching the jackson version you are using,

@@ -29,6 +29,8 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
     private final StringSchema schema;
     private final RgxGen rgxGen;
 
+    private boolean reportedDefaultMaximumEffect;
+
     enum GenerationPhase {
         MIN_LENGTH, MAX_LENGTH, EMPTY, RANDOM
     }
@@ -36,7 +38,8 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
     StringGenerator(GeneratorContext context, StringSchema schema) {
         super(GenerationPhase.class, context);
         this.schema = schema;
-        this.rgxGen = schema.getPattern() != null ? buildRgxGen(schema, effectiveMaxLength()) : null;
+        boolean callerBoundedLength = context.callerConstraints().stringMaxLength() != null;
+        this.rgxGen = schema.getPattern() != null ? buildRgxGen(schema, effectiveMaxLength(), callerBoundedLength) : null;
     }
 
     @Override
@@ -44,8 +47,14 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
         return GenerationPhase.RANDOM;
     }
 
-    private static RgxGen buildRgxGen(StringSchema schema, int maxLength) {
-        int repetition = maxLength == Integer.MAX_VALUE ? UNBOUNDED_REPETITION_LIMIT : maxLength;
+    /**
+     * A generator for the schema's {@code pattern}. An unbounded quantifier
+     * repeats up to {@code maxLength}, or a few times if nothing bounds it.
+     */
+    private static RgxGen buildRgxGen(StringSchema schema, int maxLength, boolean callerBoundedLength) {
+        Integer schemaMax = schema.getMaxLength();
+        boolean unbounded = !callerBoundedLength && (schemaMax == null || schemaMax == Integer.MAX_VALUE);
+        int repetition = unbounded ? UNBOUNDED_REPETITION_LIMIT : maxLength;
         var properties = new RgxGenProperties();
         RgxGenOption.INFINITE_PATTERN_REPETITION.setInProperties(properties, repetition);
         return RgxGen.parse(properties, schema.getPattern());
@@ -60,6 +69,20 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
                     "String length bounds are empty after applying constraints: effective minimum " + minLength
                             + " exceeds effective maximum " + maxLength,
                     context.currentJsonPointer());
+        }
+        if (context.callerConstraints().stringMaxLength() == null && !reportedDefaultMaximumEffect) {
+            int defaultMax = context.constraints().stringMaxLength();
+            Integer schemaMax = schema.getMaxLength();
+            if (minLength > defaultMax) {
+                reportedDefaultMaximumEffect = true;
+                log.info("{}: generating strings of {} characters, past gjuton's default maximum of {}, to meet the minimum length",
+                        context.currentJsonPointer(), minLength, defaultMax);
+            } else if (context.isExhaustive() && schemaMax != null && schemaMax > defaultMax) {
+                reportedDefaultMaximumEffect = true;
+                log.info("{}: limiting strings to gjuton's default maximum of {} characters, not the schema's maxLength of {};"
+                                + " set Constraints.stringLength to choose your own",
+                        context.currentJsonPointer(), defaultMax, schemaMax);
+            }
         }
         if (rgxGen != null) {
             return switch (phase) {
@@ -92,13 +115,23 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
 
     private int effectiveMinLength() {
         int schemaMin = coalesce(schema.getMinLength(), 0);
-        return Math.max(schemaMin, context.constraints().stringMinLength());
+        int minInForce = context.constraints().stringMinLength();
+        return Math.max(schemaMin, minInForce);
     }
 
+    /**
+     * The longest string this generator produces: the tighter of the schema's
+     * {@code maxLength} and the maximum in force.
+     */
     private int effectiveMaxLength() {
+        int limit = context.constraints().stringMaxLength();
+        if (context.callerConstraints().stringMaxLength() == null) {
+            // A caller's maximum is honored even below the minimum length; a default
+            // gives way, so the schema's minimum is still reachable.
+            limit = Math.max(limit, effectiveMinLength());
+        }
         Integer schemaMax = schema.getMaxLength();
-        int constraintMax = context.constraints().stringMaxLength();
-        return schemaMax != null ? Math.min(schemaMax, constraintMax) : constraintMax;
+        return schemaMax != null ? Math.min(schemaMax, limit) : limit;
     }
 
     private boolean hasLowerLengthBound() {

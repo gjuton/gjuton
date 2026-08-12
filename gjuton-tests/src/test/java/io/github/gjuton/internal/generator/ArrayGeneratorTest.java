@@ -1,7 +1,9 @@
 package io.github.gjuton.internal.generator;
 
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.extension.GjutonExtensions;
@@ -550,6 +552,153 @@ class ArrayGeneratorTest {
 
         // when / then
         assertThatThrownBy(generator::generate).isInstanceOf(UnsatisfiableSchemaException.class);
+    }
+
+    @Test
+    void hugeMaxItemsIsCutToTheDefaultMaximum() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "maxItems": 2097152
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 10)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(
+                arr -> assertThat(arr).hasSizeLessThanOrEqualTo(1_000));
+    }
+
+    @Test
+    void schemaWithoutMaxItemsStaysShort() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer"}
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 10)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> assertThat(arr).hasSizeLessThanOrEqualTo(5));
+    }
+
+    @Test
+    void minItemsAboveTheCeilingIsGeneratedInFull() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 2000,
+                    "maxItems": 2097152
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 10)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> assertThat(arr).hasSize(2000));
+    }
+
+    @Test
+    void cuttingTheSchemaMaxItemsIsReportedOnce() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "maxItems": 2097152
+                }
+                """);
+
+        // when
+        try (var logs = LogCapture.of(ArrayGenerator.class)) {
+            IntStream.range(0, 5).forEach(i -> generator.generate());
+
+            // then
+            assertThat(logs.messages())
+                    .filteredOn(m -> m.contains("default maximum"))
+                    .singleElement(as(STRING))
+                    .contains("2097152", "1000");
+        }
+    }
+
+    @Test
+    void randomModeDoesNotReportCuttingTheSchemaMaxItems() {
+        var document = PARSER.parse("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "maxItems": 2097152
+                }
+                """);
+        var context = TestContexts.randomWithSeed(42);
+        var generator = new ArrayGenerator(context, (ArraySchema) document.getRoot());
+
+        // when
+        try (var logs = LogCapture.of(ArrayGenerator.class)) {
+            IntStream.range(0, 5).forEach(i -> generator.generate());
+
+            // then
+            assertThat(logs.messages()).noneMatch(m -> m.contains("default maximum"));
+        }
+    }
+
+    @Test
+    void minItemsAboveTheCeilingIsReportedOnce() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 2000
+                }
+                """);
+
+        // when
+        try (var logs = LogCapture.of(ArrayGenerator.class)) {
+            IntStream.range(0, 5).forEach(i -> generator.generate());
+
+            // then
+            assertThat(logs.messages())
+                    .filteredOn(m -> m.contains("default maximum"))
+                    .singleElement(as(STRING))
+                    .contains("2000", "1000");
+        }
+    }
+
+    @Test
+    void randomModeReportsMinItemsAboveTheCeiling() {
+        var document = PARSER.parse("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "minItems": 200
+                }
+                """);
+        var context = TestContexts.randomWithSeed(42);
+        var generator = new ArrayGenerator(context, (ArraySchema) document.getRoot());
+
+        // when
+        try (var logs = LogCapture.of(ArrayGenerator.class)) {
+            IntStream.range(0, 5).forEach(i -> generator.generate());
+
+            // then
+            assertThat(logs.messages())
+                    .filteredOn(m -> m.contains("default maximum"))
+                    .singleElement(as(STRING))
+                    .contains("200");
+        }
     }
 
     private static ArrayGenerator arrayGenerator(String json) {
