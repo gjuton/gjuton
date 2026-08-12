@@ -211,6 +211,174 @@ class ArrayGeneratorTest {
     }
 
     @Test
+    void minContainsForcesSeveralMatchingElements() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "contains": {"const": 42},
+                    "minContains": 2
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> {
+            assertThat(arr).hasSizeGreaterThanOrEqualTo(2);
+            assertThat(arr).filteredOn(e -> e instanceof Number n && n.longValue() == 42).hasSizeGreaterThanOrEqualTo(2);
+        });
+    }
+
+    @Test
+    void minContainsAppliesToEveryContainsClause() {
+        var generator = mergedArrayGenerator("""
+                {
+                    "type": "array",
+                    "allOf": [
+                        {"contains": {"const": "A"}, "minContains": 2},
+                        {"contains": {"const": "B"}, "minContains": 2}
+                    ]
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> {
+            assertThat(arr).filteredOn("A"::equals).hasSizeGreaterThanOrEqualTo(2);
+            assertThat(arr).filteredOn("B"::equals).hasSizeGreaterThanOrEqualTo(2);
+        });
+    }
+
+    @Test
+    void relaxedMinContainsForcesNoMatchingElement() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "maxItems": 0,
+                    "contains": {"const": "x"},
+                    "minContains": 0
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> assertThat(arr).isEmpty());
+    }
+
+    @Test
+    void minContainsAboveMaxItemsThrows() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "maxItems": 1,
+                    "contains": {"const": 42},
+                    "minContains": 2
+                }
+                """);
+
+        // when / then
+        assertThatThrownBy(generator::generate).isInstanceOf(UnsatisfiableSchemaException.class);
+    }
+
+    @Test
+    void maxContainsCapsTheMatchingElements() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"enum": ["x", "y", "z"]},
+                    "contains": {"const": "x"},
+                    "maxContains": 1,
+                    "minItems": 2,
+                    "maxItems": 2
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 50)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> assertThat(arr).filteredOn("x"::equals).hasSize(1));
+    }
+
+    @Test
+    void maxContainsNoElementCanRespectIsUnsatisfiable() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"const": "x"},
+                    "contains": {"const": "x"},
+                    "minItems": 3,
+                    "maxContains": 1
+                }
+                """);
+
+        // when / then
+        assertThatThrownBy(generator::generate).isInstanceOf(UnsatisfiableSchemaException.class);
+    }
+
+    @Test
+    void severalRequiredMatchesLeaveThePrefixIntact() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "prefixItems": [{"const": "first"}, {"const": "second"}],
+                    "items": {"type": "integer"},
+                    "contains": {"const": 42},
+                    "minContains": 2,
+                    "minItems": 4,
+                    "maxItems": 4
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> {
+            assertThat(arr).startsWith("first", "second");
+            assertThat(arr).filteredOn(e -> e instanceof Number n && n.longValue() == 42).hasSizeGreaterThanOrEqualTo(2);
+        });
+    }
+
+    @Test
+    void containsBoundsWithoutContainsForceNoElement() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "maxItems": 0,
+                    "minContains": 3
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> assertThat(arr).isEmpty());
+    }
+
+    @Test
     void draft7TupleProducesCorrectlyTypedPositionalElements() {
         var generator = arrayGenerator("""
                 {

@@ -1,6 +1,7 @@
 package io.github.gjuton.internal.generator;
 
 import static io.github.gjuton.internal.generator.GenerationResult.result;
+import static io.github.gjuton.internal.generator.GenerationResult.skip;
 import static io.github.gjuton.internal.util.FunctionalUtil.coalesce;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
@@ -39,6 +40,13 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
     private final List<Schema> containsSchemas;
     private final Schema itemSchema;
     private final boolean additionalItemsAllowed;
+    private final SchemaValidator validator;
+
+    /**
+     * How many elements every {@code contains} clause needs. Zero when
+     * {@code minContains} relaxes the clauses to demanding nothing.
+     */
+    private final int requiredMatchesPerClause;
 
     private boolean reportedDefaultMaximumEffect;
 
@@ -55,6 +63,8 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
         // but boring; a varied-type generator (cycling string/int/bool/...) would surface more bugs.
         this.itemSchema = coalesce(schema.getItemSchema(), new NullSchema());
         this.additionalItemsAllowed = schema.areAdditionalItemsAllowed();
+        this.validator = new SchemaValidator(context);
+        this.requiredMatchesPerClause = coalesce(schema.getMinContains(), 1);
     }
 
     @Override
@@ -64,11 +74,17 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
 
     @Override
     protected GenerationResult<List<Object>> generatePhase(GenerationPhase phase) {
+        Integer maxContains = schema.getMaxContains();
+        if (!containsSchemas.isEmpty() && maxContains != null && requiredMatchesPerClause > maxContains) {
+            throw new UnsatisfiableSchemaException(
+                    "minContains " + requiredMatchesPerClause + " exceeds maxContains " + maxContains,
+                    context.currentJsonPointer());
+        }
         int minLength = effectiveMinLength();
         int effectiveMax = effectiveMaxLength();
         if (effectiveMax < minLength) {
             throw new UnsatisfiableSchemaException(
-                    "No valid array length satisfies minItems/maxItems/contains together: effective minimum length "
+                    "No valid array length satisfies minItems/maxItems/contains/minContains together: effective minimum length "
                             + minLength + " exceeds effective maximum length " + effectiveMax,
                     context.currentJsonPointer());
         }
@@ -92,19 +108,28 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
             case RANDOM -> minLength + context.random().nextInt(effectiveMax - minLength + 1);
         };
         var value = buildList(length);
+        if (maxContains != null) {
+            // Nothing keeps an ordinary element from matching a clause too, so the only way to
+            // stay under the maximum is to decline a candidate that went over and draw again.
+            var violation = validator.violation(value, schema);
+            if (violation != null) {
+                log.trace("{}: discarding array of {} elements: {}", context.currentJsonPointer(), length, violation);
+                return skip();
+            }
+        }
         return result(value);
     }
 
     /**
      * The smallest array length that satisfies the schema and caller constraints
-     * together: {@code minItems} raised to the caller's minimum and to one element
-     * per {@code contains} clause.
+     * together: {@code minItems} raised to the caller's minimum and to the elements
+     * every {@code contains} clause needs.
      */
     private int effectiveMinLength() {
         int minLength = coalesce(schema.getMinItems(), 0);
         int minInForce = context.constraints().arrayMinLength();
         minLength = Math.max(minLength, minInForce);
-        minLength = Math.max(minLength, containsSchemas.size());
+        minLength = Math.max(minLength, containsSchemas.size() * requiredMatchesPerClause);
         return minLength;
     }
 
@@ -190,27 +215,29 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
 
     /**
      * Maps array positions to the {@code contains} clause each one has to
-     * satisfy. No two clauses share a position, and the tuple prefix is left
-     * untouched unless every clause cannot otherwise be placed past it.
+     * satisfy. Every clause gets as many positions as it needs, no two clauses
+     * share one, and the tuple prefix is left untouched unless the clauses
+     * cannot otherwise be placed past it.
      *
-     * <p>{@code length} must be at least the number of clauses.
+     * <p>{@code length} must be at least the total number of elements the
+     * clauses need.
      */
     private Map<Integer, Schema> assignContainsPositions(int length) {
-        if (containsSchemas.isEmpty()) {
+        int required = containsSchemas.size() * requiredMatchesPerClause;
+        if (required == 0) {
             return Map.of();
         }
-        int clauseCount = containsSchemas.size();
         int roomPastPrefix = length - prefixSchemas.size();
-        int firstCandidate = roomPastPrefix >= clauseCount ? prefixSchemas.size() : 0;
+        int firstCandidate = roomPastPrefix >= required ? prefixSchemas.size() : 0;
         var candidates = new ArrayList<Integer>();
         for (int i = firstCandidate; i < length; i++) {
             candidates.add(i);
         }
         Collections.shuffle(candidates, context.random());
         var positions = new HashMap<Integer, Schema>();
-        for (int i = 0; i < clauseCount; i++) {
+        for (int i = 0; i < required; i++) {
             int position = candidates.get(i);
-            var clause = containsSchemas.get(i);
+            var clause = containsSchemas.get(i % containsSchemas.size());
             positions.put(position, clause);
         }
         return positions;

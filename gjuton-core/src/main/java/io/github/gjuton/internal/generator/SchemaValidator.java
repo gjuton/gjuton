@@ -1,5 +1,7 @@
 package io.github.gjuton.internal.generator;
 
+import static io.github.gjuton.internal.util.FunctionalUtil.coalesce;
+
 import io.github.gjuton.internal.model.ArraySchema;
 import io.github.gjuton.internal.model.BooleanSchema;
 import io.github.gjuton.internal.model.NullSchema;
@@ -276,9 +278,17 @@ final class SchemaValidator {
             }
         }
         if (schema.getContains() != null) {
+            int minContains = coalesce(schema.getMinContains(), 1);
+            Integer maxContains = schema.getMaxContains();
             for (var contains : schema.getContains()) {
-                if (list.stream().noneMatch(item -> satisfies(item, contains))) {
-                    return "no item satisfies the contains schema";
+                long matches = list.stream().filter(item -> satisfies(item, contains)).count();
+                if (matches < minContains) {
+                    return matches == 0 && minContains == 1
+                            ? "no item satisfies the contains schema"
+                            : matches + " items satisfy the contains schema, below minContains " + minContains;
+                }
+                if (maxContains != null && matches > maxContains) {
+                    return matches + " items satisfy the contains schema, above maxContains " + maxContains;
                 }
             }
         }

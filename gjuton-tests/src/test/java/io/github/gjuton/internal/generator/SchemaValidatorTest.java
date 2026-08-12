@@ -481,6 +481,71 @@ class SchemaValidatorTest {
         }
 
         @Test
+        void arrayWithTooFewMatchingElementsFailsMinContains() {
+            var document = PARSER.parse("""
+                    {"type": "array", "contains": {"type": "integer"}, "minContains": 2}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(List.of("a", 1), document.getRoot());
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void arrayWithEnoughMatchingElementsSatisfiesMinContains() {
+            var document = PARSER.parse("""
+                    {"type": "array", "contains": {"type": "integer"}, "minContains": 2}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(List.of("a", 1, 2), document.getRoot());
+
+            // then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void arrayWithTooManyMatchingElementsFailsMaxContains() {
+            var document = PARSER.parse("""
+                    {"type": "array", "contains": {"type": "integer"}, "maxContains": 2}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(List.of(1, 2, 3), document.getRoot());
+
+            // then
+            assertThat(result).isFalse();
+        }
+
+        @Test
+        void arrayWithNoMatchingElementSatisfiesRelaxedMinContains() {
+            var document = PARSER.parse("""
+                    {"type": "array", "contains": {"type": "integer"}, "minContains": 0}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(List.of("a", "b"), document.getRoot());
+
+            // then
+            assertThat(result).isTrue();
+        }
+
+        @Test
+        void containsBoundsWithoutContainsAreIgnored() {
+            var document = PARSER.parse("""
+                    {"type": "array", "minContains": 2, "maxContains": 3}
+                    """);
+
+            // when
+            var result = createValidator(document).satisfies(List.of("a"), document.getRoot());
+
+            // then
+            assertThat(result).isTrue();
+        }
+
+        @Test
         void arraySatisfyingOnlyOneOfSeveralContainsClausesFailsSchema() {
             var document = PARSER.parse("""
                     {"type": "array", "allOf": [{"contains": {"const": "A"}}, {"contains": {"const": "B"}}]}

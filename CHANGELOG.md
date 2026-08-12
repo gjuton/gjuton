@@ -16,6 +16,10 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 - Support for `propertyNames`, which constrains what a property may be called.
   Generated names now satisfy it, and a schema requiring a property whose name
   it forbids says so instead of producing JSON its own schema rejects.
+- Support for `minContains` and `maxContains`. An array schema asking for
+  several matching elements now gets them, one capping the matches stays within
+  the cap, and bounds nothing could satisfy are reported instead of producing
+  JSON the schema rejects.
 
 ### Changed
 
