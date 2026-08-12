@@ -156,8 +156,95 @@ class GjutonConstraintsTest {
         forEachValue(gen, node -> assertThat(((List<?>) node).size()).isBetween(2, 3));
     }
 
+    @Test
+    void arrayLengthOverridesTheDefaultCeiling() {
+        // when
+        var gen = Gjuton.of("""
+                { "type": "array", "items": { "type": "integer" }, "maxItems": 2097152 }""")
+                .withConstraints(Constraints.of().arrayLength(1500, 1500))
+                .withSeed(1L);
+
+        // then
+        forEachValue(gen, node -> assertThat(((List<?>) node).size()).isEqualTo(1500));
+    }
+
+    @Test
+    void stringLengthOverridesTheDefaultCeiling() {
+        // when: 2000 is past the default RANDOM mode allows itself
+        var gen = Gjuton.of("""
+                { "type": "string", "maxLength": 2147483647 }""")
+                .withConstraints(Constraints.of().stringLength(2000, 2000))
+                .withSeed(1L);
+
+        // then
+        forEachValue(gen, node -> assertThat(((String) node).length()).isEqualTo(2000));
+    }
+
+    @Test
+    void arrayLengthAppliesWhenTheSchemaHasNoMaxItems() {
+        // when
+        var gen = Gjuton.of("""
+                { "type": "array", "items": { "type": "integer" } }""")
+                .withConstraints(Constraints.of().arrayLength(0, 50))
+                .withSeed(1L);
+
+        // then: the caller's 50 is the bound, not the short span gjuton picks on its own
+        boolean sawLongArray = false;
+        for (int i = 0; i < SAMPLES; i++) {
+            var array = (List<?>) parse(gen.generate());
+            assertThat(array.size()).isBetween(0, 50);
+            if (array.size() > 10) {
+                sawLongArray = true;
+            }
+        }
+        assertThat(sawLongArray).isTrue();
+    }
+
+    @Test
+    void stringLengthAppliesToPatternsWithNoMaxLength() {
+        // when
+        var gen = Gjuton.of("""
+                { "type": "string", "pattern": "[a-z]+" }""")
+                .withConstraints(Constraints.of().stringLength(30, 100))
+                .withSeed(1L);
+
+        // then
+        forEachValue(gen, node -> assertThat((String) node).matches("[a-z]{30,100}"));
+    }
+
+    @Test
+    void emptyArrayLengthIntersectionIsUnsatisfiable() {
+        // when
+        var gen = Gjuton.of("""
+                { "type": "array", "items": { "type": "integer" }, "minItems": 3 }""")
+                .withConstraints(Constraints.of().arrayLength(0, 2));
+
+        // then
+        assertThatThrownBy(gen::generate).isInstanceOf(UnsatisfiableSchemaException.class);
+    }
+
     @Nested
     class ModeAwareDefaults {
+
+        @Test
+        void randomModeCapsArrayLengthWhenTheSchemaBoundIsHuge() {
+            var gen = Gjuton.of("""
+                    { "type": "array", "items": { "type": "integer" }, "maxItems": 2097152 }""")
+                    .withSeed(1L);
+
+            // when / then
+            forEachValue(gen, node -> assertThat(((List<?>) node).size()).isLessThanOrEqualTo(100));
+        }
+
+        @Test
+        void randomModeCapsStringLengthWhenTheSchemaBoundIsHuge() {
+            var gen = Gjuton.of("""
+                    { "type": "string", "maxLength": 2147483647 }""")
+                    .withSeed(1L);
+
+            // when / then
+            forEachValue(gen, node -> assertThat(((String) node).length()).isLessThanOrEqualTo(1000));
+        }
 
         @Test
         void randomModeDatesFallWithinPreviousToNextYear() {

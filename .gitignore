@@ -6,6 +6,7 @@ target/
 .classpath
 .project
 .factorypath
+bin/
 reference-material/
 .claude/
 worktrees/

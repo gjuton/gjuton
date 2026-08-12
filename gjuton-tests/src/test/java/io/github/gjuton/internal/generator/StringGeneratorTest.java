@@ -1,7 +1,9 @@
 package io.github.gjuton.internal.generator;
 
 import static io.github.gjuton.internal.generator.TestContexts.withSeed;
+import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 
 import io.github.gjuton.internal.model.StringSchema;
 import java.util.stream.IntStream;
@@ -33,6 +35,114 @@ class StringGeneratorTest {
         // then
         assertThat(second).isNotEmpty();
         assertThat(third).isNotEmpty();
+    }
+
+    @Test
+    void hugeMaxLengthIsCutToTheDefaultMaximum() {
+        var schema = StringSchema.builder().maxLength(Integer.MAX_VALUE).build();
+        var generator = new StringGenerator(withSeed(42), schema);
+
+        // when
+        var results = IntStream.range(0, 10)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(
+                s -> assertThat(s).hasSizeLessThanOrEqualTo(100_000));
+    }
+
+    @Test
+    void hugeMaxLengthKeepsPatternRepetitionSmall() {
+        var schema = StringSchema.builder().pattern("[a-z]+").maxLength(Integer.MAX_VALUE).build();
+        var generator = new StringGenerator(withSeed(42), schema);
+
+        // when
+        var results = IntStream.range(0, 10)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(s -> assertThat(s).hasSizeLessThanOrEqualTo(8));
+    }
+
+    @Test
+    void minLengthAboveTheCeilingIsGeneratedInFull() {
+        var schema = StringSchema.builder().minLength(150_000).maxLength(Integer.MAX_VALUE).build();
+        var generator = new StringGenerator(withSeed(42), schema);
+
+        // when
+        var results = IntStream.range(0, 5)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(s -> assertThat(s).hasSizeGreaterThanOrEqualTo(150_000));
+    }
+
+    @Test
+    void cuttingTheSchemaMaxLengthIsReportedOnce() {
+        var schema = StringSchema.builder().maxLength(Integer.MAX_VALUE).build();
+        var generator = new StringGenerator(withSeed(42), schema);
+
+        // when
+        try (var logs = LogCapture.of(StringGenerator.class)) {
+            IntStream.range(0, 5).forEach(i -> generator.generate());
+
+            // then
+            assertThat(logs.messages())
+                    .filteredOn(m -> m.contains("default maximum"))
+                    .singleElement(as(STRING))
+                    .contains(String.valueOf(Integer.MAX_VALUE), "100000");
+        }
+    }
+
+    @Test
+    void randomModeDoesNotReportCuttingTheSchemaMaxLength() {
+        var schema = StringSchema.builder().maxLength(Integer.MAX_VALUE).build();
+        var generator = new StringGenerator(TestContexts.randomWithSeed(42), schema);
+
+        // when
+        try (var logs = LogCapture.of(StringGenerator.class)) {
+            IntStream.range(0, 5).forEach(i -> generator.generate());
+
+            // then
+            assertThat(logs.messages()).noneMatch(m -> m.contains("default maximum"));
+        }
+    }
+
+    @Test
+    void minLengthAboveTheCeilingIsReportedOnce() {
+        var schema = StringSchema.builder().minLength(150_000).build();
+        var generator = new StringGenerator(withSeed(42), schema);
+
+        // when
+        try (var logs = LogCapture.of(StringGenerator.class)) {
+            IntStream.range(0, 5).forEach(i -> generator.generate());
+
+            // then
+            assertThat(logs.messages())
+                    .filteredOn(m -> m.contains("default maximum"))
+                    .singleElement(as(STRING))
+                    .contains("150000", "100000");
+        }
+    }
+
+    @Test
+    void randomModeReportsMinLengthAboveTheCeiling() {
+        var schema = StringSchema.builder().minLength(2000).build();
+        var generator = new StringGenerator(TestContexts.randomWithSeed(42), schema);
+
+        // when
+        try (var logs = LogCapture.of(StringGenerator.class)) {
+            IntStream.range(0, 5).forEach(i -> generator.generate());
+
+            // then
+            assertThat(logs.messages())
+                    .filteredOn(m -> m.contains("default maximum"))
+                    .singleElement(as(STRING))
+                    .contains("2000");
+        }
     }
 
     @Test

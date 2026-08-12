@@ -40,6 +40,8 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
     private final Schema itemSchema;
     private final boolean additionalItemsAllowed;
 
+    private boolean reportedDefaultMaximumEffect;
+
     enum GenerationPhase {
         MIN_LENGTH, MAX_LENGTH, RANDOM
     }
@@ -70,6 +72,20 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
                             + minLength + " exceeds effective maximum length " + effectiveMax,
                     context.currentJsonPointer());
         }
+        if (context.callerConstraints().arrayMaxLength() == null && !reportedDefaultMaximumEffect) {
+            int defaultMax = context.constraints().arrayMaxLength();
+            Integer schemaMax = schema.getMaxItems();
+            if (minLength > defaultMax) {
+                reportedDefaultMaximumEffect = true;
+                log.info("{}: generating arrays of {} elements, past gjuton's default maximum of {}, to meet the minimum length",
+                        context.currentJsonPointer(), minLength, defaultMax);
+            } else if (context.isExhaustive() && schemaMax != null && schemaMax > defaultMax) {
+                reportedDefaultMaximumEffect = true;
+                log.info("{}: limiting arrays to gjuton's default maximum of {} elements, not the schema's maxItems of {};"
+                                + " set Constraints.arrayLength to choose your own",
+                        context.currentJsonPointer(), defaultMax, schemaMax);
+            }
+        }
         int length = switch (phase) {
             case MIN_LENGTH -> minLength;
             case MAX_LENGTH -> effectiveMax;
@@ -86,24 +102,36 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
      */
     private int effectiveMinLength() {
         int minLength = coalesce(schema.getMinItems(), 0);
-        minLength = Math.max(minLength, context.constraints().arrayMinLength());
+        int minInForce = context.constraints().arrayMinLength();
+        minLength = Math.max(minLength, minInForce);
         minLength = Math.max(minLength, containsSchemas.size());
         return minLength;
     }
 
     /**
-     * The largest array length this generator produces: the tighter of the schema's
-     * {@code maxItems} and the caller's maximum, or a fixed span past the minimum
-     * when neither bounds it above, capped at the tuple prefix when
-     * {@code additionalItems} is false.
+     * The longest array this generator produces: the tighter of the schema's
+     * {@code maxItems} and the maximum in force, capped at the tuple prefix when
+     * {@code additionalItems} is false, and a fixed span past the minimum when
+     * neither bounds it.
      */
     private int effectiveMaxLength() {
+        int minLength = effectiveMinLength();
+        Integer callerMax = context.callerConstraints().arrayMaxLength();
+        int limit = context.constraints().arrayMaxLength();
+        if (callerMax == null) {
+            // A caller's maximum is honored even below the minimum length; a default
+            // gives way, so the schema's minimum is still reachable.
+            limit = Math.max(limit, minLength);
+        }
         Integer schemaMax = schema.getMaxItems();
-        int constraintMax = context.constraints().arrayMaxLength();
-        int upperBound = schemaMax != null ? Math.min(schemaMax, constraintMax) : constraintMax;
-        int maxLength = upperBound == Integer.MAX_VALUE
-                ? effectiveMinLength() + DEFAULT_LENGTH_BUFFER
-                : upperBound;
+        int maxLength;
+        if (schemaMax != null) {
+            maxLength = Math.min(schemaMax, limit);
+        } else if (callerMax == null) {
+            maxLength = Math.min(minLength + DEFAULT_LENGTH_BUFFER, limit);
+        } else {
+            maxLength = limit;
+        }
         if (!additionalItemsAllowed) {
             maxLength = Math.min(maxLength, prefixSchemas.size());
         }

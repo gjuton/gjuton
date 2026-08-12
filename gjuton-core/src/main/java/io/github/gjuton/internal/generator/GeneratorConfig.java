@@ -30,8 +30,9 @@ import java.util.function.Supplier;
  * @param formatOverrides               value overrides keyed by {@code format}
  *                                      as written; applied at every string
  *                                      carrying it
- * @param constraints                   caller-imposed bounds that narrow
- *                                      generated values beyond the schema
+ * @param constraints                   the bounds in force: the mode's defaults
+ *                                      with the caller's overlaid on them
+ * @param callerConstraints             the caller's own bounds
  */
 public record GeneratorConfig(
         boolean randomOnly,
@@ -41,7 +42,8 @@ public record GeneratorConfig(
         Map<String, Supplier<Object>> pathOverrides,
         Map<String, Supplier<Object>> nameOverrides,
         Map<String, Supplier<Object>> formatOverrides,
-        ValueConstraints constraints) {
+        ValueConstraints constraints,
+        ValueConstraints callerConstraints) {
 
     /**
      * The nesting-depth ceilings for the three presets the public API exposes,
@@ -77,6 +79,7 @@ public record GeneratorConfig(
                 Map.of(),
                 Map.of(),
                 Map.of(),
-                ValueConstraints.forExhaustive());
+                ValueConstraints.forExhaustive(),
+                ValueConstraints.none());
     }
 }

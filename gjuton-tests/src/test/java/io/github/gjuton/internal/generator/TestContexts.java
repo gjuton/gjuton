@@ -14,4 +14,22 @@ public final class TestContexts {
         // TODO come up with a better strategy for reading schemas and contexts in unit tests
         return GeneratorContext.testContext(new SchemaDocument(new NullSchema(), Map.of()), new Random(seed));
     }
+
+    /**
+     * A context generating as {@code GenerationMode.RANDOM} does: random values
+     * only, and the bounds that mode defaults to.
+     */
+    public static GeneratorContext randomWithSeed(long seed) {
+        var config = new GeneratorConfig(
+                true,
+                false,
+                GeneratorConfig.DEFAULT_SOFT_NESTING_DEPTH,
+                GeneratorConfig.DEFAULT_HARD_NESTING_DEPTH,
+                Map.of(),
+                Map.of(),
+                Map.of(),
+                ValueConstraints.forRandom(),
+                ValueConstraints.none());
+        return new GeneratorContext(new SchemaDocument(new NullSchema(), Map.of()), new Random(seed), config);
+    }
 }

@@ -173,15 +173,31 @@ public final class GeneratorContext {
     }
 
     /**
-     * The caller-imposed bounds narrowing generated values; every kind is unset
-     * when the caller registered no constraints.
+     * The bounds narrowing generated values: the mode's defaults, with anything
+     * the caller constrained overlaid on top.
      */
     public ValueConstraints constraints() {
         return config.constraints();
     }
 
+    /**
+     * The bounds the caller set, null wherever they set none. Tells a bound the
+     * caller chose, which is theirs to keep, from a mode default, which a
+     * generator may widen.
+     */
+    public ValueConstraints callerConstraints() {
+        return config.callerConstraints();
+    }
+
     boolean isRandomOnly() {
         return config.randomOnly();
+    }
+
+    /**
+     * Whether boundary-value phases run, on top of the random ones.
+     */
+    boolean isExhaustive() {
+        return !config.randomOnly();
     }
 
     boolean generateAdditionalProperties() {
