@@ -1,0 +1,27 @@
+{
+    "type": "object",
+    "required": ["type"],
+    "properties": {
+        "type": {"enum": ["a", "b"]}
+    },
+    "allOf": [
+        {
+            "if": {"properties": {"type": {"const": "a"}}},
+            "then": {
+                "type": "object",
+                "required": ["type", "x"],
+                "properties": {"type": {}, "x": {"type": "string"}},
+                "additionalProperties": false
+            }
+        },
+        {
+            "if": {"properties": {"type": {"const": "b"}}},
+            "then": {
+                "type": "object",
+                "required": ["type", "y"],
+                "properties": {"type": {}, "y": {"type": "string"}},
+                "additionalProperties": false
+            }
+        }
+    ]
+}

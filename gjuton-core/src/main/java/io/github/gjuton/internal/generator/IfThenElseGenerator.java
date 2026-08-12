@@ -2,26 +2,25 @@ package io.github.gjuton.internal.generator;
 
 import static io.github.gjuton.internal.generator.GenerationResult.result;
 
-import io.github.gjuton.errors.UnsatisfiableSchemaException;
 import io.github.gjuton.internal.model.Schema;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /**
  * Generator for schemas carrying {@code if}/{@code then}/{@code else}.
  *
- * <p>Each generated value honours exactly one conditional branch: either a
- * value that satisfies {@code if} and {@code then}, or a value that fails
- * {@code if} and satisfies {@code else}. Over repeated calls both branches
- * are exercised when both are satisfiable.
+ * <p>A schema may carry several conditionals, each independent. A value
+ * satisfies one by matching its {@code if} and its {@code then}, or by failing
+ * the {@code if} and satisfying its {@code else}. A generated value satisfies
+ * every conditional the schema carries.
  */
 final class IfThenElseGenerator extends PhaseGenerator<IfThenElseGenerator.GenerationPhase, Object> {
 
     private final SchemaValidator validator;
     private final Schema validationTarget;
-    private final Schema ifAndThenAndParent;
-    private final Schema elseAndParent;
-    private GenerationPhase lastPickedBranch;
+    private final Schema base;
+    private final List<Schema.Conditional> conditionals;
 
     enum GenerationPhase {
         THEN, ELSE, RANDOM
@@ -35,116 +34,87 @@ final class IfThenElseGenerator extends PhaseGenerator<IfThenElseGenerator.Gener
         // Strip the conditional keywords so the branch schemas composed below
         // (and anything generated from base) don't re-dispatch back into this
         // generator; if/then/else is applied once, here.
-        var base = parent.toBuilder()
+        this.base = parent.toBuilder()
                 .ifSchema(null)
                 .thenSchema(null)
                 .elseSchema(null)
                 .additionalConditionals(null)
                 .build();
-        var conditionals = parent.getConditionals();
-
-        this.ifAndThenAndParent = composeIfAndThen(base, conditionals);
-        this.elseAndParent = composeElse(base, conditionals);
+        this.conditionals = parent.getConditionals();
     }
 
     /**
-     * Composes the branch honoured when every {@code if} matches: the base
-     * schema merged with each conditional's {@code if} and (when present)
-     * {@code then}. Returns {@code null} when the merge is unsatisfiable, in
-     * which case the then branch is skipped in favour of else.
+     * The schema a value must satisfy to take the given side of each conditional.
+     * That an else-side also requires the {@code if} to fail is left to validating
+     * the candidate rather than encoded here.
+     *
+     * @throws io.github.gjuton.errors.UnsatisfiableSchemaException if no value can
+     *     take those sides
      */
-    private Schema composeIfAndThen(Schema base, List<Schema.Conditional> conditionals) {
+    private Schema composition(boolean[] thenSides) {
         var branches = new ArrayList<Schema>();
         branches.add(base);
-        for (var conditional : conditionals) {
-            branches.add(conditional.ifSchema());
-            if (conditional.thenSchema() != null) {
-                branches.add(conditional.thenSchema());
-            }
-        }
-        try {
-            return SchemaMerger.merge(context, branches);
-        } catch (UnsatisfiableSchemaException unsatisfiable) {
-            // Branch incompatible with the parent -- drop it (null) so the
-            // other branch can still generate. See generatePhase.
-            log.trace("disabling the if/then branch: incompatible with the parent, so only else generates here: {}",
-                    unsatisfiable.getMessage());
-            return null;
-        }
-    }
-
-    /**
-     * Composes the branch honoured when {@code if} fails: the base schema
-     * merged with each conditional's {@code else}, or the base alone when no
-     * conditional declares one. The additional requirement that the value
-     * fail {@code if} is not encoded here — it is enforced by validating
-     * each candidate.
-     */
-    private Schema composeElse(Schema base, List<Schema.Conditional> conditionals) {
-        var branches = new ArrayList<Schema>();
-        branches.add(base);
-        for (var conditional : conditionals) {
-            if (conditional.elseSchema() != null) {
+        for (int i = 0; i < conditionals.size(); i++) {
+            var conditional = conditionals.get(i);
+            if (thenSides[i]) {
+                branches.add(conditional.ifSchema());
+                if (conditional.thenSchema() != null) {
+                    branches.add(conditional.thenSchema());
+                }
+            } else if (conditional.elseSchema() != null) {
                 branches.add(conditional.elseSchema());
             }
         }
-        if (branches.size() == 1) {
-            return base;
-        }
-        try {
-            return SchemaMerger.merge(context, branches);
-        } catch (UnsatisfiableSchemaException unsatisfiable) {
-            // Branch incompatible with the parent -- drop it (null) so the
-            // other branch can still generate. See generatePhase.
-            log.trace("disabling the else branch: incompatible with the parent, so only if/then generates here: {}",
-                    unsatisfiable.getMessage());
-            return null;
-        }
+        return context.mergedSchema(branches);
     }
 
+    /**
+     * Draws a side per conditional — exactly one then-side, or each drawn on
+     * its own. A lone conditional is always an even coin.
+     */
+    private boolean[] drawSides() {
+        var random = context.random();
+        var sides = new boolean[conditionals.size()];
+        // One then-side is what a discriminator wants, where only one if may
+        // match. With a lone conditional that is not a shape, only a bias.
+        if (sides.length > 1 && random.nextBoolean()) {
+            sides[random.nextInt(sides.length)] = true;
+        } else {
+            for (int i = 0; i < sides.length; i++) {
+                sides[i] = random.nextBoolean();
+            }
+        }
+        return sides;
+    }
+
+    /**
+     * The random phase, the only one that can put conditionals on differing
+     * sides. A schema whose conditionals exclude one another can satisfy no
+     * other.
+     */
     @Override
     protected GenerationPhase minimalPhase() {
-        return ifAndThenAndParent != null ? GenerationPhase.THEN : GenerationPhase.ELSE;
+        return GenerationPhase.RANDOM;
     }
 
     @Override
     protected GenerationResult<Object> generatePhase(GenerationPhase phase) {
-        lastPickedBranch = phase == GenerationPhase.RANDOM ? randomBranch() : phase;
-        var composed = switch (lastPickedBranch) {
-            case THEN -> ifAndThenAndParent;
-            case ELSE -> elseAndParent;
-            case RANDOM -> throw new IllegalStateException("randomBranch() never picks RANDOM");
+        var sides = switch (phase) {
+            case THEN -> {
+                var all = new boolean[conditionals.size()];
+                Arrays.fill(all, true);
+                yield all;
+            }
+            case ELSE -> new boolean[conditionals.size()];
+            case RANDOM -> drawSides();
         };
-        if (composed == null) {
-            log.trace("no value for the {} branch: that branch is disabled", lastPickedBranch);
-            return GenerationResult.skip();
-        }
+        var composed = composition(sides);
         var candidate = context.generatorFor(composed).generate();
         var violation = validator.violation(candidate, validationTarget);
         if (violation == null) {
             return result(candidate);
         }
-        log.trace("discarding candidate for the {} branch: {}", lastPickedBranch, violation);
+        log.trace("discarding candidate for then-sides {}: {}", Arrays.toString(sides), violation);
         return GenerationResult.skip();
-    }
-
-    private GenerationPhase randomBranch() {
-        if (ifAndThenAndParent == null) {
-            return GenerationPhase.ELSE;
-        }
-        if (elseAndParent == null) {
-            return GenerationPhase.THEN;
-        }
-        return context.random().nextBoolean() ? GenerationPhase.THEN : GenerationPhase.ELSE;
-    }
-
-    /**
-     * The branch actually picked, rather than the phase — {@code RANDOM}
-     * itself resolves to one of the same two branches {@code THEN} and
-     * {@code ELSE} track, so novelty must follow the branch, not the phase.
-     */
-    @Override
-    protected int noveltyIndex(GenerationPhase phase) {
-        return lastPickedBranch.ordinal();
     }
 }

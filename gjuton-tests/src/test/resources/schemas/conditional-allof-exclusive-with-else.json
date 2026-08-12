@@ -1,0 +1,24 @@
+{
+    "type": "object",
+    "required": ["tier"],
+    "properties": {
+        "tier": {"enum": ["free", "pro", "enterprise"]}
+    },
+    "allOf": [
+        {
+            "if": {"properties": {"tier": {"const": "free"}}},
+            "then": {"required": ["adsEnabled"], "properties": {"adsEnabled": {"const": true}}},
+            "else": {"required": ["billingAccount"], "properties": {"billingAccount": {"type": "string"}}}
+        },
+        {
+            "if": {"properties": {"tier": {"const": "pro"}}},
+            "then": {"required": ["seats"], "properties": {"seats": {"type": "integer", "minimum": 1, "maximum": 50}}},
+            "else": {"properties": {"seats": false}}
+        },
+        {
+            "if": {"properties": {"tier": {"const": "enterprise"}}},
+            "then": {"required": ["accountManager"], "properties": {"accountManager": {"type": "string"}}},
+            "else": {"properties": {"accountManager": false}}
+        }
+    ]
+}

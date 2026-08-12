@@ -1,0 +1,49 @@
+{
+    "type": "object",
+    "required": ["l1"],
+    "properties": {
+        "l1": {
+            "type": "object",
+            "required": ["l2"],
+            "properties": {
+                "l2": {
+                    "type": "object",
+                    "required": ["l3"],
+                    "properties": {
+                        "l3": {
+                            "type": "object",
+                            "required": ["l4"],
+                            "properties": {
+                                "l4": {
+                                    "type": "object",
+                                    "required": ["tag"],
+                                    "properties": {"tag": {"enum": ["a1", "b1"]}},
+                                    "allOf": [
+                                        {
+                                            "if": {"required": ["tag"], "properties": {"tag": {"pattern": "^a"}}},
+                                            "then": {
+                                                "type": "object",
+                                                "required": ["tag", "x"],
+                                                "properties": {"tag": {"pattern": "^a"}, "x": {"type": "string"}},
+                                                "additionalProperties": false
+                                            }
+                                        },
+                                        {
+                                            "if": {"required": ["tag"], "properties": {"tag": {"pattern": "^b"}}},
+                                            "then": {
+                                                "type": "object",
+                                                "required": ["tag", "y"],
+                                                "properties": {"tag": {"pattern": "^b"}, "y": {"type": "string"}},
+                                                "additionalProperties": false
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

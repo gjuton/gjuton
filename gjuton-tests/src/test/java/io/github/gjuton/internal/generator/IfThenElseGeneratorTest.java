@@ -11,7 +11,6 @@ import io.github.gjuton.internal.parser.SchemaParser;
 import java.util.Map;
 import java.util.Random;
 import java.util.stream.Stream;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 class IfThenElseGeneratorTest {
@@ -175,11 +174,13 @@ class IfThenElseGeneratorTest {
                 }
                 """);
         var context = GeneratorContext.testContext(document, new Random(42));
+        // Deep enough to reach the default soft nesting depth, which is what turns minimal mode on.
+        context.enterPath(".a");
         context.enterPath(".a");
         context.enterPath(".a");
         var generator = new IfThenElseGenerator(context, document.getRoot());
 
-        // when / then -- minimal mode must not surface the internal IllegalStateException
+        // when / then
         assertThatThrownBy(generator::generate).isInstanceOf(UnsatisfiableSchemaException.class);
     }
 
@@ -187,30 +188,5 @@ class IfThenElseGeneratorTest {
         return new IfThenElseGenerator(
                 GeneratorContext.testContext(document, new Random(42)),
                 document.getRoot());
-    }
-
-    @Nested
-    class NoveltyTracking {
-
-        @Test
-        void noveltyIndexTracksTheBranchActuallyPickedNotThePhase() {
-            var document = PARSER.parse(STATUS_CONDITIONAL);
-            var context = GeneratorContext.testContext(document, new Random(42));
-            var generator = new IfThenElseGenerator(context, document.getRoot());
-
-            // when
-            // RANDOM resolves to THEN or ELSE, the same two outcomes THEN and
-            // ELSE track directly — its novelty index must follow whichever
-            // branch generatePhase actually picked, not RANDOM's own ordinal
-            generator.generatePhase(IfThenElseGenerator.GenerationPhase.THEN);
-            int afterThen = generator.noveltyIndex(IfThenElseGenerator.GenerationPhase.RANDOM);
-
-            generator.generatePhase(IfThenElseGenerator.GenerationPhase.ELSE);
-            int afterElse = generator.noveltyIndex(IfThenElseGenerator.GenerationPhase.RANDOM);
-
-            // then
-            assertThat(afterThen).isEqualTo(IfThenElseGenerator.GenerationPhase.THEN.ordinal());
-            assertThat(afterElse).isEqualTo(IfThenElseGenerator.GenerationPhase.ELSE.ordinal());
-        }
     }
 }
