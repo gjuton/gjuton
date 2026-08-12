@@ -162,43 +162,7 @@ class JsonSchemaSuiteTest {
 
     // The parser drops the keyword.
     private static final Set<String> KEYWORD_NOT_RECOGNIZED = Set.of(
-            "draft2019-09/maxContains.json # maxContains = 0 with minContains = 0 # empty array",
-            "draft2019-09/maxContains.json # maxContains = 0 with minContains = 0 # one matching item",
-            "draft2019-09/maxContains.json # maxContains with contains # all elements match, invalid maxContains",
-            "draft2019-09/maxContains.json # maxContains with contains # some elements match, invalid maxContains",
-            "draft2019-09/maxContains.json # maxContains with contains, value with a decimal # too many elements match, invalid maxContains",
-            "draft2019-09/maxContains.json # minContains < maxContains # minContains < maxContains < actual",
-            "draft2019-09/minContains.json # maxContains < minContains # invalid maxContains",
-            "draft2019-09/minContains.json # maxContains < minContains # invalid maxContains and minContains",
-            "draft2019-09/minContains.json # maxContains < minContains # invalid minContains",
-            "draft2019-09/minContains.json # maxContains = minContains # all elements match, invalid maxContains",
-            "draft2019-09/minContains.json # maxContains = minContains # all elements match, invalid minContains",
-            "draft2019-09/minContains.json # minContains = 0 with maxContains # empty data",
-            "draft2019-09/minContains.json # minContains = 0 with maxContains # too many",
-            "draft2019-09/minContains.json # minContains = 0 with no maxContains # empty data",
-            "draft2019-09/minContains.json # minContains = 0 with no maxContains # minContains = 0 makes contains always pass",
-            "draft2019-09/minContains.json # minContains=2 with contains # all elements match, invalid minContains",
-            "draft2019-09/minContains.json # minContains=2 with contains # some elements match, invalid minContains",
-            "draft2019-09/minContains.json # minContains=2 with contains with a decimal value # one element matches, invalid minContains",
             "draft2019-09/not.json # collect annotations inside a 'not', even if collection is disabled # unevaluated property",
-            "draft2020-12/maxContains.json # maxContains = 0 with minContains = 0 # empty array",
-            "draft2020-12/maxContains.json # maxContains = 0 with minContains = 0 # one matching item",
-            "draft2020-12/maxContains.json # maxContains with contains # all elements match, invalid maxContains",
-            "draft2020-12/maxContains.json # maxContains with contains # some elements match, invalid maxContains",
-            "draft2020-12/maxContains.json # maxContains with contains, value with a decimal # too many elements match, invalid maxContains",
-            "draft2020-12/maxContains.json # minContains < maxContains # minContains < maxContains < actual",
-            "draft2020-12/minContains.json # maxContains < minContains # invalid maxContains",
-            "draft2020-12/minContains.json # maxContains < minContains # invalid maxContains and minContains",
-            "draft2020-12/minContains.json # maxContains < minContains # invalid minContains",
-            "draft2020-12/minContains.json # maxContains = minContains # all elements match, invalid maxContains",
-            "draft2020-12/minContains.json # maxContains = minContains # all elements match, invalid minContains",
-            "draft2020-12/minContains.json # minContains = 0 # empty data",
-            "draft2020-12/minContains.json # minContains = 0 # minContains = 0 makes contains always pass",
-            "draft2020-12/minContains.json # minContains = 0 with maxContains # empty data",
-            "draft2020-12/minContains.json # minContains = 0 with maxContains # too many",
-            "draft2020-12/minContains.json # minContains=2 with contains # all elements match, invalid minContains",
-            "draft2020-12/minContains.json # minContains=2 with contains # some elements match, invalid minContains",
-            "draft2020-12/minContains.json # minContains=2 with contains with a decimal value # one element matches, invalid minContains",
             "draft2020-12/not.json # collect annotations inside a 'not', even if collection is disabled # unevaluated property"
     );
 
@@ -1058,18 +1022,6 @@ class JsonSchemaSuiteTest {
             "draft7/items.json # items with boolean schemas"
     );
 
-    // The generator does not know the keyword.
-    private static final Set<String> GENERATION_KEYWORD_NOT_RECOGNIZED = Set.of(
-            "draft2019-09/maxContains.json # maxContains = 0 with minContains = 0",
-            "draft2019-09/minContains.json # maxContains = minContains",
-            "draft2019-09/minContains.json # minContains=2 with contains",
-            "draft2019-09/minContains.json # minContains=2 with contains with a decimal value",
-            "draft2020-12/maxContains.json # maxContains = 0 with minContains = 0",
-            "draft2020-12/minContains.json # maxContains = minContains",
-            "draft2020-12/minContains.json # minContains=2 with contains",
-            "draft2020-12/minContains.json # minContains=2 with contains with a decimal value"
-    );
-
     // Reported unsatisfiable, though the suite asserts a valid instance against it.
     private static final Set<String> GENERATION_GIVES_UP = Set.of(
             "draft2019-09/contains.json # contains keyword with boolean schema false",
@@ -1121,7 +1073,7 @@ class JsonSchemaSuiteTest {
             BOOLEAN_SUBSCHEMA_IGNORED, REGEX_UNSUPPORTED_BY_JAVA);
 
     private static final List<Set<String>> GENERATION_CAUSES = List.of(
-            GENERATION_SCHEMA_REJECTED, GENERATION_KEYWORD_NOT_RECOGNIZED, GENERATION_GIVES_UP,
+            GENERATION_SCHEMA_REJECTED, GENERATION_GIVES_UP,
             GENERATION_PRODUCES_INVALID_VALUE, FAILS_IN_VALIDATION_LIBRARY);
 
     private static final Set<String> IGNORED_FOR_VALIDATION = union(VALIDATION_CAUSES);

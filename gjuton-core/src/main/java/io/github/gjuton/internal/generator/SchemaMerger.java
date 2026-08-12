@@ -394,6 +394,13 @@ final class SchemaMerger {
 
     private static ArraySchema mergeArraySchemas(GeneratorContext context,
             ArraySchema a, ArraySchema b, Supplier<String> locations) {
+        // One pair of bounds covers every clause, so the strictest of each side is what holds.
+        var minContains = maxNullable(a.getMinContains(), b.getMinContains());
+        var maxContains = minNullable(a.getMaxContains(), b.getMaxContains());
+        if (minContains != null && maxContains != null && minContains > maxContains) {
+            throw new UnsatisfiableSchemaException(
+                    "minContains " + minContains + " exceeds maxContains " + maxContains + locations.get());
+        }
         var items = mergeTwoSchemas(context, a.getItemSchema(), b.getItemSchema(), locations);
         var contains = mergeContainsClauses(context, a.getContains(), b.getContains(), locations);
         var prefixA = a.getPrefixSchemas();
@@ -421,6 +428,8 @@ final class SchemaMerger {
                 .prefixItems(mergedPrefix)
                 .additionalItems(mergedAdditionalItems)
                 .contains(contains)
+                .minContains(minContains)
+                .maxContains(maxContains)
                 .minItems(minItems)
                 .maxItems(maxItems)
                 .uniqueItems(a.isUniqueItems() || b.isUniqueItems())

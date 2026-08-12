@@ -1,0 +1,8 @@
+{
+    "type": "array",
+    "items": {"enum": ["x", "y", "z"]},
+    "contains": {"const": "x"},
+    "maxContains": 1,
+    "minItems": 2,
+    "maxItems": 3
+}

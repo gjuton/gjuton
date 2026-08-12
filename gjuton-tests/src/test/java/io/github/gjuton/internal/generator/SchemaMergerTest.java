@@ -824,6 +824,38 @@ class SchemaMergerTest {
         }
 
         @Test
+        void containsBoundsMergeToTheStrictestOfEachSide() {
+            var a = readSchema("""
+                    {"type": "array", "contains": {"const": "A"}, "minContains": 2, "maxContains": 5}
+                    """);
+            var b = readSchema("""
+                    {"type": "array", "contains": {"const": "A"}, "minContains": 3, "maxContains": 4}
+                    """);
+
+            // when
+            var merged = (ArraySchema) SchemaMerger.merge(List.of(a, b));
+
+            // then
+            assertThat(merged.getMinContains()).isEqualTo(3);
+            assertThat(merged.getMaxContains()).isEqualTo(4);
+        }
+
+        @Test
+        void containsBoundsThatCannotBothHoldAreUnsatisfiable() {
+            var a = readSchema("""
+                    {"type": "array", "contains": {"const": "A"}, "minContains": 3}
+                    """);
+            var b = readSchema("""
+                    {"type": "array", "contains": {"const": "A"}, "maxContains": 2}
+                    """);
+
+            // when / then
+            assertThatThrownBy(() -> SchemaMerger.merge(List.of(a, b)))
+                    .isInstanceOf(UnsatisfiableSchemaException.class)
+                    .hasMessageContaining("minContains 3");
+        }
+
+        @Test
         void identicalContainsClausesCollapseIntoOne() {
             var a = readSchema("""
                     {"type": "array", "contains": {"const": "A"}}

@@ -47,11 +47,10 @@ public final class ArraySchema extends Schema {
     private Object additionalItems;
 
     /**
-     * Clauses each of which at least one element of the array must satisfy,
-     * or {@code null} when the array carries no such constraint. A schema
-     * document states a single clause through the JSON Schema
-     * {@code contains} keyword; several accumulate when schemas that each
-     * declare one are merged, and every clause then has to hold on its own.
+     * Clauses the array must satisfy, or {@code null} when it carries none.
+     * A document states one through {@code contains}; merging schemas that
+     * each declare one accumulates them, and every clause then holds on its
+     * own.
      */
     private List<Schema> contains;
 
@@ -59,6 +58,21 @@ public final class ArraySchema extends Schema {
     private void setContains(Schema contains) {
         this.contains = contains == null ? null : List.of(contains);
     }
+
+    /**
+     * The fewest elements each {@code contains} clause needs. One when
+     * absent, ignored without {@code contains}. A single bound covers
+     * every clause, so merged branches asking for different counts all end
+     * up under the strictest — narrower than they demanded, never wrong.
+     */
+    private Integer minContains;
+
+    /**
+     * The most elements each {@code contains} clause may have. Unlimited
+     * when absent, ignored without {@code contains}. As with
+     * {@code minContains}, one bound covers every clause.
+     */
+    private Integer maxContains;
 
     private Integer minItems;
     private Integer maxItems;
