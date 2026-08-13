@@ -60,7 +60,8 @@ class IntegrationTest {
     // these schemas fail the test.
     private static final Set<String> SCHEMAS_THAT_NEED_NETWORK_NON_WORKING = Set.of(
             "catalog-info.json", "foundryvtt-module-manifest.json", "foundryvtt-system-manifest.json",
-            "foundryvtt-world-manifest.json", "lsdlschema.json", "web-manifest-combined.json"
+            "foundryvtt-world-manifest.json", "lsdlschema.json", "rust-toolchain.json",
+            "web-manifest-combined.json"
     );
 
     // Schemas that cannot be built without reaching the network but generate valid JSON
@@ -81,7 +82,7 @@ class IntegrationTest {
             "minecraft-texture-mcmeta.json", "mta.json", "mtaext.json", "partial-pdm.json", "partial-tox.json",
             "pep-723.json", "poetry.json", "pre-commit-config.json", "prisma.json", "rancher-fleet-0.5.json",
             "rancher-fleet-0.8.json", "rc3-collection-0.0.3.json", "rc3-folder-0.0.3.json", "rc3-request-0.0.3.json",
-            "replit.json", "rudder-techniques.json", "rust-toolchain.json",
+            "replit.json", "rudder-techniques.json",
             "sarif-external-property-file-2.1.0-rtm.0.json", "sarif-external-property-file-2.1.0-rtm.1.json",
             "sarif-external-property-file-2.1.0-rtm.2.json", "sarif-external-property-file-2.1.0-rtm.3.json",
             "sarif-external-property-file-2.1.0-rtm.4.json", "sarif-external-property-file-2.1.0-rtm.5.json",
@@ -97,10 +98,6 @@ class IntegrationTest {
     private static final Set<String> NON_WORKING_SCHEMAS = Set.of(
             // Schema build fails: missing local $ref target file
             "base-04.json", // schema build: missing local ref target "path" (NoSuchFileException)
-
-            // Schema build fails: unresolved $ref fragment
-            "dss-2.0.0.json", // schema build: unresolved percent-encoded $ref fragment
-            "opspec-io-0.1.7.json", // schema build: unresolved percent-encoded $ref fragment
 
             // Generates JSON violating other constraints (oneOf/const/required/type/dependentSchemas)
             "es6importsorterrc.json", // generates /preCommands/0 violating its oneOf
@@ -133,7 +130,6 @@ class IntegrationTest {
             "specif-1.0.json", // UnsatisfiableSchemaException at /$schema (pattern+length)
             "specif-1.1.json", // UnsatisfiableSchemaException at /$schema (pattern+length)
             "starlake.json", // UnsatisfiableSchemaException
-            "venvironment-schema-v4.0.0.json", // UnsatisfiableSchemaException at /can-networks/0/database
             "vhwdebugger-binding-schema.json", // UnsatisfiableSchemaException
             // Also slow, but excluded for failing: generates 8 valid values, then throws on the
             // 9th in EXHAUSTIVE mode. RANDOM survives 20 invocations but is slow at deep limits.
@@ -150,6 +146,7 @@ class IntegrationTest {
             "venvironment-schema-v3.0.0.json", // "04874" mis-resolved as "4874"
             "venvironment-schema-v3.1.0.json", // "04874" mis-resolved as "4874"
             "venvironment-schema-v3.2.0.json", // "09047" mis-resolved as "9047"
+            "venvironment-schema-v4.0.0.json", // "02120" mis-resolved as "2120"
             "venvironment-schema-v4.1.0.json", // "09693" mis-resolved as "9693"
             "venvironment-schema-v5.0.0.json" // "09693" mis-resolved as "9693"
     );

@@ -2,6 +2,7 @@ package io.github.gjuton.internal.parser;
 
 import io.github.gjuton.internal.jsonconversion.JsonConverter;
 import io.github.gjuton.internal.model.Schema;
+import io.github.gjuton.internal.util.StringUtil;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.net.URI;
@@ -122,6 +123,10 @@ final class RefCollector {
                         targetBase = baseUriOf(targetDoc, location);
                         targetDocUri = targetBase.toString();
                     }
+                    // A pointer written in a URI fragment carries every character outside
+                    // the fragment alphabet percent-encoded, so it is decoded before it
+                    // names anything.
+                    fragment = StringUtil.decodePercentEscapes(fragment);
                     // The target may sit outside any sub-schema position and so be
                     // reachable only by following the ref that points at it. An empty
                     // fragment names the document itself.
@@ -194,8 +199,8 @@ final class RefCollector {
      * {@code document}.
      *
      * <p>Escapes are read as RFC 6901 writes them — {@code ~1} for a
-     * {@code /} within a key and {@code ~0} for a {@code ~}. Percent-encoding
-     * is left as written (issue #150).
+     * {@code /} within a key and {@code ~0} for a {@code ~}. The pointer is
+     * expected already free of the percent-encoding a URI fragment carries.
      */
     private static Object resolvePointer(Object document, String pointer) {
         if (pointer.isEmpty()) {

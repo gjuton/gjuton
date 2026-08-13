@@ -103,7 +103,7 @@ Allowed dependencies between packages (enforced by ArchUnit — violations fail
 
 ```
 api            — entry point; may access all layers
-parser         — may only access jsonconversion, model and errors
+parser         — may only access jsonconversion, model, errors and util
 generator      — may only access model, errors, and util
 output         — may only access jsonconversion and errors
 jsonconversion — may only access errors
@@ -129,6 +129,7 @@ graph TD
     api --> model
     parser --> jsonconversion
     parser --> model
+    parser --> util
     generator --> model
     generator --> util
     output --> jsonconversion

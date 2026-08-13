@@ -37,6 +37,9 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ### Fixed
 
+- A `$ref` naming a definition whose key contains a character a URI must escape,
+  such as `#/patternProperties/%5Ba-z%5D%2B`, now resolves to that definition
+  instead of failing the parse. A `+` in a fragment still means a literal `+`.
 - A schema whose `allOf` holds one `if`/`then` per value of a discriminator
   property now generates, instead of being reported as unsatisfiable. Each
   conditional is satisfied on its own side rather than every `then` having to

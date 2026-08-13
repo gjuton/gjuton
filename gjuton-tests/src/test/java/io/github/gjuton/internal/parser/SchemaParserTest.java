@@ -229,6 +229,66 @@ class SchemaParserTest {
         }
 
         @Test
+        void fragmentEscapeResolvesToTheKeyItNames() {
+            // The escape a fragment carries stands for the character in the key, and
+            // RFC 6901's own escaping is read afterwards.
+            var ref = "#/definitions/a~1b%3Ac";
+            var document = PARSER.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "x": {"$ref": "%s"}
+                        },
+                        "definitions": {
+                            "a/b:c": {"type": "string"}
+                        }
+                    }
+                    """.formatted(ref));
+
+            // when
+            var resolved = document.resolveRef(ref);
+
+            // then
+            assertThat(resolved).isNotNull();
+        }
+
+        @Test
+        void percentEncodedPatternPropertiesKeyResolves() {
+            var document = PARSER.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "y": {"$ref": "#/patternProperties/%5B-_.a-zA-Z0-9%5D%2B"}
+                        },
+                        "patternProperties": {
+                            "[-_.a-zA-Z0-9]+": {"type": "string"}
+                        }
+                    }
+                    """);
+
+            // when
+            var resolved = document.resolveRef("#/patternProperties/%5B-_.a-zA-Z0-9%5D%2B");
+
+            // then
+            assertThat(resolved).isNotNull();
+        }
+
+        @Test
+        void unresolvedPercentEncodedRefIsReportedDecoded() {
+            // when / then
+            assertThatThrownBy(() -> PARSER.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "missing": {"$ref": "#/definitions/a%3Ab"}
+                        }
+                    }
+                    """))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("#/definitions/a:b");
+        }
+
+        @Test
         void unresolvedRefThrowsIllegalArgumentException() {
             // when / then
             assertThatThrownBy(() -> PARSER.parse("""
