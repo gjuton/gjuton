@@ -359,6 +359,31 @@ class ArrayGeneratorTest {
     }
 
     @Test
+    void requiredMatchesMakeRoomPastThePrefix() {
+        var generator = arrayGenerator("""
+                {
+                    "type": "array",
+                    "prefixItems": [{"const": "first"}],
+                    "items": {"type": "integer"},
+                    "contains": {"const": 42},
+                    "minContains": 3,
+                    "minItems": 3
+                }
+                """);
+
+        // when
+        var results = IntStream.range(0, 20)
+                .mapToObj(i -> generator.generate())
+                .toList();
+
+        // then
+        assertThat(results).allSatisfy(arr -> {
+            assertThat(arr).startsWith("first");
+            assertThat(arr).filteredOn(e -> e instanceof Number n && n.longValue() == 42).hasSizeGreaterThanOrEqualTo(3);
+        });
+    }
+
+    @Test
     void containsBoundsWithoutContainsForceNoElement() {
         var generator = arrayGenerator("""
                 {
