@@ -121,15 +121,20 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
     }
 
     /**
-     * The smallest array length that satisfies the schema and caller constraints
-     * together: {@code minItems} raised to the caller's minimum and to the elements
-     * every {@code contains} clause needs.
+     * The shortest array this generator produces: long enough for the schema's
+     * minimum and the caller's. The schema's is either stated outright or
+     * follows from its other constraints.
      */
     private int effectiveMinLength() {
         int minLength = coalesce(schema.getMinItems(), 0);
         int minInForce = context.constraints().arrayMinLength();
         minLength = Math.max(minLength, minInForce);
-        minLength = Math.max(minLength, containsSchemas.size() * requiredMatchesPerClause);
+        int required = containsSchemas.size() * requiredMatchesPerClause;
+        // prefixItems on its own requires no elements, so only clause matches
+        // push the length past the prefix.
+        if (required > 0) {
+            minLength = Math.max(minLength, prefixSchemas.size() + required);
+        }
         return minLength;
     }
 
@@ -216,21 +221,18 @@ final class ArrayGenerator extends PhaseGenerator<ArrayGenerator.GenerationPhase
     /**
      * Maps array positions to the {@code contains} clause each one has to
      * satisfy. Every clause gets as many positions as it needs, no two clauses
-     * share one, and the tuple prefix is left untouched unless the clauses
-     * cannot otherwise be placed past it.
+     * share one, and the tuple prefix is left untouched.
      *
-     * <p>{@code length} must be at least the total number of elements the
-     * clauses need.
+     * <p>{@code length} must leave room past the prefix for every element the
+     * clauses need, which {@link #effectiveMinLength()} guarantees.
      */
     private Map<Integer, Schema> assignContainsPositions(int length) {
         int required = containsSchemas.size() * requiredMatchesPerClause;
         if (required == 0) {
             return Map.of();
         }
-        int roomPastPrefix = length - prefixSchemas.size();
-        int firstCandidate = roomPastPrefix >= required ? prefixSchemas.size() : 0;
         var candidates = new ArrayList<Integer>();
-        for (int i = firstCandidate; i < length; i++) {
+        for (int i = prefixSchemas.size(); i < length; i++) {
             candidates.add(i);
         }
         Collections.shuffle(candidates, context.random());

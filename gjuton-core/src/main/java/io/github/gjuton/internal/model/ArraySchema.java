@@ -61,9 +61,10 @@ public final class ArraySchema extends Schema {
 
     /**
      * The fewest elements each {@code contains} clause needs. One when
-     * absent, ignored without {@code contains}. A single bound covers
-     * every clause, so merged branches asking for different counts all end
-     * up under the strictest — narrower than they demanded, never wrong.
+     * absent, ignored without {@code contains}. A single bound covers every
+     * clause, so merged branches asking for different counts all end up under
+     * the strictest, and one branch's minimum can meet another's maximum and
+     * be reported as unsatisfiable though each clause could be met on its own.
      */
     private Integer minContains;
 

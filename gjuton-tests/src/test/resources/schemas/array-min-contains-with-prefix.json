@@ -1,0 +1,11 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "array",
+    "prefixItems": [
+        {"const": "first"}
+    ],
+    "items": {"type": "integer"},
+    "contains": {"const": 42},
+    "minContains": 2,
+    "maxItems": 4
+}
