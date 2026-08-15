@@ -11,6 +11,8 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-08-15
+
 ### Added
 
 - Support for `propertyNames`, which constrains what a property may be called.
