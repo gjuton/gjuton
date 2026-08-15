@@ -14,24 +14,29 @@ Gjuton is pre-1.0 — the API is unstable and breaking changes may land in any r
 
 ## Installation
 
-Maven:
+Gjuton reads and writes JSON with Jackson, and Jackson 2 (`com.fasterxml.jackson`)
+and Jackson 3 (`tools.jackson`) are separate libraries. Depend on the artifact
+matching the one your project already uses.
+
+Maven, for Jackson 2:
 
 ```xml
 <dependency>
     <groupId>io.github.gjuton</groupId>
-    <artifactId>gjuton</artifactId>
-    <version>0.0.2</version>
+    <artifactId>gjuton-jackson2</artifactId>
+    <version>0.1.0</version>
 </dependency>
 ```
 
-Gradle:
+For Jackson 3, use `gjuton-jackson3` instead. Gradle:
 
 ```groovy
-implementation 'io.github.gjuton:gjuton:0.0.2'
+implementation 'io.github.gjuton:gjuton-jackson2:0.1.0'
 ```
 
-Gjuton is pre-1.0 — breaking changes may land in any release. Pin a specific
-version and check the [changelog](CHANGELOG.md) before upgrading.
+Either one brings in `gjuton-core`, which holds the generator itself. Depending
+on `gjuton-core` alone does not work — it cannot read or write JSON, and says
+which artifact to add.
 
 Gjuton pulls in three transitive dependencies:
 
@@ -39,6 +44,11 @@ Gjuton pulls in three transitive dependencies:
 - RgxGen — `pattern` generation
 - slf4j-api — trace logging; no logging implementation is bundled, so your
   existing setup is left alone
+
+## Upgrading
+
+The [changelog](CHANGELOG.md) records what changed in
+each release, and the [upgrade guide](UPGRADING.md) what to do about it.
 
 ## Quick start
 
@@ -93,7 +103,12 @@ Gjuton gen = Gjuton.of(schema)
 
 `withSeed(long)` fixes the random source. Two generators with the same schema
 and seed produce the same sequence of values across repeated `generate()` calls
-— so a failing test can be replayed with identical data.
+— so a failing test can be replayed with identical data. The guarantee holds
+within a gjuton version; upgrading may change what a seed produces.
+
+In `RANDOM` mode, `date` and `date-time` values are not reproducible across the
+turn of a year. Set `dateRange` (see [value constraints](#value-constraints)) to
+pin them.
 
 ```java
 Gjuton gen = Gjuton.of(schema).withSeed(42);
