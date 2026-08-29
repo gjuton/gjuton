@@ -11,6 +11,13 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Fixed
+
+- A `dependentSchemas` entry (or its draft-7 `dependencies` equivalent) written as
+  a `oneOf`, `anyOf` or `allOf` wrapper is now honoured: the branch taken matches
+  the value generated for the triggering property, and the properties that branch
+  requires are generated against it instead of being left out.
+
 ## [0.1.0] — 2026-08-15
 
 ### Added

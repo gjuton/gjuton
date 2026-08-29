@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "required": ["kind"],
+  "properties": { "kind": { "enum": ["a", "b"] } },
+  "dependentSchemas": {
+    "kind": {
+      "oneOf": [
+        { "properties": { "kind": { "const": "a" }, "payload": { "type": "string" } },
+          "required": ["payload"] },
+        { "properties": { "kind": { "const": "b" }, "payload": { "type": "integer" } },
+          "required": ["payload"] }
+      ]
+    }
+  }
+}

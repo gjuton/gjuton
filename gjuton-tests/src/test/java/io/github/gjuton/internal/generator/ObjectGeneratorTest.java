@@ -945,6 +945,41 @@ class ObjectGeneratorTest {
         assertThat(values).anyMatch(v -> !"".equals(v));
     }
 
+    @Test
+    void oneOfInDependentSchemaPicksBranchMatchingTheTriggeringValue() {
+        var generator = objectGenerator("""
+                {
+                    "type": "object",
+                    "required": ["kind"],
+                    "properties": {"kind": {"enum": ["a", "b"]}},
+                    "dependentSchemas": {
+                        "kind": {
+                            "oneOf": [
+                                {"properties": {"kind": {"const": "a"}, "payload": {"type": "string"}},
+                                 "required": ["payload"]},
+                                {"properties": {"kind": {"const": "b"}, "payload": {"type": "integer"}},
+                                 "required": ["payload"]}
+                            ]
+                        }
+                    }
+                }
+                """);
+
+        // when
+        var results = generate(generator, 20);
+
+        // then
+        assertThat(results).extracting(obj -> obj.get("kind")).contains("a", "b");
+        assertThat(results).allSatisfy(obj -> {
+            assertThat(obj).containsKeys("kind", "payload");
+            if ("a".equals(obj.get("kind"))) {
+                assertThat(obj.get("payload")).isInstanceOf(String.class);
+            } else {
+                assertThat(obj.get("payload")).isInstanceOf(Number.class);
+            }
+        });
+    }
+
     private static List<Map<String, Object>> generate(ObjectGenerator generator, int iterations) {
         return IntStream.range(0, iterations).mapToObj(i -> generator.generate()).toList();
     }

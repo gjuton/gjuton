@@ -38,6 +38,15 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     private static final int ADDITIONAL_PROPERTIES_HEADROOM = 3;
 
     private final ObjectSchema schema;
+
+    /**
+     * The schema minus every {@code dependentSchemas} entry whose subschema
+     * combines branches. Serves as the base {@link #resolveEffectiveSchema}
+     * narrows, so such a dependent schema constrains the object where its
+     * branch is chosen and is not left to constrain it a second time.
+     */
+    private final ObjectSchema schemaWithoutCombiningDependentSchemas;
+
     private final List<String> requiredAndTransitiveRequired;
     private final Map<Pattern, Schema> compiledPatternProperties;
     private final Map<String, RgxGen> patternGenerators;
@@ -69,6 +78,7 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     ObjectGenerator(GeneratorContext context, ObjectSchema schema) {
         super(GenerationPhase.class, context);
         this.schema = schema;
+        this.schemaWithoutCombiningDependentSchemas = withoutCombiningDependentSchemas(schema);
         this.compiledPatternProperties = schema.getPatternProperties().entrySet().stream()
                 .collect(Collectors.toMap(
                         e -> Pattern.compile(e.getKey()),
@@ -87,6 +97,39 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
             allRequired.addAll(computeImpliedProperties(req, schema.getDependentRequired(), schema.getDependentSchemas()));
         }
         this.requiredAndTransitiveRequired = List.copyOf(allRequired);
+    }
+
+    /**
+     * Whether {@code candidate} leaves part of what it accepts to branches —
+     * an {@code allOf}, {@code anyOf} or {@code oneOf} — instead of stating it
+     * outright.
+     */
+    private static boolean combinesBranches(Schema candidate) {
+        return candidate.getOneOf() != null || candidate.getAnyOf() != null || candidate.getAllOf() != null;
+    }
+
+    /**
+     * Returns {@code objectSchema} without the {@code dependentSchemas}
+     * entries that combine branches, keeping every other constraint it
+     * carries. Returns {@code objectSchema} itself when no entry combines.
+     */
+    private static ObjectSchema withoutCombiningDependentSchemas(ObjectSchema objectSchema) {
+        var kept = new LinkedHashMap<String, Schema>();
+        objectSchema.getDependentSchemas().forEach((property, dependent) -> {
+            if (!combinesBranches(dependent)) {
+                kept.put(property, dependent);
+            }
+        });
+        if (kept.size() == objectSchema.getDependentSchemas().size()) {
+            return objectSchema;
+        }
+        // The draft-7 "dependencies" form feeds the same getters, so both keywords
+        // are rewritten to leave nothing behind that would reinstate a dropped entry.
+        return objectSchema.toBuilder()
+                .dependencies(Map.of())
+                .dependentRequired(objectSchema.getDependentRequired())
+                .dependentSchemas(kept)
+                .build();
     }
 
     /**
@@ -319,11 +362,24 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
      * the effective schema for value generation and synthesizing
      * additional properties if needed to reach {@code targetCount}.
      *
+     * <p>A dependent schema the selection triggers may leave the object's
+     * shape to branches of its own. The result then holds what the branch
+     * taken calls for, which need not be {@code selected}.
+     *
      * @throws UnsatisfiableSchemaException if the effective schema's
      *         {@code propertyNames} disallows one of the selected names
      */
     private Map<String, Object> generateSelected(Set<String> selected, int targetCount, int effectiveMin) {
         var effectiveSchema = resolveEffectiveSchema(selected);
+        if (combinesBranches(effectiveSchema)) {
+            // A triggered dependent schema puts the object's shape in its branches:
+            // which properties belong in it, and what they hold, follows from the
+            // branch taken, so the object is generated as a whole rather than from
+            // the selection made without sight of those branches.
+            @SuppressWarnings("unchecked")
+            var branched = (Map<String, Object>) context.generatorFor(effectiveSchema).generate();
+            return branched;
+        }
         // Against the effective schema, not the base one: a dependentSchemas
         // entry can introduce a propertyNames that the very selection
         // triggering it violates.
@@ -363,7 +419,7 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
      */
     private ObjectSchema resolveEffectiveSchema(Set<String> selectedProperties) {
         var schemas = new ArrayList<Schema>();
-        schemas.add(schema);
+        schemas.add(schemaWithoutCombiningDependentSchemas);
         for (var property : selectedProperties) {
             var depSchema = schema.getDependentSchemas().get(property);
             if (depSchema != null) {
