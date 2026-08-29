@@ -137,6 +137,23 @@
     </dependencyManagement>
 
     <build>
+        <!-- Apache-2.0 §4 binds anyone who redistributes gjuton, and a shaded fat jar is the
+             common case: Shade's licence transformers copy what they find under META-INF/, so
+             the attribution has to travel inside the jar. Naming a resource directory replaces
+             the default one, which is why src/main/resources is listed again. -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+            </resource>
+            <resource>
+                <directory>${project.basedir}/..</directory>
+                <targetPath>META-INF</targetPath>
+                <includes>
+                    <include>LICENSE</include>
+                    <include>NOTICE</include>
+                </includes>
+            </resource>
+        </resources>
         <pluginManagement>
             <plugins>
                 <plugin>
