@@ -1273,6 +1273,80 @@ class SchemaParserTest {
     }
 
     @Nested
+    class UnrecognisedTypes {
+
+        @Test
+        void unrecognisedTypeIsRejected() {
+            // when / then
+            assertThatThrownBy(() -> PARSER.parse("""
+                    {"type": "undef", "minimum": 5, "maximum": 6}
+                    """))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("undef");
+        }
+
+        @Test
+        void capitalisedTypeIsRejected() {
+            // when / then
+            assertThatThrownBy(() -> PARSER.parse("""
+                    {"type": "Object", "properties": {"a": {"type": "string"}}, "required": ["a"]}
+                    """))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Object");
+        }
+
+        @Test
+        void unrecognisedTypeOnNestedSchemaIsRejectedNamingItsLocation() {
+            // when / then
+            assertThatThrownBy(() -> PARSER.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "a": {"type": "Object", "properties": {"b": {"type": "string"}}}
+                        }
+                    }
+                    """))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Object")
+                    .hasMessageContaining("#/properties/a");
+        }
+
+        @Test
+        void unrecognisedTypeInsideTypeArrayIsRejected() {
+            // when / then
+            assertThatThrownBy(() -> PARSER.parse("""
+                    {"type": ["string", "undef"]}
+                    """))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("undef");
+        }
+
+        @Test
+        void unrecognisedTypeInsideRefTargetIsRejected() {
+            // when / then
+            assertThatThrownBy(() -> PARSER.parse("""
+                    {
+                        "$ref": "#/definitions/a",
+                        "definitions": {"a": {"type": "Object"}}
+                    }
+                    """))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("Object");
+        }
+
+        @Test
+        void constPayloadResemblingSchemaWithUnrecognisedTypeIsAccepted() {
+            // when
+            var document = PARSER.parse("""
+                    {"const": {"type": "Object"}}
+                    """);
+
+            // then
+            assertThat(document.getRoot().getConstValue()).isEqualTo(Map.of("type", "Object"));
+        }
+    }
+
+    @Nested
     class TypeParsing {
 
         @Test

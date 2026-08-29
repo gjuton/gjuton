@@ -16,6 +16,10 @@ import java.util.Map;
  * <p>Normalisation is idempotent: a subtree may safely be normalised again
  * after the document containing it already has been.
  *
+ * <p>A schema naming a {@code type} that JSON Schema does not define is
+ * rejected rather than rewritten — there is no shape that preserves what it
+ * was meant to say.
+ *
  * <p>Only recurses into positions that hold sub-schemas ({@code properties}
  * values, {@code items}, {@code oneOf}/{@code anyOf}/{@code allOf}
  * elements, etc.) — never into {@code const}/{@code enum} payloads or
@@ -59,6 +63,13 @@ final class SchemaNormalizer {
     private static final List<String> ARRAY_KEYWORDS = List.of(
             "items", "prefixItems", "additionalItems",
             "contains", "minItems", "maxItems", "uniqueItems");
+
+    /**
+     * The values the JSON Schema {@code type} keyword may name, in the order
+     * an error message lists them.
+     */
+    private static final List<String> JSON_TYPES = List.of(
+            "string", "number", "integer", "boolean", "null", "object", "array");
 
     /**
      * The JSON Schema keywords whose values hold sub-schemas, and the shape
@@ -123,12 +134,94 @@ final class SchemaNormalizer {
      * A node that is already normalised is left unchanged. A value that is
      * not a JSON object — including one naming nothing at all — is left
      * alone rather than rejected.
+     *
+     * @throws IllegalArgumentException if a schema declares a {@code type}
+     *     that is not a JSON Schema type
      */
     static void normalize(Object node) {
-        // Type arrays first: inference reads the type keyword, and the branches
-        // this produces are themselves schemas that still need inferring.
+        // Validation first: it is the only step that sees a type as it was
+        // written, before an array of them is rewritten away.
+        validateTypes(node, "#");
+        // Type arrays before inference: inference reads the type keyword, and the
+        // branches the rewrite produces are themselves schemas that still need inferring.
         rewriteTypeArrays(node);
         inferMissingTypes(node);
+    }
+
+    /**
+     * Rejects every schema at or beneath {@code node} that declares a
+     * {@code type} JSON Schema does not define, so that a typo or a
+     * wrong-cased name fails the parse rather than silently widening the
+     * schema to accept any value at all. Type names are case-sensitive.
+     * A schema declaring no type is left alone, and so stays subject to
+     * type inference.
+     *
+     * @param pointer the JSON Pointer naming where {@code node} sits, so
+     *     that an error can say which schema is at fault
+     * @throws IllegalArgumentException naming the offending value and its
+     *     location
+     */
+    private static void validateTypes(Object node, String pointer) {
+        if (!(node instanceof Map)) {
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        var objectNode = (Map<String, Object>) node;
+        var typeNode = objectNode.get("type");
+        if (typeNode != null) {
+            // The array form names one type per element, and is checked element by
+            // element so the message quotes what was written rather than the array.
+            var declaredTypes = typeNode instanceof List<?> typeArray ? typeArray : List.of(typeNode);
+            for (var declaredType : declaredTypes) {
+                if (!JSON_TYPES.contains(declaredType)) {
+                    throw new IllegalArgumentException(
+                            "Unrecognised type '" + declaredType + "' at " + pointer
+                                    + "; expected one of " + JSON_TYPES);
+                }
+            }
+        }
+        for (var field : SCHEMA_FIELDS.entrySet()) {
+            var value = objectNode.get(field.getKey());
+            if (value == null) {
+                continue;
+            }
+            var keywordPointer = pointer + "/" + field.getKey();
+            switch (field.getValue()) {
+                case SCHEMA -> validateTypes(value, keywordPointer);
+                case SCHEMA_ARRAY -> validateTypesInArray(value, keywordPointer);
+                case SCHEMA_MAP -> {
+                    if (value instanceof Map<?, ?> mapValue) {
+                        for (var entry : mapValue.entrySet()) {
+                            validateTypes(entry.getValue(), keywordPointer + "/" + entry.getKey());
+                        }
+                    }
+                }
+                case SCHEMA_OR_SCHEMA_ARRAY -> {
+                    if (value instanceof List) {
+                        validateTypesInArray(value, keywordPointer);
+                    } else {
+                        validateTypes(value, keywordPointer);
+                    }
+                }
+                default -> throw new IllegalStateException("Unhandled field type: " + field.getValue());
+            }
+        }
+    }
+
+    /**
+     * Validates each element of {@code arrayNode} as a schema of its own, at
+     * the position its index names.
+     *
+     * @throws IllegalArgumentException naming the offending value and its
+     *     location
+     */
+    private static void validateTypesInArray(Object arrayNode, String pointer) {
+        if (!(arrayNode instanceof List<?> elements)) {
+            return;
+        }
+        for (int index = 0; index < elements.size(); index++) {
+            validateTypes(elements.get(index), pointer + "/" + index);
+        }
     }
 
     /**

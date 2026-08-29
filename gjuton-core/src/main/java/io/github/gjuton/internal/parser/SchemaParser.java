@@ -27,8 +27,9 @@ public final class SchemaParser {
      * Parses a JSON Schema string into a {@link SchemaDocument} containing
      * the root schema and all resolved {@code $ref} targets.
      *
-     * @throws IllegalArgumentException if the input is not valid JSON or
-     *     contains an unresolvable {@code $ref}
+     * @throws IllegalArgumentException if the input is not valid JSON,
+     *     names a {@code type} that is not a JSON Schema type, or contains
+     *     an unresolvable {@code $ref}
      */
     public SchemaDocument parse(String jsonSchema) {
         return doParse(jsonSchema, null);
@@ -40,8 +41,9 @@ public final class SchemaParser {
      * {@code $ref} values are resolved relative to the {@code $id} the schema
      * declares, or to the file's own location when it declares none.
      *
-     * @throws IllegalArgumentException if the schema is not valid JSON or
-     *     contains an unresolvable {@code $ref}
+     * @throws IllegalArgumentException if the schema is not valid JSON,
+     *     names a {@code type} that is not a JSON Schema type, or contains
+     *     an unresolvable {@code $ref}
      * @throws UncheckedIOException if reading the file fails
      */
     public SchemaDocument parse(Path schemaFile) {

@@ -11,6 +11,13 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Fixed
+
+- A schema whose `type` is not a JSON Schema type — a typo such as `"undef"`,
+  or a wrong-cased `"Object"` — is now rejected, naming the value and where it
+  was written. Such a schema previously parsed as "anything", so every
+  constraint beside it was dropped and generation emitted arbitrary values.
+
 ## [0.1.0] — 2026-08-15
 
 ### Added
