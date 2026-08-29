@@ -90,7 +90,44 @@ class EnumGeneratorTest {
 
         // when / then
         assertThatThrownBy(() -> new EnumGenerator(withSeed(42), root.getEnumValues(), root))
-                .isInstanceOf(UnsatisfiableSchemaException.class);
+                .isInstanceOf(UnsatisfiableSchemaException.class)
+                .hasMessage("No enum value satisfies the schema (at $)");
+    }
+
+    @Test
+    void namesTheContradictionWhenBooleanMembersMeetStringType() {
+        var root = PARSER.parse("""
+                { "type": "string", "enum": [true, false] }
+                """).getRoot();
+
+        // when / then
+        assertThatThrownBy(() -> new EnumGenerator(withSeed(42), root.getEnumValues(), root))
+                .isInstanceOf(UnsatisfiableSchemaException.class)
+                .hasMessage("No enum value satisfies the schema: the enum values are boolean but the schema declares type string (at $)");
+    }
+
+    @Test
+    void namesTheContradictionWhenStringMembersMeetAnIntegerType() {
+        var root = PARSER.parse("""
+                { "type": "integer", "enum": ["0", "1", "2"] }
+                """).getRoot();
+
+        // when / then
+        assertThatThrownBy(() -> new EnumGenerator(withSeed(42), root.getEnumValues(), root))
+                .isInstanceOf(UnsatisfiableSchemaException.class)
+                .hasMessage("No enum value satisfies the schema: the enum values are string but the schema declares type integer (at $)");
+    }
+
+    @Test
+    void namesTheContradictionWhenStringMembersMeetAnArrayType() {
+        var root = PARSER.parse("""
+                { "type": "array", "items": { "type": "string" }, "enum": ["drugs", "safe"] }
+                """).getRoot();
+
+        // when / then
+        assertThatThrownBy(() -> new EnumGenerator(withSeed(42), root.getEnumValues(), root))
+                .isInstanceOf(UnsatisfiableSchemaException.class)
+                .hasMessage("No enum value satisfies the schema: the enum values are string but the schema declares type array (at $)");
     }
 
     @Test

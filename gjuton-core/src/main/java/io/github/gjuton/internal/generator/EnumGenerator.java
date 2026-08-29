@@ -3,7 +3,15 @@ package io.github.gjuton.internal.generator;
 import static io.github.gjuton.internal.generator.GenerationResult.result;
 
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.internal.model.ArraySchema;
+import io.github.gjuton.internal.model.BooleanSchema;
+import io.github.gjuton.internal.model.NullSchema;
+import io.github.gjuton.internal.model.NumericSchema;
+import io.github.gjuton.internal.model.ObjectSchema;
 import io.github.gjuton.internal.model.Schema;
+import io.github.gjuton.internal.model.StringSchema;
+import io.github.gjuton.internal.model.UnsatisfiableSchema;
+import io.github.gjuton.internal.model.UntypedSchema;
 import java.util.List;
 
 /**
@@ -36,9 +44,63 @@ final class EnumGenerator extends PhaseGenerator<EnumGenerator.GenerationPhase, 
                 .filter(value -> validator.satisfies(value, validationTarget))
                 .toList();
         if (this.values.isEmpty()) {
-            throw new UnsatisfiableSchemaException("No enum value satisfies the schema",
+            throw new UnsatisfiableSchemaException(unsatisfiableReason(values, validationTarget),
                     context.currentJsonPointer());
         }
+    }
+
+    /**
+     * The failure to report when a schema admits none of its enum values.
+     * Members that are all of one JSON type which the declared type does not
+     * admit make the schema contradictory rather than merely over-constrained,
+     * and the reason then names both types; any other cause is reported
+     * without one.
+     */
+    private static String unsatisfiableReason(List<Object> values, Schema schema) {
+        var reason = "No enum value satisfies the schema";
+        var declaredType = switch (schema) {
+            case StringSchema ignored -> "string";
+            case NumericSchema numeric -> numeric.isInteger() ? "integer" : "number";
+            case BooleanSchema ignored -> "boolean";
+            case NullSchema ignored -> "null";
+            case ObjectSchema ignored -> "object";
+            case ArraySchema ignored -> "array";
+            case UntypedSchema ignored -> null;
+            case UnsatisfiableSchema ignored -> null;
+        };
+        if (declaredType == null) {
+            return reason;
+        }
+        var memberTypes = values.stream().map(EnumGenerator::jsonType).distinct().toList();
+        if (memberTypes.size() != 1) {
+            return reason;
+        }
+        var memberType = memberTypes.getFirst();
+        // An integer type admits numbers — 10 passes it — so numeric members of
+        // one fail on a constraint rather than on the type they are.
+        var admitted = memberType.equals(declaredType)
+                || (memberType.equals("number") && declaredType.equals("integer"));
+        if (admitted) {
+            return reason;
+        }
+        return reason + ": the enum values are " + memberType + " but the schema declares type " + declaredType;
+    }
+
+    /**
+     * The JSON Schema type name of a value as it appears in a parsed document.
+     * Every number is {@code "number"} — {@code "integer"} is a constraint a
+     * schema places on a number, not a type a value carries on its own.
+     */
+    private static String jsonType(Object value) {
+        return switch (value) {
+            case null -> "null";
+            case Boolean ignored -> "boolean";
+            case Number ignored -> "number";
+            case String ignored -> "string";
+            case List<?> ignored -> "array";
+            // a JSON value that is none of the above is an object
+            default -> "object";
+        };
     }
 
     @Override

@@ -11,6 +11,14 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Changed
+
+- A schema whose `enum` members are all of a type its `type` keyword does not
+  admit — `{"type": "string", "enum": [true, false]}`, say — now reports that
+  contradiction instead of only saying that no enum value satisfied the schema,
+  so a schema that needs fixing is no longer mistaken for a limitation of the
+  generator. Such schemas are still rejected rather than coerced.
+
 ## [0.1.0] — 2026-08-15
 
 ### Added
