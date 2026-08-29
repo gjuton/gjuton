@@ -10,8 +10,8 @@ waits in a *pending* state on the Central Portal for a human to click **Publish*
 the manual publish step is a deliberate gate.
 
 Versioning is manual. Between releases the POM version is `X.Y.Z-SNAPSHOT`
-(Central rejects `-SNAPSHOT`); a release drops the suffix, tags, then bumps to the
-next `-SNAPSHOT`.
+(Central rejects `-SNAPSHOT`); a release drops the suffix and bumps to the next
+`-SNAPSHOT` in one pull request, and the tag goes on the commit in between.
 
 ## Prerequisites (one-time setup)
 
@@ -67,40 +67,55 @@ Delete the exported `gjuton-signing-key.asc` afterwards.
 Assume the release is `0.0.2` and the POM currently reads `0.0.2-SNAPSHOT`.
 
 1. **Update the changelog.** In `CHANGELOG.md`, rename `## [Unreleased]` to
-   `## [0.0.2] - <today's date>` and add a fresh empty `## [Unreleased]` above it.
+   `## [0.0.2] — <today's date>` and add a fresh empty `## [Unreleased]` above it.
    Confirm the entries describe what a user gets by upgrading.
-2. **Swap in the new README, if there is one.** A `README-unreleased.md` in the
+2. **Update the upgrade guide.** Add a `## 0.0.2` section to `UPGRADING.md`,
+   above the previous release's. A release that breaks nothing still gets one,
+   saying so — an absent section is indistinguishable from a forgotten one.
+3. **Swap in the new README, if there is one.** A `README-unreleased.md` in the
    repo root means the current `README.md` describes the published version and
    goes stale the moment this release lands. Diff the two, carry over anything
    `README.md` gained since the replacement was written, set the version in it to
    the one being released, then replace `README.md` with it and delete both
    `README-unreleased.md` and the explanatory comment at its top.
-3. **Drop the snapshot suffix.** Set the version to the release version across
+4. **Drop the snapshot suffix.** Set the version to the release version across
    the reactor:
    ```bash
    mvn versions:set -DnewVersion=0.0.2 -DgenerateBackupPoms=false
    ```
-4. **Verify the build** locally: `mvn clean verify`.
-5. **Commit** the version and changelog: `git commit -am "chore: release 0.0.2"`.
-6. **Tag and push.** The tag name must be the version with a `v` prefix:
+5. **Verify the build** locally: `mvn clean verify`.
+6. **Commit both the release and the next snapshot** on a branch. Master takes no
+   direct pushes, so the release goes through a pull request like any other
+   change. Keep them as two commits — the tag has to land on one whose poms read
+   the release version:
    ```bash
-   git tag v0.0.2
-   git push origin master v0.0.2
-   ```
-   The tag push triggers `release.yml`, which builds, signs, and uploads to the
-   Central Portal.
-7. **Publish on the Portal.** Sign in at <https://central.sonatype.com>, open the
-   pending deployment, inspect the staged artifacts, and click **Publish**. It
-   syncs to Maven Central within a few minutes.
-8. **Bump to the next snapshot** so development continues off a snapshot version:
-   ```bash
+   git checkout -b release-0.0.2
+   git commit -am "chore: release 0.0.2"
    mvn versions:set -DnewVersion=0.0.3-SNAPSHOT -DgenerateBackupPoms=false
    git commit -am "chore: bump to 0.0.3-SNAPSHOT"
-   git push origin master
+   git push -u origin release-0.0.2
    ```
-9. **Write the GitHub Release.** Create a release for tag `v0.0.2` and paste the
+7. **Open the pull request and merge it with rebase.** Not squash: squashing
+   collapses the two commits into one reading `0.0.3-SNAPSHOT`, leaving nothing
+   to tag, and Central rejects a snapshot version.
+8. **Tag the release commit and push the tag.** Rebasing rewrote the SHAs, so
+   take the commit from master rather than reusing a local one. Tags are not
+   covered by the branch ruleset, so this pushes directly:
+   ```bash
+   git checkout master && git pull
+   git tag v0.0.2 $(git log --format=%H --grep '^chore: release 0.0.2' -1)
+   git push origin v0.0.2
+   ```
+   Confirm the tagged commit's `pom.xml` reads `0.0.2` first — a squashed merge
+   is the way this goes wrong, and it fails late, at the Central upload. The tag
+   push triggers `release.yml`, which builds, signs, and uploads to the Central
+   Portal.
+9. **Publish on the Portal.** Sign in at <https://central.sonatype.com>, open the
+   pending deployment, inspect the staged artifacts, and click **Publish**. It
+   syncs to Maven Central within a few minutes.
+10. **Write the GitHub Release.** Create a release for tag `v0.0.2` and paste the
    `0.0.2` section of the changelog as the body.
-9. **Tell each ticket which release it shipped in.** Someone who finds a ticket
+11. **Tell each ticket which release it shipped in.** Someone who finds a ticket
    for the bug they hit needs to know whether the version they run contains the
    fix. Comment on every issue the release's PRs closed, once the artifact is
    actually downloadable:
@@ -127,6 +142,13 @@ Assume the release is `0.0.2` and the POM currently reads `0.0.2-SNAPSHOT`.
 
 ## Breaking changes
 
-While pre-1.0, breaking changes are allowed in any release. When one lands, its
-changelog entry must state what broke and the migration steps. The exact format
-for this will be settled at the first breaking change.
+While pre-1.0, breaking changes are allowed in any release. The changelog entry
+says what broke, in the ordinary Keep a Changelog section it belongs to; what to
+do about it goes in `UPGRADING.md`, under the release's own section. Keeping the
+steps out of the changelog is deliberate — the changelog summarises what changed,
+and migration detail buried there is hard to find when it is actually needed.
+
+Some breakage has no migration steps to give. Seeded output is reproducible
+within a version, not across versions, so a generator change may alter what a
+seed produces; the only advice possible is to re-record, which is not worth a
+section. The changelog notes it and `UPGRADING.md` stays silent.
