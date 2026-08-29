@@ -8,6 +8,7 @@ import com.github.curiousoddman.rgxgen.RgxGen;
 import com.github.curiousoddman.rgxgen.config.RgxGenOption;
 import com.github.curiousoddman.rgxgen.config.RgxGenProperties;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.errors.UnsupportedPatternException;
 import io.github.gjuton.internal.model.StringSchema;
 import io.github.gjuton.internal.util.RandomUtil;
 
@@ -39,7 +40,20 @@ final class StringGenerator extends PhaseGenerator<StringGenerator.GenerationPha
         super(GenerationPhase.class, context);
         this.schema = schema;
         boolean callerBoundedLength = context.callerConstraints().stringMaxLength() != null;
-        this.rgxGen = schema.getPattern() != null ? buildRgxGen(schema, effectiveMaxLength(), callerBoundedLength) : null;
+        if (schema.getPattern() == null) {
+            this.rgxGen = null;
+        } else {
+            try {
+                this.rgxGen = buildRgxGen(schema, effectiveMaxLength(), callerBoundedLength);
+            } catch (RuntimeException e) {
+                // The regex library reports a pattern it cannot work with in more than
+                // its own exception class - a bad quantifier arrives as a
+                // NumberFormatException. None of them belong on the public API.
+                throw new UnsupportedPatternException(
+                        "Not able to generate values matching the pattern '" + schema.getPattern() + "'",
+                        context.currentJsonPointer(), e);
+            }
+        }
     }
 
     @Override

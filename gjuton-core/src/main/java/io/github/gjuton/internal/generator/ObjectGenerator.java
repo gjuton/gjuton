@@ -5,6 +5,7 @@ import static io.github.gjuton.internal.util.FunctionalUtil.coalesce;
 
 import com.github.curiousoddman.rgxgen.RgxGen;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.errors.UnsupportedPatternException;
 import io.github.gjuton.internal.model.ObjectSchema;
 import io.github.gjuton.internal.model.Schema;
 import io.github.gjuton.internal.model.StringSchema;
@@ -19,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 /**
  * Generator for {@code "type": "object"} schemas. Varies the number of
@@ -69,18 +69,22 @@ final class ObjectGenerator extends PhaseGenerator<ObjectGenerator.GenerationPha
     ObjectGenerator(GeneratorContext context, ObjectSchema schema) {
         super(GenerationPhase.class, context);
         this.schema = schema;
-        this.compiledPatternProperties = schema.getPatternProperties().entrySet().stream()
-                .collect(Collectors.toMap(
-                        e -> Pattern.compile(e.getKey()),
-                        Map.Entry::getValue,
-                        (a, b) -> a,
-                        LinkedHashMap::new));
-        this.patternGenerators = schema.getPatternProperties().keySet().stream()
-                .collect(Collectors.toMap(
-                        k -> k,
-                        RgxGen::parse,
-                        (a, b) -> a,
-                        LinkedHashMap::new));
+        this.compiledPatternProperties = new LinkedHashMap<>();
+        this.patternGenerators = new LinkedHashMap<>();
+        for (var entry : schema.getPatternProperties().entrySet()) {
+            var pattern = entry.getKey();
+            try {
+                compiledPatternProperties.put(Pattern.compile(pattern), entry.getValue());
+                patternGenerators.put(pattern, RgxGen.parse(pattern));
+            } catch (RuntimeException e) {
+                // Neither the JDK's PatternSyntaxException nor the regex library's own
+                // types belong on the public API, and the library reports a pattern it
+                // cannot work with in more than one of them.
+                throw new UnsupportedPatternException(
+                        "Not able to generate values matching the patternProperties key '" + pattern + "'",
+                        context.currentJsonPointer(), e);
+            }
+        }
         this.validator = new SchemaValidator(context);
         var allRequired = new LinkedHashSet<String>();
         for (var req : schema.getRequired()) {

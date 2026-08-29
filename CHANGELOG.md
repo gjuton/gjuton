@@ -11,6 +11,13 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Fixed
+
+- A `pattern` or `patternProperties` key gjuton cannot generate values from now
+  fails with a new `UnsupportedPatternException`, naming the pattern and where
+  it sits and keeping the regex engine's own exception as the cause, instead of
+  leaking a `java.util.regex` or rgxgen type through the public API.
+
 ## [0.1.0] — 2026-08-15
 
 ### Added

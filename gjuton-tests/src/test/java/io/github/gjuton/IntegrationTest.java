@@ -155,8 +155,8 @@ class IntegrationTest {
     // produce a matching string, or produces one that doesn't actually match the pattern.
     // Not a Gjuton defect - it's the third-party regex-generation library's limitation.
     private static final Set<String> UNSUPPORTED_REGEX_GENERATION = Set.of(
-            "global.json", // rgxgen RgxGenParseException: unexpected symbol in pattern
-            "mongodb-atlas-search-index-definition.json", // rgxgen PatternDoesNotMatchAnythingException
+            "global.json", // rgxgen cannot read the pattern
+            "mongodb-atlas-search-index-definition.json", // rgxgen cannot generate from the pattern
             "bukkit-plugin.json", // generates /main violating its own regex pattern
             "paper-plugin.json", // [$.main: does not match the regex pattern ^(?!io\.papermc\.)([a-zA-Z_$][a-zA-Z\d_$]*\.)*[a-zA-Z_$][a-zA-Z\d_$]*$]
             "venvironment-schema-v1.0.0.json", // generates /application-models/0/file-path violating its regex pattern

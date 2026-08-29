@@ -258,5 +258,6 @@ while (gen.noveltyScore() > 0.0) {
 - **Instances are not thread-safe.** Each thread should use its own generator.
 - **`pattern` strings are generated with RgxGen.** String values constrained by a
   `pattern` regular expression are produced using the RgxGen library. If RgxGen
-  cannot produce a string matching a given pattern, override that path with a
-  custom override that supplies a matching string yourself.
+  cannot produce a string matching a given pattern, generation fails with
+  `UnsupportedPatternException`; override that path with a custom override that
+  supplies a matching string yourself.

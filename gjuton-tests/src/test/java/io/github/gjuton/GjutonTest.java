@@ -8,6 +8,7 @@ import io.github.gjuton.api.GenerationMode;
 import io.github.gjuton.api.Gjuton;
 import io.github.gjuton.errors.JsonBindingException;
 import io.github.gjuton.errors.UnsatisfiableSchemaException;
+import io.github.gjuton.errors.UnsupportedPatternException;
 import io.github.gjuton.internal.extension.GjutonExtensions;
 import io.github.gjuton.internal.generator.GeneratorConfig;
 import io.github.gjuton.internal.generator.GjutonMdc;
@@ -21,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
+import java.util.regex.PatternSyntaxException;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -148,6 +150,34 @@ class GjutonTest {
         // then
         assertThatThrownBy(() -> Gjuton.of(INT_SCHEMA).withGenerationMode(null))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void unusablePatternFailsWithGjutonErrorType() {
+        // when
+        var thrown = catchThrowable(() -> Gjuton.of("""
+                {"type": "string", "pattern": "a{{b}}c"}""").generate());
+
+        // then
+        assertThat(thrown)
+                .isInstanceOf(UnsupportedPatternException.class)
+                .hasMessageContaining("a{{b}}c")
+                .hasMessageContaining("(at $)")
+                .hasCauseInstanceOf(NumberFormatException.class);
+    }
+
+    @Test
+    void unusablePatternPropertiesKeyFailsWithGjutonErrorType() {
+        // when
+        var thrown = catchThrowable(() -> Gjuton.of("""
+                {"type": "object", "patternProperties": {"(abc": {"type": "string"}}}""").generate());
+
+        // then
+        assertThat(thrown)
+                .isInstanceOf(UnsupportedPatternException.class)
+                .hasMessageContaining("(abc")
+                .hasMessageContaining("(at $)")
+                .hasCauseInstanceOf(PatternSyntaxException.class);
     }
 
     @Test
