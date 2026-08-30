@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * Rewrites a JSON Schema tree into the subset of shapes the schema model
@@ -36,7 +37,7 @@ final class SchemaNormalizer {
         /**
          * The value is an object whose values are sub-schemas (e.g. {@code properties}).
          * An entry may hold data instead — a Draft 7 {@code dependencies} entry is
-         * either a sub-schema or a property-name array — which walkers skip.
+         * either a sub-schema or a property-name array.
          */
         SCHEMA_MAP,
         /** The value is either a single sub-schema or an array of sub-schemas (e.g. {@code items}). */
@@ -148,39 +149,7 @@ final class SchemaNormalizer {
                 objectNode.put("type", inferred);
             }
         }
-        for (var field : SCHEMA_FIELDS.entrySet()) {
-            var value = objectNode.get(field.getKey());
-            if (value == null) {
-                continue;
-            }
-            switch (field.getValue()) {
-                case SCHEMA -> inferMissingTypes(value);
-                case SCHEMA_ARRAY -> {
-                    if (value instanceof List<?> arrayValue) {
-                        for (var element : arrayValue) {
-                            inferMissingTypes(element);
-                        }
-                    }
-                }
-                case SCHEMA_MAP -> {
-                    if (value instanceof Map<?, ?> mapValue) {
-                        for (var entry : mapValue.entrySet()) {
-                            inferMissingTypes(entry.getValue());
-                        }
-                    }
-                }
-                case SCHEMA_OR_SCHEMA_ARRAY -> {
-                    if (value instanceof List<?> arrayValue) {
-                        for (var element : arrayValue) {
-                            inferMissingTypes(element);
-                        }
-                    } else {
-                        inferMissingTypes(value);
-                    }
-                }
-                default -> throw new IllegalStateException("Unhandled field type: " + field.getValue());
-            }
-        }
+        forEachSubSchema(objectNode, SchemaNormalizer::inferMissingTypes);
     }
 
     /**
@@ -237,38 +206,62 @@ final class SchemaNormalizer {
      * deserialisation.
      */
     private static void rewriteTypeArrays(Object node) {
-        if (node instanceof Map) {
-            @SuppressWarnings("unchecked")
-            var objectNode = (Map<String, Object>) node;
-            var typeNode = objectNode.get("type");
-            if (typeNode instanceof List<?> typeArray) {
-                var oneOfArray = new ArrayList<>();
-                for (var typeElement : typeArray) {
-                    @SuppressWarnings("unchecked")
-                    var branch = (Map<String, Object>) deepCopy(objectNode);
-                    branch.put("type", typeElement);
-                    oneOfArray.add(branch);
-                }
-                var definitions = objectNode.get("definitions");
-                var defs = objectNode.get("$defs");
-                objectNode.clear();
-                if (definitions != null) {
-                    objectNode.put("definitions", definitions);
-                }
-                if (defs != null) {
-                    objectNode.put("$defs", defs);
-                }
-                objectNode.put("oneOf", oneOfArray);
+        if (!(node instanceof Map)) {
+            return;
+        }
+        @SuppressWarnings("unchecked")
+        var objectNode = (Map<String, Object>) node;
+        var typeNode = objectNode.get("type");
+        if (typeNode instanceof List<?> typeArray) {
+            var oneOfArray = new ArrayList<>();
+            for (var typeElement : typeArray) {
+                @SuppressWarnings("unchecked")
+                var branch = (Map<String, Object>) deepCopy(objectNode);
+                branch.put("type", typeElement);
+                oneOfArray.add(branch);
             }
-            // The rewrite above replaces this node's own entries, so the walk reads a
-            // snapshot of them rather than a live view of the map it just repopulated.
-            var values = new ArrayList<>(objectNode.values());
-            for (var value : values) {
-                rewriteTypeArrays(value);
+            var definitions = objectNode.get("definitions");
+            var defs = objectNode.get("$defs");
+            objectNode.clear();
+            if (definitions != null) {
+                objectNode.put("definitions", definitions);
             }
-        } else if (node instanceof List<?> arrayNode) {
-            for (var element : arrayNode) {
-                rewriteTypeArrays(element);
+            if (defs != null) {
+                objectNode.put("$defs", defs);
+            }
+            objectNode.put("oneOf", oneOfArray);
+        }
+        forEachSubSchema(objectNode, SchemaNormalizer::rewriteTypeArrays);
+    }
+
+    /**
+     * Applies {@code action} to the value of every keyword of {@code node}
+     * that may hold a sub-schema, unwrapped to its elements where the
+     * keyword holds an array or object of them. A value may still be data —
+     * a Draft 7 keys-form {@code dependencies} entry is a property-name
+     * array — so {@code action} must tolerate a non-object.
+     */
+    static void forEachSubSchema(Map<?, ?> node, Consumer<Object> action) {
+        for (var property : node.entrySet()) {
+            var shape = SCHEMA_FIELDS.get(property.getKey());
+            if (shape == null) {
+                continue;
+            }
+            var value = property.getValue();
+            if (shape == SchemaShape.SCHEMA_MAP) {
+                // The keys of a schema map are user-chosen property or definition
+                // names, so its schemas sit one level below the keyword.
+                if (value instanceof Map<?, ?> mapValue) {
+                    for (var entry : mapValue.entrySet()) {
+                        action.accept(entry.getValue());
+                    }
+                }
+            } else if (value instanceof List<?> arrayValue) {
+                for (var element : arrayValue) {
+                    action.accept(element);
+                }
+            } else {
+                action.accept(value);
             }
         }
     }

@@ -104,7 +104,6 @@ class IntegrationTest {
             "prometheus.json", // generates /remote_write/0/authorization violating its const constraint
             "tmlanguage.json", // generates /patterns entries missing required 'begin'/'end'
             "tslint.json", // generates /rules/* entries with null where boolean is required
-            "vim-addon-info.json", // generates /repository violating dependentSchemas constraint
             "web-manifest.json", // generates /orientation ambiguously valid under 2 oneOf branches
 
             // Throws UnsatisfiableSchemaException; not yet triaged to confirm whether the

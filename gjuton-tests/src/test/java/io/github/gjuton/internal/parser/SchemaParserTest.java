@@ -1270,6 +1270,44 @@ class SchemaParserTest {
             assertThat(stringBranch.getMinLength()).isEqualTo(3);
         }
 
+        @Test
+        void propertiesKeyedTypeResolveToTheirOwnSubtypes() {
+            // when
+            var document = PARSER.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": { "type": ["string", "null"] }
+                        },
+                        "patternProperties": {
+                            "^type$": { "type": "integer" }
+                        }
+                    }
+                    """);
+
+            // then
+            var root = (ObjectSchema) document.getRoot();
+            var typeProperty = root.getProperties().get("type");
+            var branches = typeProperty.getOneOf().getFirst();
+            assertThat(branches).hasSize(2);
+            assertThat(branches.get(0)).isInstanceOf(StringSchema.class);
+            assertThat(branches.get(1)).isInstanceOf(NullSchema.class);
+            assertThat(root.getPatternProperties().get("^type$")).isInstanceOf(NumericSchema.class);
+        }
+
+        @Test
+        void constPayloadResemblingTypeArrayIsNotRewritten() {
+            // when
+            var document = PARSER.parse("""
+                    {
+                        "const": {"type": ["a", "b"]}
+                    }
+                    """);
+
+            // then
+            assertThat(document.getRoot().getConstValue())
+                    .isEqualTo(Map.of("type", List.of("a", "b")));
+        }
     }
 
     @Nested
@@ -1483,6 +1521,105 @@ class SchemaParserTest {
             assertThat(root.getDependentSchemas()).containsKey("b");
             var depSchema = (ObjectSchema) root.getDependentSchemas().get("b");
             assertThat(depSchema.getRequired()).containsExactly("c");
+        }
+
+        @Test
+        void draft7DependenciesEntryKeyedTypeIsPropertyName() {
+            // when
+            var document = PARSER.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "url": { "type": "string" },
+                            "type": { "type": "string" }
+                        },
+                        "dependencies": {
+                            "url": ["type"],
+                            "type": ["url"]
+                        }
+                    }
+                    """);
+
+            // then
+            var root = (ObjectSchema) document.getRoot();
+            assertThat(root.getDependentRequired())
+                    .containsEntry("url", List.of("type"))
+                    .containsEntry("type", List.of("url"));
+        }
+
+        @Test
+        void draft7DependenciesSchemaFormKeyedTypeIsPropertyName() {
+            // when
+            var document = PARSER.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": { "type": "string" },
+                            "url": { "type": "string" }
+                        },
+                        "dependencies": {
+                            "type": {
+                                "properties": { "url": { "type": "string" } },
+                                "required": ["url"]
+                            }
+                        }
+                    }
+                    """);
+
+            // then
+            var root = (ObjectSchema) document.getRoot();
+            var depSchema = (ObjectSchema) root.getDependentSchemas().get("type");
+            assertThat(depSchema.getRequired()).containsExactly("url");
+        }
+
+        @Test
+        void dependentRequiredEntryKeyedTypeIsPropertyName() {
+            // when
+            var document = PARSER.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "url": { "type": "string" },
+                            "type": { "type": "string" }
+                        },
+                        "dependentRequired": {
+                            "url": ["type"],
+                            "type": ["url"]
+                        }
+                    }
+                    """);
+
+            // then
+            var root = (ObjectSchema) document.getRoot();
+            assertThat(root.getDependentRequired())
+                    .containsEntry("url", List.of("type"))
+                    .containsEntry("type", List.of("url"));
+        }
+
+        @Test
+        void dependentSchemasEntryKeyedTypeIsPropertyName() {
+            // when
+            var document = PARSER.parse("""
+                    {
+                        "type": "object",
+                        "properties": {
+                            "type": { "type": "string" },
+                            "url": { "type": "string" }
+                        },
+                        "dependentSchemas": {
+                            "type": {
+                                "type": "object",
+                                "properties": { "url": { "type": "string" } },
+                                "required": ["url"]
+                            }
+                        }
+                    }
+                    """);
+
+            // then
+            var root = (ObjectSchema) document.getRoot();
+            var depSchema = (ObjectSchema) root.getDependentSchemas().get("type");
+            assertThat(depSchema.getRequired()).containsExactly("url");
         }
     }
 

@@ -11,6 +11,13 @@ section is promoted to a version at release time (see `docs/releasing.md`).
 
 ## [Unreleased]
 
+### Fixed
+
+- A schema whose `dependencies` or `dependentRequired` names a property called
+  `type` is now read as written, instead of being mistaken for a type
+  declaration — such a schema either failed to parse or silently lost the
+  dependency and generated JSON it rejected.
+
 ## [0.1.0] — 2026-08-15
 
 ### Added
