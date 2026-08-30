@@ -141,27 +141,12 @@ final class RefCollector {
                     walk(target, targetDoc, targetDocUri, targetBase, refs, loadedDocuments);
                 }
             }
-            for (var property : objectNode.entrySet()) {
-                var shape = SchemaNormalizer.SCHEMA_FIELDS.get(property.getKey());
-                if (shape == null) {
-                    continue;
-                }
-                var value = property.getValue();
-                if (shape == SchemaNormalizer.SchemaShape.SCHEMA_MAP) {
-                    // The keys of a schema map are user-chosen property or definition
-                    // names, so its schemas sit one level below the keyword.
-                    if (value instanceof Map<?, ?> mapValue) {
-                        for (var entry : mapValue.entrySet()) {
-                            walk(entry.getValue(), currentDoc, currentDocUri, baseUri, refs, loadedDocuments);
-                        }
-                    }
-                } else {
-                    walk(value, currentDoc, currentDocUri, baseUri, refs, loadedDocuments);
-                }
-            }
+            var childBase = baseUri;
+            SchemaNormalizer.forEachSubSchema(objectNode,
+                    child -> walk(child, currentDoc, currentDocUri, childBase, refs, loadedDocuments));
         } else if (node instanceof List<?> arrayNode) {
-            // Only reachable from a whitelisted keyword above, so an array of
-            // schemas is walked while an enum payload is never entered.
+            // Reached only for a value handed over whole: a Draft 7 dependencies
+            // entry holding property names, or a $ref target that is an array.
             for (var element : arrayNode) {
                 walk(element, currentDoc, currentDocUri, enclosingBase, refs, loadedDocuments);
             }
@@ -348,24 +333,7 @@ final class RefCollector {
                     }
                 }
             }
-            for (var property : objectNode.entrySet()) {
-                var shape = SchemaNormalizer.SCHEMA_FIELDS.get(property.getKey());
-                if (shape == null) {
-                    continue;
-                }
-                var value = property.getValue();
-                if (shape == SchemaNormalizer.SchemaShape.SCHEMA_MAP) {
-                    // The keys of a schema map are user-chosen property or definition
-                    // names, so its schemas sit one level below the keyword.
-                    if (value instanceof Map<?, ?> mapValue) {
-                        for (var entry : mapValue.entrySet()) {
-                            qualifyRefs(entry.getValue(), docUri);
-                        }
-                    }
-                } else {
-                    qualifyRefs(value, docUri);
-                }
-            }
+            SchemaNormalizer.forEachSubSchema(objectNode, child -> qualifyRefs(child, docUri));
         } else if (node instanceof List<?> arrayNode) {
             for (var element : arrayNode) {
                 qualifyRefs(element, docUri);

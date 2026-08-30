@@ -1,0 +1,17 @@
+{
+  "type": "object",
+  "properties": {
+    "url": { "type": "string" },
+    "type": { "type": "string" },
+    "encoding": { "type": "string" }
+  },
+  "dependencies": {
+    "url": ["type"],
+    "type": {
+      "properties": {
+        "encoding": { "type": "string" }
+      },
+      "required": ["encoding"]
+    }
+  }
+}
